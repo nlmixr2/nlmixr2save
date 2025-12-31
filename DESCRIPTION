@@ -1,0 +1,22 @@
+Package: nlmixr2save
+Title: This package saves 'nlmixr2' fits into a format that can be read outside of 'nlmixr2'
+Version: 0.0.0.9000
+Authors@R:
+    person("Matthew", "Fidler", email="matthew.fidler@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-8538-6691"))
+Description: 'nlmixr2' allows fitting and comparing nonlinear mixed-effects models in
+    differential equations with flexible dosing information commonly seen
+    in pharmacokinetics and pharmacodynamics (Almquist, Leander, and
+    Jirstrand 2015 <doi:10.1007/s10928-015-9409-1>). Differential equation
+    solving is by compiled C code provided in the 'rxode2' package (Wang,
+    Hallow, and James 2015 <doi:10.1002/psp4.12052>). This package is for
+    saving 'nlmixr2' in a format that can be read outside of 'nlmixr2' and is independent of
+    the version of 'nlmixr2'.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports: 
+    cli,
+    rxode2,
+    zip
