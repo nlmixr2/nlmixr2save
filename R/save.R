@@ -97,7 +97,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   .str <- character(0)
   for (.i in .item) {
     .minfo(paste0("saving fit item: ", .i))
-    .obj <- `$.nlmixr2FitCore`(fit$env, .i, FALSE) # decompresses object
+    .obj <- get(.i, envir=fit$env)
+    if (is.raw(.obj)) {
+      .obj <- eval(str2lang(paste0("fit$", .i))) # decompresses object
+    }
     if (!saveFitItem(.obj, .i, file)) {
       .expr <- as.list(rxode2::rxUiDeparse(.obj, .i))
       if (!is.null(.expr)) {
