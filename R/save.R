@@ -6,6 +6,20 @@
   cli::cli_alert_info(gettext(text), ..., .envir = .envir)
 }
 
+#' This sees if you have rxode2 installed and if you want to use it
+#'
+#' When `nlmixr2.rxode2` option is set to `FALSE`, this function will return
+#' `FALSE` even if `rxode2` is installed, allowing testing of non-rxode2 code paths.
+#'
+#' @return boolean
+#' @keywords internal
+#' @author Matthew L. Fidler
+#' @noRd
+.hasRxode2 <- function() {
+  requireNamespace("rxode2", quietly = TRUE) &&
+    isTRUE(getOption("nlmixr2.rxode2", TRUE))
+}
+
 #' Save a fitted model item to a file
 #'
 #' This is a generic function to save a fitted model item to a file.
@@ -25,10 +39,17 @@ saveFitItem <- function(item, name, file) {
 #' @rdname saveFitItem
 #' @export
 saveFitItem.rxUi <- function(item, name, file) {
-  writeLines(paste0("ui <- ", paste(deparse(as.function(item)), collapse="\n"),
-                    "\n",
-                    "ui <- rxode2::rxode2(ui)"),
-              con = paste0(file,"-", name, ".R"))
+  if (.hasRxode2()) {
+    writeLines(paste0("ui <- ", paste(deparse(as.function(item)), collapse="\n"),
+                      "\n",
+                      "ui <- rxode2::rxode2(ui)"),
+               con = paste0(file,"-", name, ".R"))
+  } else {
+    v <- try(saveRDS(item, paste0(file,"-", name, ".rds")))
+    if (inherits(v, "try-error")) {
+      return(FALSE)
+    }
+  }
   TRUE
 }
 
@@ -54,7 +75,6 @@ saveFitItem.nlmixr2ParFixed <- function(item, name, file) {
   saveRDS(item, paste0(file,"-", name, ".rds"))
   TRUE
 }
-
 
 #' @rdname saveFitItem
 #' @export
