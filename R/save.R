@@ -39,16 +39,17 @@ saveFitItem <- function(item, name, file) {
 #' @rdname saveFitItem
 #' @export
 saveFitItem.rxUi <- function(item, name, file) {
+  v <- NULL
   if (.hasRxode2()) {
-    writeLines(paste0("ui <- ", paste(deparse(as.function(item)), collapse="\n"),
+    v <- try(writeLines(paste0("ui <- ", paste(deparse(as.function(item)), collapse="\n"),
                       "\n",
                       "ui <- rxode2::rxode2(ui)"),
-               con = paste0(file,"-", name, ".R"))
+               con = paste0(file,"-", name, ".R")))
   } else {
     v <- try(saveRDS(item, paste0(file,"-", name, ".rds")))
-    if (inherits(v, "try-error")) {
-      return(FALSE)
-    }
+  }
+  if (inherits(v, "try-error")) {
+    return(FALSE) # nocov
   }
   TRUE
 }
@@ -64,7 +65,7 @@ saveFitItem.data.frame <- function(item, name, file) {
     v <- try(saveRDS(item, paste0(file,"-", name, ".rds")))
   }
   if (inherits(v, "try-error")) {
-    return(FALSE)
+    return(FALSE) # nocov
   }
   TRUE
 }
