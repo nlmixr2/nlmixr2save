@@ -82,4 +82,93 @@ if (requireNamespace("withr", quietly = TRUE)) {
       expect_equal(obj, obj2)
     })
   })
+
+  if (requireNamespace("nlmixr2est", quietly = TRUE) &&
+        requireNamespace("nlmixr2data", quietly = TRUE)) {
+
+    withr::with_tempdir({
+
+      library(nlmixr2est)
+      library(nlmixr2data)
+
+      one.cmt <- function() {
+        ini({
+          ## You may label each parameter with a comment
+          tka <- 0.45 # Log Ka
+          tcl <- log(c(0, 2.7, 100)) # Log Cl
+          ## This works with interactive models
+          ## You may also label the preceding line with label("label text")
+          tv <- 3.45; label("log V")
+          ## the label("Label name") works with all models
+          eta.ka ~ 0.6
+          eta.cl ~ 0.3
+          eta.v ~ 0.1
+          add.sd <- 0.7
+        })
+        model({
+          ka <- exp(tka + eta.ka)
+          cl <- exp(tcl + eta.cl)
+          v <- exp(tv + eta.v)
+          linCmt() ~ add(add.sd)
+        })
+      }
+
+      fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
+                                      control=list(print=0, compress=FALSE)))
+
+      fitS <- suppressMessages(nlmixr(one.cmt, theo_sd, est="saem",
+                                      control=list(print=0, compress=FALSE)))
+
+      test_that("saving fits do not generate errors", {
+        expect_error(suppressMessages(saveFit(fitS, "fitS")), NA)
+        expect_true(file.exists("fitS.zip"))
+        expect_error(suppressMessages(saveFit(fitF, "fitF")), NA)
+        expect_true(file.exists("fitF.zip"))
+      })
+
+      fit2F <- suppressMessages(loadFit("fitF"))
+
+      for (n in ls(fitF$env, all.names=TRUE)) {
+        if (n %in% c("foceiModel")) {
+          next
+        }
+        test_that(paste0("fitF env item ", n, " matches after load"), {
+          expect_equal(fitF$env[[n]], fit2F$env[[n]])
+        })
+      }
+
+      ## test_that("saving and laoding a fit from nlmixr2 works", {
+
+      ##   expect_true(file.exists("fitF.zip"))
+
+      ##   fit2F <- loadFit("fitF")
+
+      ##   expect_true(inherits(fit2F, "nlmixr2FitCore"))
+      ##   expect_equal(coef(fitF), coef(fit2F))
+
+      ##   expect_equal(fitF$parFixedDf, fit2F$parFixedDf)
+
+      ##   expect_equal(fitF$ranef, fit2F$ranef)
+
+
+
+      ##   expect_equal(fitF, fit2F)
+
+      ##   suppressMessages(saveFit(fitS, "fitS"))
+      ##   expect_true(file.exists("fitS.zip"))
+
+      ##   fit2S <- loadFit("fitS")
+
+      ##   expect_true(inherits(fit2S, "nlmixr2FitCore"))
+      ##   expect_equal(coef(fitS), coef(fit2S))
+      ##   expect_equal(fitS$parFixedDf, fit2S$parFixedDf)
+      ##   expect_equal(fitS$ranef, fit2S$ranef)
+
+      ## expect_equal(fitS, fit2S)
+
+
+      ## })
+
+    })
+  }
 }

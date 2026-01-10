@@ -41,9 +41,9 @@ saveFitItem <- function(item, name, file) {
 saveFitItem.rxUi <- function(item, name, file) {
   v <- NULL
   if (.hasRxode2()) {
-    v <- try(writeLines(paste0("ui <- ", paste(deparse(as.function(item)), collapse="\n"),
+    v <- try(writeLines(paste0(name, " <- ", paste(deparse(as.function(item)), collapse="\n"),
                       "\n",
-                      "ui <- rxode2::rxode2(ui)"),
+                      paste0(name, " <- rxode2::rxode2(", name, ")")),
                con = paste0(file,"-", name, ".R")))
   } else {
     v <- try(saveRDS(item, paste0(file,"-", name, ".rds")))
@@ -97,6 +97,39 @@ saveFitItem.saemFit <- function(item, name, file) {
   TRUE
 }
 
+#' @rdname saveFitItem
+#' @export
+saveFitItem.foceiModelList <- function(item, name, file) {
+  .r <- c(paste0(name, " <- list()\n"),
+             vapply(seq_along(item),
+                    function(i) {
+                      if (inherits(item[[i]], "rxode2")) {
+                        paste0(name, "[[", deparse1(names(item)[i]), "]] <- ",
+                               "rxode2::rxode2(",
+                               deparse1(rxode2::rxNorm(item[[i]])),
+                               ")\n")
+                      } else {
+                        paste0(name, "[[", deparse1(names(item)[i]), "]] <- ",
+                               paste(deparse(item[[i]]), collapse="\n"), "\n")
+                      }
+                    },
+                    character(1), USE.NAMES=FALSE),
+          paste0("class(", name, ") <- ", deparse1(class(item)), "\n"))
+  writeLines(.r, con = paste0(file,"-", name, ".R"))
+  TRUE
+}
+
+.saveDeparse <- function(obj, name) {
+  .expr <- rxode2::rxUiDeparse(obj, name)
+  if (inherits(.expr, "try-error")) {
+    return(NULL)
+  } else if (is.null(.expr)) {
+    return(NULL)
+  } else {
+    return(as.list(.expr))
+  }
+}
+
 #' Save a fitted model object to a series of files
 #'
 #' @param fit the fitted model object
@@ -123,7 +156,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
       .obj <- eval(str2lang(paste0("fit$", .i))) # decompresses object
     }
     if (!saveFitItem(.obj, .i, file)) {
-      .expr <- as.list(rxode2::rxUiDeparse(.obj, .i))
+      .expr <- .saveDeparse(.obj, .i)
       if (!is.null(.expr)) {
         .expr[[1]] <- quote(`=`)
         .expr <- as.call(.expr)
@@ -136,7 +169,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   }
   .cls <- as.character(class(fit))
   attr(.cls, ".foceiEnv") <- NULL
-  .str <- c(.str, paste0("..class.. = ", paste(deparse(.cls), collapse="\n")))
+  .str <- c(.str, paste0("..class.. = ", paste(deparse(.cls), collapse="\n")),
+            paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")))
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
   writeLines(.str, con = paste0(file,"-env.R"))
@@ -189,10 +223,21 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   writeLines(paste0(file, " <- function() {\n",
                     "source('", paste0(file,"-env.R"), "', local=TRUE)\n",
                     ".class <- env$`..class..`\n",
+                    ".id.level <- env$`..id.level..`\n",
                     "rm('..class..', envir=env)\n",
+                    "rm('..id.level..', envir=env)\n",
                     .r,
+                    "if (!is.null(.id.level)) {\n",
+                    "  if (!is.null(env$ranef$ID)) {\n",
+                    "    env$ranef$ID <- factor(env$ranef$ID, levels=.id.level)\n",
+                    "  }\n",
+                    "  if (!is.null(env$etaObf$ID)) {\n",
+                    "    env$etaObf$ID <- factor(env$etaObf$ID, levels=.id.level)\n",
+                    "  }\n",
+                    "}\n",
                     "if (any(.class == 'nlmixr2FitCore')) {\n",
                     "  ret <- read.csv('", paste0(file,".csv"), "')\n",
+                    "  class(env) <- 'nlmixr2FitCoreSilent'\n",
                     "  attr(.class, '.foceiEnv') <- env\n",
                     "  class(ret) <- .class\n",
                     "  return(ret)\n",
