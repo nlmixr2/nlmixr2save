@@ -123,6 +123,10 @@ saveFitItem.foceiModelList <- function(item, name, file) {
   writeLines(.r, con = paste0(file,"-", name, ".R"))
   TRUE
 }
+
+#' @export
+saveFitItem.saemModelList <- saveFitItem.foceiModelList
+
 #' Save the deparsed object
 #'
 #' @param obj object

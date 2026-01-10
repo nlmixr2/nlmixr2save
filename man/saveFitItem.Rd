@@ -8,6 +8,7 @@
 \alias{saveFitItem.nlmixr2estSessionInfo}
 \alias{saveFitItem.default}
 \alias{saveFitItem.saemFit}
+\alias{saveFitItem.foceiModelList}
 \title{Save a fitted model item to a file}
 \usage{
 saveFitItem(item, name, file)
@@ -23,6 +24,8 @@ saveFitItem(item, name, file)
 \method{saveFitItem}{default}(item, name, file)
 
 \method{saveFitItem}{saemFit}(item, name, file)
+
+\method{saveFitItem}{foceiModelList}(item, name, file)
 }
 \arguments{
 \item{item}{Item to be saved}

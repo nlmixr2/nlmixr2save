@@ -132,10 +132,18 @@ if (requireNamespace("withr", quietly = TRUE)) {
       for (n in ls(fitF$env, all.names=TRUE)) {
         if (n == "ui") {
           for (m in names(fitF$ui)) {
-            test_that(paste0("fitF $env$ui$", m), {
-              expect_equal(fitF$ui[[m]], fit2F$ui[[m]])
-            })
+            if (m %in% c("mv0", "mvL")) {
+              test_that(paste0("fitF $env$ui$", m), {
+                expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
+                             rxode2::rxNorm(fit2F$ui[[m]]))
+              })
+            } else {
+              test_that(paste0("fitF $env$ui$", m), {
+                expect_equal(fitF$ui[[m]], fit2F$ui[[m]])
+              })
+            }
           }
+          next
         }
         if (n %in% c("foceiModel")) {
           next
