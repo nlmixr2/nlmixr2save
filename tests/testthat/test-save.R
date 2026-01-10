@@ -3,6 +3,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
     withr::with_options(list(nlmixr2.rxode2 = TRUE), {
       withr::with_tempdir({
         test_that("test rxUi item saving with rxode2", {
+
           library(rxode2)
 
           ui <- function() {
@@ -20,8 +21,8 @@ if (requireNamespace("withr", quietly = TRUE)) {
           expect_true(file.exists("testfit-rxUi.R"))
           rm("ui")
           source("testfit-rxUi.R", local=TRUE)
-          expect_true(exists("ui"))
-          expect_true(inherits(ui, "rxUi"))
+          expect_true(exists("rxUi"))
+          expect_true(inherits(rxUi, "rxUi"))
         })
       })
     })
@@ -45,9 +46,9 @@ if (requireNamespace("withr", quietly = TRUE)) {
           saveFitItem(ui(), "rxUi", "testfit")
           expect_true(file.exists("testfit-rxUi.rds"))
           rm("ui")
-          ui <- readRDS("testfit-rxUi.rds")
-          expect_true(exists("ui"))
-          expect_true(inherits(ui, "rxUi"))
+          rxUi <- readRDS("testfit-rxUi.rds")
+          expect_true(exists("rxUi"))
+          expect_true(inherits(rxUi, "rxUi"))
         })
       })
     })
@@ -129,6 +130,13 @@ if (requireNamespace("withr", quietly = TRUE)) {
       fit2F <- suppressMessages(loadFit("fitF"))
 
       for (n in ls(fitF$env, all.names=TRUE)) {
+        if (n == "ui") {
+          for (m in names(fitF$ui)) {
+            test_that(paste0("fitF $env$ui$", m), {
+              expect_equal(fitF$ui[[m]], fit2F$ui[[m]])
+            })
+          }
+        }
         if (n %in% c("foceiModel")) {
           next
         }

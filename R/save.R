@@ -43,7 +43,12 @@ saveFitItem.rxUi <- function(item, name, file) {
   if (.hasRxode2()) {
     v <- try(writeLines(paste0(name, " <- ", paste(deparse(as.function(item)), collapse="\n"),
                       "\n",
-                      paste0(name, " <- rxode2::rxode2(", name, ")")),
+                      paste0(name, " <- rxode2::rxode2(", name, ")\n"),
+                      paste0(name, " <- rxode2::rxUiDecompress(", name, ")\n"),
+                      paste0("assign(\"modelName\", ", deparse1(item$modelName),
+                             ", envir=, ", name, ")\n"),
+                      paste0("rm(\"model\", envir=", name, ")\n"),
+                      paste0(name, " <- rxode2::rxUiCompress(", name, ")\n")),
                con = paste0(file,"-", name, ".R")))
   } else {
     v <- try(saveRDS(item, paste0(file,"-", name, ".rds")))
@@ -118,7 +123,13 @@ saveFitItem.foceiModelList <- function(item, name, file) {
   writeLines(.r, con = paste0(file,"-", name, ".R"))
   TRUE
 }
-
+#' Save the deparsed object
+#'
+#' @param obj object
+#' @param name name that the object should be assigned to
+#' @return R expression of name `<-` R expression
+#' @noRd
+#' @author Matthew L. Fidler
 .saveDeparse <- function(obj, name) {
   .expr <- rxode2::rxUiDeparse(obj, name)
   if (inherits(.expr, "try-error")) {
@@ -235,6 +246,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "  if (!is.null(env$etaObf$ID)) {\n",
                     "    env$etaObf$ID <- factor(env$etaObf$ID, levels=.id.level)\n",
                     "  }\n",
+                    "}\n",
+                    "if (!is.null(env$parHistData)) {\n",
+                    "  env$parHistData$type <- factor(env$parHistData$type, levels=c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\"))\n",
                     "}\n",
                     "if (any(.class == 'nlmixr2FitCore')) {\n",
                     "  ret <- read.csv('", paste0(file,".csv"), "')\n",
