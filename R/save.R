@@ -325,15 +325,4 @@ loadFit <- function(file) {
   } else {
     stop("cannot find fit file ", file, " or ", .r, " or ", .zip, call.=FALSE)
   }
-  if (grepl("[.]zip$", file)) {
-    .td <- tempdir()
-    zip::unzip(file, exdir = .td)
-    .files <- list.files(.td, full.names=TRUE)
-    .rfile <- .files[grepl("[.]R$", .files)]
-    source(.rfile, local=parent.frame())
-    unlink(.td, recursive=TRUE)
-  } else {
-    source(paste0(file,".R"), local=parent.frame())
-  }
-  invisible()
 }
