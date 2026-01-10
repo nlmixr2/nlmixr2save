@@ -227,6 +227,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "rm('..class..', envir=env)\n",
                     "rm('..id.level..', envir=env)\n",
                     .r,
+                    "env$model <- rxode2::model(env$ui)\n",
                     "if (!is.null(.id.level)) {\n",
                     "  if (!is.null(env$ranef$ID)) {\n",
                     "    env$ranef$ID <- factor(env$ranef$ID, levels=.id.level)\n",
