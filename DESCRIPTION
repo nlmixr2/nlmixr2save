@@ -18,6 +18,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     cli,
+    Rcpp,
     zip
 Suggests:
     nlmixr2data,
@@ -26,3 +27,5 @@ Suggests:
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
+LinkingTo: 
+    Rcpp

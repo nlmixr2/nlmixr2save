@@ -145,7 +145,15 @@ if (requireNamespace("withr", quietly = TRUE)) {
           }
           next
         }
-        if (n %in% c("foceiModel")) {
+        if (n == "foceiModel") {
+          next
+        }
+        if (any(grepl("Control$", class(fitF$env[[n]])))) {
+          f1 <- rxUiDeparse(fitF$env[[n]], "ctl")
+          f2 <- rxUiDeparse(fit2F$env[[n]], "ctl")
+          test_that(paste0("fitF env Control item", n, " match after load (using `rxUiDeparse()`)"), {
+            expect_equal(f1, f2)
+          })
           next
         }
         test_that(paste0("fitF env item ", n, " matches after load"), {

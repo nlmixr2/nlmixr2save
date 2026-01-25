@@ -176,6 +176,14 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
         .expr[[1]] <- quote(`=`)
         .expr <- as.call(.expr)
         .str <- c(.str, paste(deparse(.expr), collapse="\n"))
+      } else if (.i %in% c("phiC", "phiH")) {
+        .lines <- deparse(as.call(c(quote(`list`), lapply(seq_along(.obj), function(i) { rxUiDeparse(.obj[[i]], "x")[[3]]}))))
+        .lines[1] <- paste0(.i, " <- ", .lines[1])
+        if (!is.null(names(.obj))) {
+          .lines <- c(.lines,
+                      paste0("names(", .i, ") <- ", deparse1(names(.obj))))
+        }
+        writeLines(.lines, con = paste0(file,"-", .i, ".R"))
       } else {
         warning("cannot save object of class ", paste(class(.obj), collapse=", "),
                 " for item ", .i, "; skipping", call.=FALSE)
@@ -209,6 +217,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                      val <- substr(f, nchar(file)+2, nchar(f)-4)
                      if (val %in% .saveFitEnv$rowDF) {
                        ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1)\n")
+                       if (val == "parFixedDf") {
+                         ret <- paste0(ret,
+                                       "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`)\n")
+                       }
                      } else if (val == "iniDf0"){
                        ret <- paste0("env$iniDf0 <- read.csv('", f, "',check.names=FALSE)\n",
                                      "env$iniDf0$ntheta <- as.integer(env$iniDf0$ntheta)\n",
