@@ -1,5 +1,5 @@
 .saveFitEnv <- new.env(parent = emptyenv())
-.saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf")
+.saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed")
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData", "iniDf0")
 
 .minfo <- function (text, ..., .envir = parent.frame()) {
@@ -72,13 +72,6 @@ saveFitItem.data.frame <- function(item, name, file) {
   if (inherits(v, "try-error")) {
     return(FALSE) # nocov
   }
-  TRUE
-}
-
-#' @rdname saveFitItem
-#' @export
-saveFitItem.nlmixr2ParFixed <- function(item, name, file) {
-  saveRDS(item, paste0(file,"-", name, ".rds"))
   TRUE
 }
 
@@ -215,7 +208,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                    }
                    if (grepl(".csv$", f)) {
                      val <- substr(f, nchar(file)+2, nchar(f)-4)
-                     if (val %in% .saveFitEnv$rowDF) {
+                     if (val == "parFixed") {
+                       ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1, colClasses=\"character\")\nclass(env$`", val, "`) <- c('nlmixr2ParFixed', 'data.frame')\n")
+                     } else if (val == "objDf") {
+                       ret <- paste0("env$objDf <- read.csv('", f, "',check.names=FALSE, row.names=1)\n",
+                                     "env$objDf$OBJF <- as.double(env$objDf$OBJF)\n",
+                                     "env$objDf$AIC <- as.double(env$objDf$AIC)\n",
+                                     "env$objDf$BIC <- as.double(env$objDf$BIC)\n",
+                                     "env$objDf$`Log-likelihood` <- as.double(env$objDf$`Log-likelihood`)\n"
+                                     )
+                     } else if (val %in% .saveFitEnv$rowDF) {
                        ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1)\n")
                        if (val == "parFixedDf") {
                          ret <- paste0(ret,
@@ -265,6 +267,14 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "}\n",
                     "if (!is.null(env$parHistData)) {\n",
                     "  env$parHistData$type <- factor(env$parHistData$type, levels=c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\"))\n",
+                    "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
+                    "}\n",
+                    "if (exists('saemControl', env) && is.numeric(env$saemControl$mcmc$niter[1])) {\n",
+                    "    .parHistData <- env$parHistData\n",
+                    "    .cls <- class(.parHistData)\n",
+                    "    attr(.cls, 'niter') <- env$saemControl$mcmc$niter[1]\n",
+                    "    class(.parHistData) <- .cls\n",
+                    "    env$parHistData <- .parHistData\n",
                     "}\n",
                     "if (any(.class == 'nlmixr2FitCore')) {\n",
                     "  ret <- read.csv('", paste0(file,".csv"), "')\n",
@@ -296,6 +306,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
 #' @rdname saveFit
 #' @export
 saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE) {
+  if (missing(file)) {
+    file <- as.character(substitute(fit))
+  }
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
   saveFit.nlmixr2FitCore(fit, file, zip=TRUE)
 }

@@ -4,7 +4,6 @@
 \alias{saveFitItem}
 \alias{saveFitItem.rxUi}
 \alias{saveFitItem.data.frame}
-\alias{saveFitItem.nlmixr2ParFixed}
 \alias{saveFitItem.nlmixr2estSessionInfo}
 \alias{saveFitItem.default}
 \alias{saveFitItem.saemFit}
@@ -16,8 +15,6 @@ saveFitItem(item, name, file)
 \method{saveFitItem}{rxUi}(item, name, file)
 
 \method{saveFitItem}{data.frame}(item, name, file)
-
-\method{saveFitItem}{nlmixr2ParFixed}(item, name, file)
 
 \method{saveFitItem}{nlmixr2estSessionInfo}(item, name, file)
 
