@@ -42,7 +42,19 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: |
+            any::rcmdcheck
+            nlmixr2/lotri
+            nlmixr2/rxode2ll
+            nlmixr2/rxode2
+            nlmixr2/nlmixr2est
+            nlmixr2/nlmixr2extra
+            nlmixr2/nlmixr2plot
+            nlmixr2/nlmixr2
+            nlmixr2/monolix2rx
+            nlmixr2/nonmem2rx
+            nlmixr2/babelmixr2
+            ggPMXdevelopment/ggPMX
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
