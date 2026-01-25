@@ -1,0 +1,83 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# nlmixr2save
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of nlmixr2save is to save a nlmixr2 fit in file formats that
+can be read outside R, avoiding `.rds` or other formats as much as
+possible.
+
+## Installation
+
+You can install the development version of nlmixr2save from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("remotes")
+remotes::install_github("nlmixr2/nlmixr2save")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r example}
+library(nlmixr2)
+library(nlmixr2save) # eventually nlmixr2 will include this if available
+one.cmt <- function() {
+  ini({
+    ## You may label each parameter with a comment
+    tka <- 0.45 # Log Ka
+    tcl <- log(c(0, 2.7, 100)) # Log Cl
+    ## This works with interactive models
+    ## You may also label the preceding line with label("label text")
+    tv <- 3.45; label("log V")
+    ## the label("Label name") works with all models
+    eta.ka ~ 0.6
+    eta.cl ~ 0.3
+    eta.v ~ 0.1
+    add.sd <- 0.7
+  })
+  model({
+    ka <- exp(tka + eta.ka)
+    cl <- exp(tcl + eta.cl)
+    v <- exp(tv + eta.v)
+    linCmt() ~ add(add.sd)
+  })
+}
+
+fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
+                                control=list(print=0, compress=FALSE)))
+
+saveFit(fitF)
+```
+
+This creates a ".zip" file that includes a "fitF.R" file.  This fit
+builds the fit from (mostly) csv and R source files.
+
+The reason for this extra package saving models:
+
+- The model properties and results can be examined outside of R
+
+- This model can be saved without worrying how data are serialized and/or compressed
+
+- This saved model version **should** be independent of the version of
+  `rxode2` and `nlmixr2`, whereas other methods of saving are
+  dependent on the version of nlmixr2/rxode2
+
+In the future, this could be used in conjunction with `vroom`, `altrep` and other
+similar tools to partially load fit without loading the corresponding datasets.

@@ -1,0 +1,168 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# nlmixr2save
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of nlmixr2save is to save a nlmixr2 fit in file formats that
+can be read outside R, avoiding `.rds` or other formats as much as
+possible.
+
+## Installation
+
+You can install the development version of nlmixr2save from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("remotes")
+remotes::install_github("nlmixr2/nlmixr2save")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+``` r
+library(nlmixr2)
+#> ── Attaching packages ───────────────────────────────────────── nlmixr2 5.0.0 ──
+#> ✔ lotri         1.0.2          ✔ monolix2rx    0.0.6     
+#> ✔ nlmixr2data   2.0.9          ✔ nlmixr2lib    0.3.2     
+#> ✔ nlmixr2est    5.0.2.9000     ✔ nlmixr2rpt    0.2.2     
+#> ✔ nlmixr2extra  5.0.0          ✔ nonmem2rx     0.1.9     
+#> ✔ nlmixr2plot   5.0.0          ✔ posologyr     1.2.8     
+#> ✔ rxode2        5.0.1.9000     ✔ shinyMixR     0.5.3     
+#> ✔ babelmixr2    0.1.11         ✔ xpose.nlmixr2 0.4.1     
+#> ✔ ggPMX         1.3.2
+#> ── Optional Packages Loaded/Ignored ─────────────────────────── nlmixr2 5.0.0 ──
+#> ✔ babelmixr2        ✔ nonmem2rx    
+#> ✔ ggPMX             ✔ posologyr    
+#> ✔ monolix2rx        ✔ shinyMixR    
+#> ✔ nlmixr2lib        ✔ xpose.nlmixr2
+#> ✔ nlmixr2rpt
+#> ── Conflicts ───────────────────────────────────────────── nlmixr2conflicts() ──
+#> ✖ rxode2::boxCox()     masks nlmixr2est::boxCox()
+#> ✖ rxode2::yeoJohnson() masks nlmixr2est::yeoJohnson()
+library(nlmixr2save) # eventually nlmixr2 will include this if available
+one.cmt <- function() {
+  ini({
+    ## You may label each parameter with a comment
+    tka <- 0.45 # Log Ka
+    tcl <- log(c(0, 2.7, 100)) # Log Cl
+    ## This works with interactive models
+    ## You may also label the preceding line with label("label text")
+    tv <- 3.45; label("log V")
+    ## the label("Label name") works with all models
+    eta.ka ~ 0.6
+    eta.cl ~ 0.3
+    eta.v ~ 0.1
+    add.sd <- 0.7
+  })
+  model({
+    ka <- exp(tka + eta.ka)
+    cl <- exp(tcl + eta.cl)
+    v <- exp(tv + eta.v)
+    linCmt() ~ add(add.sd)
+  })
+}
+
+fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
+                                control=list(print=0, compress=FALSE)))
+#> calculating covariance matrix
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> done
+
+saveFit(fitF)
+#> ℹ saving fit item: .rownum
+#> ℹ saving fit item: AIC
+#> ℹ saving fit item: aqHi
+#> ℹ saving fit item: aqLow
+#> ℹ saving fit item: aqn
+#> ℹ saving fit item: BIC
+#> ℹ saving fit item: censInformation
+#> ℹ saving fit item: cholR
+#> ℹ saving fit item: cholS
+#> ℹ saving fit item: conditionNumberCor
+#> ℹ saving fit item: conditionNumberCov
+#> ℹ saving fit item: convergence
+#> ℹ saving fit item: cov
+#> ℹ saving fit item: covLvl
+#> ℹ saving fit item: covMethod
+#> ℹ saving fit item: covR
+#> ℹ saving fit item: covRS
+#> ℹ saving fit item: covS
+#> ℹ saving fit item: eigenCor
+#> ℹ saving fit item: eigenCov
+#> ℹ saving fit item: eigenVecCor
+#> ℹ saving fit item: eigenVecCov
+#> ℹ saving fit item: est
+#> ℹ saving fit item: etaObf
+#> ℹ saving fit item: extra
+#> ℹ saving fit item: fixef
+#> ℹ saving fit item: foceiControl0
+#> ℹ saving fit item: foceiModel
+#> ℹ saving fit item: fullCor
+#> ℹ saving fit item: iniDf0
+#> ℹ saving fit item: llikObs
+#> ℹ saving fit item: logLik
+#> ℹ saving fit item: message
+#> ℹ saving fit item: method
+#> ℹ saving fit item: mixIdx
+#> ℹ saving fit item: nAGQ
+#> ℹ saving fit item: nEstOmega
+#> ℹ saving fit item: nobs
+#> ℹ saving fit item: nsub
+#> ℹ saving fit item: objDf
+#> ℹ saving fit item: objective
+#> ℹ saving fit item: ofvType
+#> ℹ saving fit item: omega
+#> ℹ saving fit item: optReturn
+#> ℹ saving fit item: origData
+#> ℹ saving fit item: parFixed
+#> ℹ saving fit item: parFixedDf
+#> ℹ saving fit item: parHistData
+#> ℹ saving fit item: phiC
+#> ℹ saving fit item: phiH
+#> ℹ saving fit item: qfirst
+#> ℹ saving fit item: qw
+#> ℹ saving fit item: qx
+#> ℹ saving fit item: R
+#> ℹ saving fit item: R.0
+#> ℹ saving fit item: R.E
+#> ℹ saving fit item: R.pd
+#> ℹ saving fit item: ranef
+#> ℹ saving fit item: Rinv
+#> ℹ saving fit item: runInfo
+#> ℹ saving fit item: S
+#> ℹ saving fit item: S.E
+#> ℹ saving fit item: S.pd
+#> ℹ saving fit item: S0
+#> ℹ saving fit item: scaleInfo
+#> ℹ saving fit item: sessioninfo
+#> ℹ saving fit item: shrink
+#> ℹ saving fit item: Sper
+#> ℹ saving fit item: table
+#> ℹ saving fit item: time
+#> ℹ saving fit item: ui
+#> ℹ zipping fit files
+#> ℹ removing unzipped fit files
+```
+
+This creates a “.zip” file that includes a “fitF.R” file. This fit
+builds the fit from (mostly) csv and R source files.
+
+The reason for this extra package saving models:
+
+- The model properties and results can be examined outside of R
+
+- This model can be saved without worrying how data are serialized
+  and/or compressed
+
+- This saved model version **should** be independent of the version of
+  `rxode2` and `nlmixr2`, whereas other methods of saving are dependent
+  on the version of nlmixr2/rxode2
+
+In the future, this could be used in conjunction with `vroom`, `altrep`
+and other similar tools to partially load fit without loading the
+corresponding datasets.
