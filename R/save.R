@@ -170,7 +170,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
         .expr <- as.call(.expr)
         .str <- c(.str, paste(deparse(.expr), collapse="\n"))
       } else if (.i %in% c("phiC", "phiH")) {
-        .lines <- deparse(as.call(c(quote(`list`), lapply(seq_along(.obj), function(i) { rxUiDeparse(.obj[[i]], "x")[[3]]}))))
+        .lines <- deparse(as.call(c(quote(`list`), lapply(seq_along(.obj), function(i) {
+          rxode2::rxUiDeparse(.obj[[i]], "x")[[3]]
+        }))))
         .lines[1] <- paste0(.i, " <- ", .lines[1])
         if (!is.null(names(.obj))) {
           .lines <- c(.lines,

@@ -109,8 +109,8 @@ if (requireNamespace("withr", quietly = TRUE)) {
           next
         }
         if (any(grepl("Control$", class(fitF$env[[n]])))) {
-          f1 <- rxUiDeparse(fitF$env[[n]], "ctl")
-          f2 <- rxUiDeparse(fit2F$env[[n]], "ctl")
+          f1 <- rxode2::rxUiDeparse(fitF$env[[n]], "ctl")
+          f2 <- rxode2::rxUiDeparse(fit2F$env[[n]], "ctl")
           test_that(paste0("fitF env Control item", n, " match after load (using `rxUiDeparse()`)"), {
             expect_equal(f1, f2)
           })
@@ -156,7 +156,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
                                       control=list(print=0, compress=FALSE)))
 
       test_that("saving fits do not generate errors", {
-        expect_error(suppressMessages(saveFit(fitS, "fitS")), NA)
+        expect_error(suppressMessages(saveFit(fitS)), NA)
         expect_true(file.exists("fitS.zip"))
         expect_error(suppressMessages(saveFit(fitF, "fitF")), NA)
         expect_true(file.exists("fitF.zip"))
