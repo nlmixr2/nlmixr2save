@@ -16,6 +16,8 @@ knitr::opts_chunk$set(
 # nlmixr2save
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/nlmixr2/nlmixr2save/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nlmixr2/nlmixr2save/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/nlmixr2/nlmixr2save/graph/badge.svg)](https://app.codecov.io/gh/nlmixr2/nlmixr2save)
 <!-- badges: end -->
 
 The goal of nlmixr2save is to save a nlmixr2 fit in file formats that
