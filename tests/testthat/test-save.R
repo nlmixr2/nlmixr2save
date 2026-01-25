@@ -87,6 +87,41 @@ if (requireNamespace("withr", quietly = TRUE)) {
   if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         requireNamespace("nlmixr2data", quietly = TRUE)) {
 
+    fitEquals <- function(fitF, fit2F) {
+      fitName <- as.character(substitute(fitF))
+      for (n in ls(fitF$env, all.names=TRUE)) {
+        if (n == "ui") {
+          for (m in names(fitF$ui)) {
+            if (m %in% c("mv0", "mvL")) {
+              test_that(paste0(fitName, "$env$ui$", m), {
+                expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
+                             rxode2::rxNorm(fit2F$ui[[m]]))
+              })
+            } else {
+              test_that(paste0(fitName, "$env$ui$", m), {
+                expect_equal(fitF$ui[[m]], fit2F$ui[[m]])
+              })
+            }
+          }
+          next
+        }
+        if (n %in% c("foceiModel", "saemModel", "saem0")) {
+          next
+        }
+        if (any(grepl("Control$", class(fitF$env[[n]])))) {
+          f1 <- rxUiDeparse(fitF$env[[n]], "ctl")
+          f2 <- rxUiDeparse(fit2F$env[[n]], "ctl")
+          test_that(paste0("fitF env Control item", n, " match after load (using `rxUiDeparse()`)"), {
+            expect_equal(f1, f2)
+          })
+          next
+        }
+        test_that(paste0(fitName, " env item ", n, " matches after load"), {
+          expect_equal(fitF$env[[n]], fit2F$env[[n]])
+        })
+      }
+    }
+
     withr::with_tempdir({
 
       library(nlmixr2est)
@@ -128,38 +163,10 @@ if (requireNamespace("withr", quietly = TRUE)) {
       })
 
       fit2F <- suppressMessages(loadFit("fitF"))
+      fit2S <- suppressMessages(loadFit("fitS"))
 
-      for (n in ls(fitF$env, all.names=TRUE)) {
-        if (n == "ui") {
-          for (m in names(fitF$ui)) {
-            if (m %in% c("mv0", "mvL")) {
-              test_that(paste0("fitF $env$ui$", m), {
-                expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
-                             rxode2::rxNorm(fit2F$ui[[m]]))
-              })
-            } else {
-              test_that(paste0("fitF $env$ui$", m), {
-                expect_equal(fitF$ui[[m]], fit2F$ui[[m]])
-              })
-            }
-          }
-          next
-        }
-        if (n == "foceiModel") {
-          next
-        }
-        if (any(grepl("Control$", class(fitF$env[[n]])))) {
-          f1 <- rxUiDeparse(fitF$env[[n]], "ctl")
-          f2 <- rxUiDeparse(fit2F$env[[n]], "ctl")
-          test_that(paste0("fitF env Control item", n, " match after load (using `rxUiDeparse()`)"), {
-            expect_equal(f1, f2)
-          })
-          next
-        }
-        test_that(paste0("fitF env item ", n, " matches after load"), {
-          expect_equal(fitF$env[[n]], fit2F$env[[n]])
-        })
-      }
+      fitEquals(fitF, fit2F)
+      fitEquals(fitS, fit2S)
 
       ## test_that("saving and laoding a fit from nlmixr2 works", {
 
