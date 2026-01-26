@@ -55,6 +55,8 @@ jobs:
             nlmixr2/nonmem2rx
             nlmixr2/babelmixr2
             ggPMXdevelopment/ggPMX
+            lixoftConnectors=?ignore
+            qs=?ignore
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
