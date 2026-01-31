@@ -117,7 +117,15 @@ if (requireNamespace("withr", quietly = TRUE)) {
           next
         }
         test_that(paste0(fitName, " env item ", n, " matches after load"), {
-          expect_equal(fitF$env[[n]], fit2F$env[[n]])
+          if (is.raw(fitF$env[[n]])) {
+            # the saved fit is never compressed interally
+            expect_equal(eval(str2lang(paste0("fitF$", n))),
+                         fit2F[[n]])
+          } else {
+            expect_equal(fitF$env[[n]],
+                         fit2F$env[[n]])
+          }
+
         })
       }
     }
@@ -155,11 +163,48 @@ if (requireNamespace("withr", quietly = TRUE)) {
       fitS <- suppressMessages(nlmixr(one.cmt, theo_sd, est="saem",
                                       control=list(print=0, compress=FALSE)))
 
+      # now try iov
+      theo_iov <- nlmixr2data::theo_md
+      theo_iov$occ <- 1
+      theo_iov$occ[theo_iov$TIME >= 144] <- 2
+
+      one.cmt.iov <- function() {
+        ini({
+          tka <- 0.45 # Log Ka
+          tcl <- log(c(0, 2.7, 100)) # Log Cl
+          tv <- 3.45; label("log V")
+          eta.ka ~ 0.6
+          eta.cl ~ 0.3
+          eta.v ~ 0.1
+          iov.cl ~ 0.1 | occ
+          add.sd <- 0.7
+        })
+        model({
+          ka <- exp(tka + eta.ka)
+          cl <- exp(tcl + eta.cl + iov.cl)
+          v <- exp(tv + eta.v)
+          linCmt() ~ add(add.sd)
+        })
+      }
+
+      fitIF <- suppressMessages(nlmixr(one.cmt.iov, theo_iov, est="focei",
+                                       control=list(print=0)))
+
+      fitIS <- suppressMessages(nlmixr(one.cmt.iov, theo_iov, est="saem",
+                                       control=list(print=0)))
+
       test_that("saving fits do not generate errors", {
         expect_error(suppressMessages(saveFit(fitS)), NA)
         expect_true(file.exists("fitS.zip"))
+
         expect_error(suppressMessages(saveFit(fitF, "fitF")), NA)
         expect_true(file.exists("fitF.zip"))
+
+        expect_error(suppressMessages(saveFit(fitIF)), NA)
+        expect_true(file.exists("fitIF.zip"))
+
+        expect_error(suppressMessages(saveFit(fitIS)), NA)
+        expect_true(file.exists("fitIS.zip"))
       })
 
       fit2F <- suppressMessages(loadFit("fitF"))
@@ -167,6 +212,12 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)
+
+      fit2IF <- loadFit("fitIF")
+      fitEquals(fitIF, fit2IF)
+
+      fit2IS <- loadFit("fitIS")
+      fitEquals(fitIS, fit2IS)
 
       ## test_that("saving and laoding a fit from nlmixr2 works", {
 

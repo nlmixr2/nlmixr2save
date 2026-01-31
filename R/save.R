@@ -180,8 +180,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
         }
         writeLines(.lines, con = paste0(file,"-", .i, ".R"))
       } else {
-        warning("cannot save object of class ", paste(class(.obj), collapse=", "),
-                " for item ", .i, "; skipping", call.=FALSE)
+        warning("could not determine how to save object of class ", paste(class(.obj), collapse=", "),
+                " for item ", .i, "; as a text-file, reverting to .rds format", call.=FALSE)
+        saveRDS(.obj, paste0(file, "-", .i, ".rds"))
       }
     }
   }
