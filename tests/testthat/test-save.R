@@ -108,6 +108,65 @@ if (requireNamespace("withr", quietly = TRUE)) {
         if (n %in% c("foceiModel", "saemModel", "saem0")) {
           next
         }
+        if (n == "omega") {
+          test_that(paste0(fitName, " env item ", n, " matches after load"), {
+            .omega <- fitF$env[[n]]
+            .dn <- dimnames(.omega)
+            attr(.omega, ".match.hash") <- NULL
+            attr(.dn, ".match.hash") <- NULL
+            attr(.dn[[1]], ".match.hash") <- NULL
+            attr(.dn[[2]], ".match.hash") <- NULL
+            dimnames(.omega) <- .dn
+
+            .omega2 <- fit2F$env[[n]]
+            .dn <- dimnames(.omega2)
+            attr(.omega2, ".match.hash") <- NULL
+            attr(.dn, ".match.hash") <- NULL
+            attr(.dn[[1]], ".match.hash") <- NULL
+            attr(.dn[[2]], ".match.hash") <- NULL
+            dimnames(.omega2) <- .dn
+
+            expect_equal(.omega, .omega2)
+          })
+          next
+        }
+        if (n %in% c("phiH", "phiC")) {
+          test_that(paste0(fitName, " env item ", n, " matches after load"), {
+            .phiHF <- fitF$env[[n]]
+            .n <- names(.phiHF)
+            .phiHF <- lapply(seq_along(.phiHF), function(i) {
+              if (is.matrix(.phiHF[[i]])) {
+                .dn <- dimnames(.phiHF[[i]])
+                attr(.phiHF[[i]], ".match.hash") <- NULL
+                attr(.dn, ".match.hash") <- NULL
+                attr(.dn[[1]], ".match.hash") <- NULL
+                attr(.dn[[2]], ".match.hash") <- NULL
+                dimnames(.phiHF[[i]]) <- .dn
+              }
+              .phiHF[[i]]
+            })
+            names(.phiHF) <- .n
+
+            .phiH2F <- fit2F$env[[n]]
+
+            .n <- names(.phiH2F)
+            .phiH2F <- lapply(seq_along(.phiH2F), function(i) {
+              if (is.matrix(.phiH2F[[i]])) {
+                .dn <- dimnames(.phiH2F[[i]])
+                attr(.phiH2F[[i]], ".match.hash") <- NULL
+                attr(.dn, ".match.hash") <- NULL
+                attr(.dn[[1]], ".match.hash") <- NULL
+                attr(.dn[[2]], ".match.hash") <- NULL
+
+                dimnames(.phiH2F[[i]]) <- .dn
+              }
+              .phiH2F[[i]]
+            })
+            names(.phiH2F) <- .n
+            expect_equal(.phiHF, .phiH2F)
+          })
+          next
+        }
         if (any(grepl("Control$", class(fitF$env[[n]])))) {
           f1 <- rxode2::rxUiDeparse(fitF$env[[n]], "ctl")
           f2 <- rxode2::rxUiDeparse(fit2F$env[[n]], "ctl")
