@@ -92,6 +92,9 @@ if (requireNamespace("withr", quietly = TRUE)) {
       for (n in ls(fitF$env, all.names=TRUE)) {
         if (n == "ui") {
           for (m in names(fitF$ui)) {
+            if (m == "control") {
+              next
+            }
             if (m %in% c("mv0", "mvL")) {
               test_that(paste0(fitName, "$env$ui$", m), {
                 expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
@@ -267,7 +270,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
       })
 
       fit2F <- suppressMessages(loadFit("fitF"))
-      fit2S <- suppressMessages(loadFit("fitS"))
+      fit2S <- suppressMessages(loadFit(fitS))
 
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)

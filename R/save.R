@@ -331,6 +331,14 @@ saveFit.default <- function(fit, file, zip=TRUE) {
 #'
 #' @export
 loadFit <- function(file) {
+
+  .file <- as.character(substitute(file))
+  .tmp <- try(force(file), silent=TRUE)
+  if (is.character(.tmp) && length(.tmp) == 1) {
+    file <- .tmp
+  } else {
+    file <- .file
+  }
   .zip <- paste0(file, ".zip")
   .r <-  paste0(file, ".R")
   .didUnzip <- FALSE
