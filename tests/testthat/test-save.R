@@ -281,38 +281,6 @@ if (requireNamespace("withr", quietly = TRUE)) {
       fit2IS <- loadFit("fitIS")
       fitEquals(fitIS, fit2IS)
 
-      ## test_that("saving and laoding a fit from nlmixr2 works", {
-
-      ##   expect_true(file.exists("fitF.zip"))
-
-      ##   fit2F <- loadFit("fitF")
-
-      ##   expect_true(inherits(fit2F, "nlmixr2FitCore"))
-      ##   expect_equal(coef(fitF), coef(fit2F))
-
-      ##   expect_equal(fitF$parFixedDf, fit2F$parFixedDf)
-
-      ##   expect_equal(fitF$ranef, fit2F$ranef)
-
-
-
-      ##   expect_equal(fitF, fit2F)
-
-      ##   suppressMessages(saveFit(fitS, "fitS"))
-      ##   expect_true(file.exists("fitS.zip"))
-
-      ##   fit2S <- loadFit("fitS")
-
-      ##   expect_true(inherits(fit2S, "nlmixr2FitCore"))
-      ##   expect_equal(coef(fitS), coef(fit2S))
-      ##   expect_equal(fitS$parFixedDf, fit2S$parFixedDf)
-      ##   expect_equal(fitS$ranef, fit2S$ranef)
-
-      ## expect_equal(fitS, fit2S)
-
-
-      ## })
-
     })
   }
 }
