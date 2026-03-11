@@ -102,8 +102,12 @@
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>    <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2</a></span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span>, est<span class="op">=</span><span class="st">"focei"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>    <span class="fu">saveFit</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
-<span class="r-in"><span>    <span class="va">fit2</span> <span class="op">&lt;-</span> <span class="fu"><a href="loadFit.html">loadFit</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="fu">saveFit</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="co"># saved to fit.zip</span></span></span>
+<span class="r-in"><span>    <span class="va">fit2</span> <span class="op">&lt;-</span> <span class="fu"><a href="loadFit.html">loadFit</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="co"># load fit.zip</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"fit.zip"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>       <span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="st">"fit.zip"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">fit2</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">}</span></span></span>
@@ -238,8 +242,8 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">── Time (sec </span><span style="color: #0000BB; font-weight: bold;">$time</span><span style="font-weight: bold;">): ──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            setup optimize covariance table compress   other</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> elapsed 0.014688  0.36899   0.368992 0.061    0.001 4.95833</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           setup optimize covariance table compress    other</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> elapsed 0.01674 0.363616   0.363618 0.062    0.001 5.221026</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">── Population Parameters (</span><span style="color: #0000BB; font-weight: bold;">$parFixed</span><span style="font-weight: bold;"> or </span><span style="color: #0000BB; font-weight: bold;">$parFixedDf</span><span style="font-weight: bold;">): ──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

@@ -68,8 +68,12 @@ Matthew L. Fidler
 
     fit <- nlmixr2(one.cmt, theo_sd, est="focei")
 
-    saveFit(fit)
-    fit2 <- loadFit(fit)
+    saveFit(fit) # saved to fit.zip
+    fit2 <- loadFit(fit) # load fit.zip
+
+    if (file.exists("fit.zip")) {
+       unlink("fit.zip")
+    }
 
     print(fit2)
   }
@@ -204,8 +208,8 @@ Matthew L. Fidler
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>            setup optimize covariance table compress   other
-#> elapsed 0.014688  0.36899   0.368992 0.061    0.001 4.95833
+#>           setup optimize covariance table compress    other
+#> elapsed 0.01674 0.363616   0.363618 0.062    0.001 5.221026
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
