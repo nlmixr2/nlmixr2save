@@ -55,8 +55,12 @@ Save a fitted model object to a series of files
 
     fit <- nlmixr2(one.cmt, theo_sd, est="focei")
 
-    saveFit(fit)
-    fit2 <- loadFit(fit)
+    saveFit(fit) # saved to fit.zip
+    fit2 <- loadFit(fit) # load fit.zip
+
+    if (file.exists("fit.zip")) {
+       unlink("fit.zip")
+    }
 
     print(fit2)
   }

@@ -176,6 +176,10 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #'     saveFit(fit) # saved to fit.zip
 #'     fit2 <- loadFit(fit) # load fit.zip
 #'
+#'     if (file.exists("fit.zip")) {
+#'        unlink("fit.zip")
+#'     }
+#'
 #'     print(fit2)
 #'   }
 #' }
