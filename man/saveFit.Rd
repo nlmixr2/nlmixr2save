@@ -30,39 +30,39 @@ Save a fitted model object to a series of files
 }
 \examples{
 \donttest{
-  if (requireNamespace("nlmixr2est", quietly=TRUE)) {
+  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
     library(nlmixr2est)
     library(nlmixr2data)
+    withr::with_tempdir({
+      one.cmt <- function() {
+        ini({
+          tka <- 0.45
+          tcl <- log(c(0, 2.7, 100))
+          tv <- 3.45
+          eta.ka ~ 0.6
+          eta.cl ~ 0.3
+          eta.v ~ 0.1
+          add.sd <- 0.7
+        })
+        model({
+          ka <- exp(tka + eta.ka)
+          cl <- exp(tcl + eta.cl)
+          v  <- exp(tv + eta.v)
+          linCmt() ~ add(add.sd)
+        })
+      }
 
-    one.cmt <- function() {
-                 ini({
-                      tka <- 0.45
-                      tcl <- log(c(0, 2.7, 100))
-                      tv <- 3.45
-                      eta.ka ~ 0.6
-                      eta.cl ~ 0.3
-                      eta.v ~ 0.1
-                      add.sd <- 0.7
-                })
-                model({
-                  ka <- exp(tka + eta.ka)
-                  cl <- exp(tcl + eta.cl)
-                  v <- exp(tv + eta.v)
-                  linCmt() ~ add(add.sd)
-                })
-    }
+      fit <- nlmixr2(one.cmt, theo_sd, est="focei")
 
+      saveFit(fit) # saved to fit.zip
+      fit2 <- loadFit(fit) # load fit.zip
 
-    fit <- nlmixr2(one.cmt, theo_sd, est="focei")
+      if (file.exists("fit.zip")) {
+         unlink("fit.zip")
+      }
 
-    saveFit(fit) # saved to fit.zip
-    fit2 <- loadFit(fit) # load fit.zip
-
-    if (file.exists("fit.zip")) {
-       unlink("fit.zip")
-    }
-
-    print(fit2)
+      print(fit2)
+    })
   }
 }
 }
