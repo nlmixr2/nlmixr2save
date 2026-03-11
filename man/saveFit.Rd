@@ -28,6 +28,40 @@ nothing, called for side effects
 \description{
 Save a fitted model object to a series of files
 }
+\examples{
+\donttest{
+  if (requireNamespace("nlmixr2est", quietly=TRUE)) {
+    library(nlmixr2est)
+    library(nlmixr2data)
+
+    one.cmt <- function() {
+                 ini({
+                      tka <- 0.45
+                      tcl <- log(c(0, 2.7, 100))
+                      tv <- 3.45
+                      eta.ka ~ 0.6
+                      eta.cl ~ 0.3
+                      eta.v ~ 0.1
+                      add.sd <- 0.7
+                })
+                model({
+                  ka <- exp(tka + eta.ka)
+                  cl <- exp(tcl + eta.cl)
+                  v <- exp(tv + eta.v)
+                  linCmt() ~ add(add.sd)
+                })
+    }
+
+
+    fit <- nlmixr2(one.cmt, theo_sd, est="focei")
+
+    saveFit(fit)
+    fit2 <- loadFit(fit)
+
+    print(fit2)
+  }
+}
+}
 \author{
 Matthew L. Fidler
 }
