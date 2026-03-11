@@ -179,10 +179,12 @@ if (requireNamespace("withr", quietly = TRUE)) {
           next
         }
         test_that(paste0(fitName, " env item ", n, " matches after load"), {
-          if (is.raw(fitF$env[[n]])) {
-            # the saved fit is never compressed interally
-            expect_equal(eval(str2lang(paste0("fitF$", n))),
-                         fit2F[[n]])
+          if (is.raw(fitF$env[[n]]) ||
+                is.raw(fit2F$env[[n]])) {
+            # the saved fit is never compressed internally
+            .fit1 <- eval(str2lang(paste0("fitF$", n)))
+            .fit2 <- eval(str2lang(paste0("fit2F$", n)))
+            expect_equal(.fit1, .fit2)
           } else {
             expect_equal(fitF$env[[n]],
                          fit2F$env[[n]])
