@@ -309,7 +309,98 @@ if (requireNamespace("withr", quietly = TRUE)) {
       fit2NL <- loadFit("fitNL")
       fitEquals(fitNL, fit2NL)
 
+      fitNL2 <- suppressMessages(nlmixr(one.cmt.nlm, theo_sd, est="nlm",
+                                        control=list(print=0, compress=FALSE,
+                                                     calcTables=FALSE)))
 
+      test_that("saving fits do not generate errors", {
+        expect_error(suppressMessages(saveFit(fitNL2)), NA)
+        expect_true(file.exists("fitNL2.zip"))
+      })
+
+      fit2NL2 <- loadFit("fitNL2")
+      fitEquals(fitNL2, fit2NL2)
+
+
+
+
+
+    })
+
+    test_that("test assignment", {
+
+      suppressMessages(withr::with_tempdir({
+
+        library(nlmixr2est)
+        library(nlmixr2data)
+
+        one.cmt <- function() {
+          ini({
+            ## You may label each parameter with a comment
+            tka <- 0.45 # Log Ka
+            tcl <- log(c(0, 2.7, 100)) # Log Cl
+            ## This works with interactive models
+            ## You may also label the preceding line with label("label text")
+            tv <- 3.45; label("log V")
+            ## the label("Label name") works with all models
+            eta.ka ~ 0.6
+            eta.cl ~ 0.3
+            eta.v ~ 0.1
+            add.sd <- 0.7
+          })
+          model({
+            ka <- exp(tka + eta.ka)
+            cl <- exp(tcl + eta.cl)
+            v <- exp(tv + eta.v)
+            linCmt() ~ add(add.sd)
+          })
+        }
+
+        fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                       control=list(print=0, compress=FALSE))
+
+        expect_true(file.exists("fitF.zip"))
+        hash1 <- tools::md5sum("fitF.zip")
+
+        fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                       control=list(print=0, compress=FALSE))
+        expect_true(file.exists("fitF.zip"))
+        hash2 <- tools::md5sum("fitF.zip")
+
+        expect_equal(hash1, hash2)
+
+        fitF := nlmixr(one.cmt, theo_sd, est="saem",
+                       control=list(print=0, compress=FALSE))
+
+        expect_true(file.exists("fitF.zip"))
+        hash3 <- tools::md5sum("fitF.zip")
+        expect_false(identical(hash1, hash3))
+
+        # Without tables
+        fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                       control=list(print=0, compress=FALSE, calcTables=FALSE))
+
+        expect_true(file.exists("fitF.zip"))
+        hash4 <- tools::md5sum("fitF.zip")
+
+        expect_false(identical(hash1, hash4))
+
+        fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                       control=list(print=0, compress=FALSE, calcTables=FALSE))
+
+        expect_true(file.exists("fitF.zip"))
+        hash5 <- tools::md5sum("fitF.zip")
+
+        expect_equal(hash5, hash4)
+        fitF := nlmixr(one.cmt, theo_sd, est="saem",
+                       control=list(print=0, compress=FALSE))
+
+        expect_true(file.exists("fitF.zip"))
+        hash6 <- tools::md5sum("fitF.zip")
+        expect_false(identical(hash4, hash6))
+
+
+      }))
     })
   }
 }

@@ -205,6 +205,9 @@ saveFit <- function(fit, file, zip=TRUE) {
 #' @rdname saveFit
 #' @export
 saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
+  if (missing(file)) {
+    file <- as.character(substitute(fit))
+  }
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
   for (.i in .item) {
@@ -333,7 +336,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "    class(.parHistData) <- .cls\n",
                     "    env$parHistData <- .parHistData\n",
                     "}\n",
-                    "if (any(.class == 'nlmixr2FitCore')) {\n",
+                    "if (any(.class == 'nlmixr2FitData')) {\n",
                     "  ret <- read.csv('", paste0(file,".csv"), "')\n",
                     "  class(env) <- 'nlmixr2FitCoreSilent'\n",
                     "  attr(.class, '.foceiEnv') <- env\n",
