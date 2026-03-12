@@ -498,6 +498,9 @@ loadFit <- function(file) {
 #'   [.assignParent()] for getting or setting the environment used in
 #'   the `:=` operator.
 #'
+#'
+#' @usage NULL
+#'
 #' @author Matthew L. Fidler
 #'
 #' @examples
@@ -547,13 +550,11 @@ loadFit <- function(file) {
   UseMethod(":=", value)
 }
 
-#' @rdname colon-equals
 #' @export
 `:=.assign_default` <- function(x, value) {
   assign(as.character(substitute(x)), value, envir=.assignParent())
 }
 
-#' @rdname colon-equals
 #' @export
 `:=.nlmixr2FitCore` <- function(x, value) {
   # This will be evaluated
@@ -561,12 +562,10 @@ loadFit <- function(file) {
   assign(as.character(substitute(x)), value, envir=.assignParent())
 }
 
-#' @rdname colon-equals
 #' @export
 `:=.assign_nlmixr2FitData` <- `:=.nlmixr2FitCore`
 
 
-#' @rdname colon-equals
 #' @export
 `:=.assign_nlmixr2` <- function(x, value) {
   # First see if the zip file exists
@@ -628,11 +627,9 @@ loadFit <- function(file) {
   invisible(.fit)
 }
 
-#' @rdname colon-equals
 #' @export
 `:=.assign_nlmixr` <- `:=.assign_nlmixr2`
 
-#' @rdname colon-equals
 #' @export
 `:=.assign_default` <- function(x, value) {
   .x <- as.character(substitute(x))
@@ -662,7 +659,6 @@ loadFit <- function(file) {
   invisible(.value)
 }
 
-#' @rdname colon-equals
 #' @export
 `:=.default` <- function(x, value) {
   .val <- as.character(substitute(x))

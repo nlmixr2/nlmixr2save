@@ -2,31 +2,8 @@
 % Please edit documentation in R/save.R
 \name{:=}
 \alias{:=}
-\alias{:=.assign_default}
-\alias{:=.nlmixr2FitCore}
-\alias{:=.assign_nlmixr2FitData}
-\alias{:=.assign_nlmixr2}
-\alias{:=.assign_nlmixr}
-\alias{:=.default}
 \title{This assignment operator is meant to assign or load a nlmixr2 fit
 (and other objects)}
-\usage{
-`:=`(x, value)
-
-\method{:=}{assign_default}(x, value)
-
-\method{:=}{nlmixr2FitCore}(x, value)
-
-\method{:=}{assign_nlmixr2FitData}(x, value)
-
-\method{:=}{assign_nlmixr2}(x, value)
-
-\method{:=}{assign_nlmixr}(x, value)
-
-\method{:=}{assign_default}(x, value)
-
-\method{:=}{default}(x, value)
-}
 \arguments{
 \item{x}{the name of the object to assign the value to}
 
