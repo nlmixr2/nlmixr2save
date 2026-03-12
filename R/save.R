@@ -132,7 +132,7 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' @author Matthew L. Fidler
 .saveDeparse <- function(obj, name, useRxode=TRUE) {
   if (useRxode && .hasRxode2()) {
-    .expr <- rxode2::rxUiDeparse(obj, name)
+    .expr <- try(rxode2::rxUiDeparse(obj, name), silent=TRUE)
     if (inherits(.expr, "try-error")) {
       return(.saveDeparse(obj, name , useRxode=FALSE))
     } else if (is.null(.expr)) {
