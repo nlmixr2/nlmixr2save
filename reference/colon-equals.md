@@ -24,6 +24,9 @@ classes.
 # S3 method for class 'assign_nlmixr'
 `:=`(x, value)
 
+# S3 method for class 'assign_default'
+`:=`(x, value)
+
 # Default S3 method
 `:=`(x, value)
 ```

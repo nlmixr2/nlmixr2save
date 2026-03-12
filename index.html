@@ -64,7 +64,8 @@
 </h2>
 <p>This is a basic example which shows you how to solve a common problem:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://nlmixr2.org/" class="external-link">nlmixr2</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://nlmixr2.org/" class="external-link">nlmixr2</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── Attaching packages ───────────────────────────────────────── nlmixr2 5.0.0 ──</span></span>
 <span><span class="co">#&gt; ✔ lotri         1.0.3          ✔ monolix2rx    0.0.6     </span></span>
 <span><span class="co">#&gt; ✔ nlmixr2data   2.0.9          ✔ nlmixr2lib    0.3.2     </span></span>
@@ -189,35 +190,176 @@
 <span></span>
 <span><span class="co"># You can also load this with `loadFit(fitF)`</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/loadFit.html">loadFit</a></span><span class="op">(</span><span class="va">fitF</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="reference/loadFit.html">loadFit</a></span><span class="op">(</span><span class="va">fitF</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ℹ loading fit from fitF.R</span></span>
 <span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
 <span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
-<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span></code></pre></div>
+<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span>
+<span><span class="co">#&gt; ── nlmixr² FOCEi (outer: nlminb) ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;           OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)</span></span>
+<span><span class="co">#&gt; FOCEi 116.8044 373.4041 393.5838      -179.7021        68.53386        9.375135</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Time (sec $time): ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;            setup optimize covariance table compress    other</span></span>
+<span><span class="co">#&gt; elapsed 0.002021 0.252837   0.252838 0.077    0.001 2.668304</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Population Parameters ($parFixed or $parFixedDf): ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;        Parameter  Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%</span></span>
+<span><span class="co">#&gt; tka              0.463  0.195 42.2       1.59 (1.08, 2.33)     70.7      2.03% </span></span>
+<span><span class="co">#&gt; tcl               1.01 0.0751 7.42       2.75 (2.38, 3.19)     26.7      3.89% </span></span>
+<span><span class="co">#&gt; tv         log V  3.46 0.0436 1.26       31.8 (29.2, 34.7)     14.0      10.5% </span></span>
+<span><span class="co">#&gt; add.sd           0.694                               0.694                     </span></span>
+<span><span class="co">#&gt;  </span></span>
+<span><span class="co">#&gt;   Covariance Type ($covMethod): r,s</span></span>
+<span><span class="co">#&gt;   Some strong fixed parameter correlations exist ($cor) :</span></span>
+<span><span class="co">#&gt;     cor:tcl,tka  cor:tv,tka  cor:tv,tcl </span></span>
+<span><span class="co">#&gt;      0.158       0.421       0.744  </span></span>
+<span><span class="co">#&gt;  </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   No correlations in between subject variability (BSV) matrix</span></span>
+<span><span class="co">#&gt;   Full BSV covariance ($omega) or correlation ($omegaR; diagonals=SDs) </span></span>
+<span><span class="co">#&gt;   Distribution stats (mean/skewness/kurtosis/p-value) available in $shrink </span></span>
+<span><span class="co">#&gt;   Information about run found ($runInfo):</span></span>
+<span><span class="co">#&gt;    • gradient problems with initial estimate and covariance; see $scaleInfo </span></span>
+<span><span class="co">#&gt;    • ETAs were reset to zero during optimization; (Can control by foceiControl(resetEtaP=.)) </span></span>
+<span><span class="co">#&gt;    • initial ETAs were nudged; (can control by foceiControl(etaNudge=., etaNudge2=)) </span></span>
+<span><span class="co">#&gt;   Censoring ($censInformation): No censoring</span></span>
+<span><span class="co">#&gt;   Minimization message ($message):  </span></span>
+<span><span class="co">#&gt;     relative convergence (4) </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Fit Data (object is a modified tibble): ──</span></span>
+<span><span class="co">#&gt; # A tibble: 132 × 22</span></span>
+<span><span class="co">#&gt;      ID  TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES</span></span>
+<span><span class="co">#&gt;   &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1     1  0     0.74  0     0.74   1.07   0     0.74   1.07   0     0.74   1.07 </span></span>
+<span><span class="co">#&gt; 2     1  0.25  2.84  3.26 -0.419 -0.505  3.85 -1.01  -1.45   3.49 -0.652 -0.744</span></span>
+<span><span class="co">#&gt; 3     1  0.57  6.57  5.82  0.746  0.699  6.78 -0.215 -0.310  6.16  0.409  0.349</span></span>
+<span><span class="co">#&gt; # ℹ 129 more rows</span></span>
+<span><span class="co">#&gt; # ℹ 10 more variables: eta.ka &lt;dbl&gt;, eta.cl &lt;dbl&gt;, eta.v &lt;dbl&gt;, depot &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   central &lt;dbl&gt;, ka &lt;dbl&gt;, cl &lt;dbl&gt;, v &lt;dbl&gt;, tad &lt;dbl&gt;, dosenum &lt;int&gt;</span></span></code></pre></div>
+<p>This creates a “.zip” file that includes a “fitF.R” file. This fit builds the fit from (mostly) csv and R source files.</p>
+<p>The reason for this extra package saving models:</p>
+<ul>
+<li><p>The model properties and results can be examined outside of R</p></li>
+<li><p>This model can be saved without worrying how data are serialized and/or compressed</p></li>
+<li><p>This saved model version <strong>should</strong> be independent of the version of <code>rxode2</code> and <code>nlmixr2</code>, whereas other methods of saving are dependent on the version of nlmixr2/rxode2</p></li>
+</ul>
+<p>In the future, this could be used in conjunction with <code>vroom</code>, <code>altrep</code> and other similar tools to partially load fit without loading the corresponding datasets.</p>
+<p>In addition to introducing the R-independent zip file for nlmixr2 fits, this also introduced the cache assignment operator <code>:=</code> which will cache functions calls when assigning them.</p>
+<p>In the case of <code>nlmixr2</code> fits, these cached values will be the zip files described above; Otherwise, this will be a <code>rds</code> file that has the object and the md5 of the arguments in a list.</p>
+<p>If the object is NOT a function, it cannot load the cache, but may have some side effects.</p>
+<p>In the case of a nlmixr2 fit, you could assign it as follows</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
-<span><span class="co"># You can also automatically load a fit if the arguments for nlmixr2 do not change</span></span>
-<span><span class="co"># by using the := assignmt operator introduced in this package</span></span>
+<code class="sourceCode R"><span><span class="va">fit2</span> <span class="op">:=</span> <span class="va">fit</span> <span class="co"># The fit2.zip is created to save the fit</span></span></code></pre></div>
+<p>Here are some annotated examples of the cache assignment operator in pratice:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># You can also automatically load a fit if the arguments for nlmixr2 do not change</span></span>
+<span><span class="co"># by using the := cached assignment operator introduced in this package</span></span>
 <span></span>
 <span><span class="va">fitF</span> <span class="op">:=</span> <span class="fu">nlmixr</span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span>, est<span class="op">=</span><span class="st">"focei"</span>, control<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>print<span class="op">=</span><span class="fl">0</span>, compress<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ℹ loading fit from fitF.R</span></span>
+<span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
+<span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
+<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span>
+<span><span class="co">#&gt; ℹ fit in fitF.zip does not match current fit; removing and refitting</span></span>
 <span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
 <span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
 <span><span class="co">#&gt; calculating covariance matrix</span></span>
 <span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====done</span></span>
 <span><span class="co">#&gt; → Calculating residuals/tables</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: .rownum</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: AIC</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: aqHi</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: aqLow</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: aqn</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: BIC</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: censInformation</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: cholR</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: cholS</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: conditionNumberCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: conditionNumberCov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: convergence</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: cov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covLvl</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covMethod</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covR</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covRS</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covS</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenCov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenVecCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenVecCov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: est</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: etaObf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: extra</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: fixef</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: foceiControl0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: foceiModel</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: fullCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: iniDf0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: llikObs</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: logLik</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: message</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: method</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: mixIdx</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nAGQ</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nEstOmega</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nlmixr2save</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nobs</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nsub</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: objDf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: objective</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: ofvType</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: omega</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: optReturn</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: origData</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: parFixed</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: parFixedDf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: parHistData</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: phiC</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: phiH</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: qfirst</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: qw</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: qx</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: R</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: R.0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: R.E</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: R.pd</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: ranef</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: Rinv</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: runInfo</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: S</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: S.E</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: S.pd</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: S0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: scaleInfo</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: sessioninfo</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: shrink</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: Sper</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: table</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: time</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: ui</span></span>
+<span><span class="co">#&gt; ℹ zipping fit files</span></span>
+<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span>
 <span></span>
 <span><span class="co"># Now using the same arguments it loads</span></span>
 <span><span class="va">fitF</span> <span class="op">:=</span> <span class="fu">nlmixr</span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span>, est<span class="op">=</span><span class="st">"focei"</span>, control<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>print<span class="op">=</span><span class="fl">0</span>, compress<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ℹ loading fit from fitF.R</span></span>
 <span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
 <span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
-<span><span class="co">#&gt; calculating covariance matrix</span></span>
-<span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====done</span></span>
-<span><span class="co">#&gt; → Calculating residuals/tables</span></span>
-<span><span class="co">#&gt; ✔ done</span></span>
+<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span>
 <span></span>
 <span><span class="co"># But if we use different arguments, say using saem, it will rerun.</span></span>
 <span><span class="va">fitF</span> <span class="op">:=</span> <span class="fu">nlmixr</span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span>, est<span class="op">=</span><span class="st">"saem"</span>, control<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>print<span class="op">=</span><span class="fl">0</span>, compress<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ℹ loading fit from fitF.R</span></span>
+<span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
+<span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
+<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span>
+<span><span class="co">#&gt; ℹ fit in fitF.zip does not match current fit; removing and refitting</span></span>
 <span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
 <span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
 <span><span class="co">#&gt; → loading into symengine environment...</span></span>
@@ -242,15 +384,87 @@
 <span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
 <span><span class="co">#&gt; → Calculating residuals/tables</span></span>
-<span><span class="co">#&gt; ✔ done</span></span></code></pre></div>
-<p>This creates a “.zip” file that includes a “fitF.R” file. This fit builds the fit from (mostly) csv and R source files.</p>
-<p>The reason for this extra package saving models:</p>
-<ul>
-<li><p>The model properties and results can be examined outside of R</p></li>
-<li><p>This model can be saved without worrying how data are serialized and/or compressed</p></li>
-<li><p>This saved model version <strong>should</strong> be independent of the version of <code>rxode2</code> and <code>nlmixr2</code>, whereas other methods of saving are dependent on the version of nlmixr2/rxode2</p></li>
-</ul>
-<p>In the future, this could be used in conjunction with <code>vroom</code>, <code>altrep</code> and other similar tools to partially load fit without loading the corresponding datasets.</p>
+<span><span class="co">#&gt; ✔ done</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: .likTime</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: .rownum</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: adjObf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: AIC</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: aqHi</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: aqLow</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: aqn</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: BIC</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: censInformation</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: conditionNumberCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: conditionNumberCov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: cov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covLvl</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: covMethod</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenCov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenVecCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: eigenVecCov</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: est</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: etaObf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: extra</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: fixef</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: foceiControl0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: fullCor</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: iniDf0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: logLik</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: message</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: method</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: mixIdx</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nAGQ</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nEstOmega</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nlmixr2save</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nobs</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: nsub</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: objDf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: objective</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: ofvType</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: omega</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: origData</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: parFixed</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: parFixedDf</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: parHistData</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: phiM</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: qfirst</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: qw</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: qx</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: ranef</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: runInfo</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: saem0</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: saemControl</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: saemModel</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: scaleInfo</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: sessioninfo</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: shrink</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: table</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: time</span></span>
+<span><span class="co">#&gt; ℹ saving fit item: ui</span></span>
+<span><span class="co">#&gt; ℹ zipping fit files</span></span>
+<span><span class="co">#&gt; ℹ removing unzipped fit files</span></span>
+<span></span>
+<span><span class="co"># note this approach does not evaluate the first function only,</span></span>
+<span><span class="co"># everything else is evaluated so `suppressMessage(nlmixr(...))` would always run</span></span>
+<span><span class="co"># the model, never loading the cached model.</span></span>
+<span></span>
+<span><span class="co"># The cached assignment operator works for generic functions too, but saves</span></span>
+<span><span class="co"># as a rds file.  For example,</span></span>
+<span></span>
+<span><span class="va">sim</span> <span class="op">:=</span> <span class="fu">rxSolve</span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span><span class="op">)</span> <span class="co"># First simulate</span></span>
+<span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
+<span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
+<span></span>
+<span><span class="va">sim</span> <span class="op">:=</span> <span class="fu">rxSolve</span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span><span class="op">)</span> <span class="co"># Same arguments, load instead</span></span>
+<span><span class="co">#&gt; ℹ loading fit from sim.rds</span></span>
+<span><span class="co">#&gt; ℹ loading from sim.rds</span></span>
+<span></span>
+<span><span class="va">sim</span> <span class="op">:=</span> <span class="fu">rxSolve</span><span class="op">(</span><span class="va">one.cmt</span>, <span class="va">theo_sd</span>, nStud<span class="op">=</span><span class="fl">4</span><span class="op">)</span> <span class="co"># Different arguments, resimulate</span></span>
+<span><span class="co">#&gt; ℹ loading fit from sim.rds</span></span>
+<span><span class="co">#&gt; ℹ fit in sim.rds does not match argument md5, removing and re-running command</span></span>
+<span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
+<span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">
