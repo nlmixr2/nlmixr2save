@@ -30,6 +30,14 @@ SEXP nlmixr2saveParFixedDf(SEXP obj) {
     Rf_setAttrib(nv, R_NamesSymbol, Rf_getAttrib(obj, R_RowNamesSymbol));
     ret["SE"] = nv;
   }
+  if (ret.containsElementNamed("BSV(SD)")) {
+    nv = Rcpp::as<Rcpp::NumericVector>(ret["BSV(SD)"]);
+    ret["BSV(SD)"] = nv;
+  }
+  if (ret.containsElementNamed("Shrink(SD)%")) {
+    nv = Rcpp::as<Rcpp::NumericVector>(ret["Shrink(SD)%"]);
+    ret["Shrink(SD)%"] = nv;
+  }
   Rf_setAttrib(ret, R_RowNamesSymbol, Rf_getAttrib(obj, R_RowNamesSymbol));
   ret.attr("class") = "data.frame";
   return Rcpp::wrap(ret);

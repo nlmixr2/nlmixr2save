@@ -283,6 +283,33 @@ if (requireNamespace("withr", quietly = TRUE)) {
       fit2IS <- loadFit("fitIS")
       fitEquals(fitIS, fit2IS)
 
+      one.cmt.nlm <- function() {
+        ini({
+          tka <- 0.45 # Log Ka
+          tcl <- log(c(0, 2.7, 100)) # Log Cl
+          tv <- 3.45; label("log V")
+          add.sd <- 0.7
+        })
+        model({
+          ka <- exp(tka)
+          cl <- exp(tcl)
+          v <- exp(tv)
+          linCmt() ~ add(add.sd)
+        })
+      }
+
+      fitNL <- suppressMessages(nlmixr(one.cmt.nlm, theo_sd, est="nlm",
+                                       control=list(print=0, compress=FALSE)))
+
+      test_that("saving fits do not generate errors", {
+        expect_error(suppressMessages(saveFit(fitNL, "fitNL")), NA)
+        expect_true(file.exists("fitNL.zip"))
+      })
+
+      fit2NL <- loadFit("fitNL")
+      fitEquals(fitNL, fit2NL)
+
+
     })
   }
 }

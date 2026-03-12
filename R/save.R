@@ -98,6 +98,9 @@ saveFitItem.saemFit <- function(item, name, file) {
 #' @rdname saveFitItem
 #' @export
 saveFitItem.foceiModelList <- function(item, name, file) {
+  if (!.hasRxode2()) {
+    stop("cannot save foceiModelList without rxode2 installed", call.=FALSE)
+  }
   .r <- c(paste0(name, " <- list()\n"),
              vapply(seq_along(item),
                     function(i) {
@@ -127,14 +130,26 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' @return R expression of name `<-` R expression
 #' @noRd
 #' @author Matthew L. Fidler
-.saveDeparse <- function(obj, name) {
-  .expr <- rxode2::rxUiDeparse(obj, name)
-  if (inherits(.expr, "try-error")) {
-    return(NULL)
-  } else if (is.null(.expr)) {
-    return(NULL)
+.saveDeparse <- function(obj, name, useRxode=TRUE) {
+  if (useRxode && .hasRxode2()) {
+    .expr <- rxode2::rxUiDeparse(obj, name)
+    if (inherits(.expr, "try-error")) {
+      return(.saveDeparse(obj, name , useRxode=FALSE))
+    } else if (is.null(.expr)) {
+      return(NULL)
+    } else {
+      return(as.list(.expr))
+    }
   } else {
-    return(as.list(.expr))
+    .expr <- try(deparse1(obj), silent=TRUE)
+    if (inherits(.expr, "try-error")) {
+      return(NULL)
+    } else if (is.null(.expr)) {
+      return(NULL)
+    } else {
+      .expr <- str2lang(paste0(name, " <- ", .expr))
+      return(as.list(.expr))
+    }
   }
 }
 
@@ -206,7 +221,11 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
         .str <- c(.str, paste(deparse(.expr), collapse="\n"))
       } else if (.i %in% c("phiC", "phiH")) {
         .lines <- deparse(as.call(c(quote(`list`), lapply(seq_along(.obj), function(i) {
-          rxode2::rxUiDeparse(.obj[[i]], "x")[[3]]
+          .ret <- .saveDeparse(.obj[[i]], "x")
+          if (!is.null(.ret)) {
+            return(.ret[[3]])
+          }
+          NULL
         }))))
         .lines[1] <- paste0(.i, " <- ", .lines[1])
         if (!is.null(names(.obj))) {
@@ -382,7 +401,7 @@ loadFit <- function(file) {
     .didUnzip <- TRUE
   }
   if (file.exists(.r)) {
-    message("loading fit from ", .r)
+    .minfo(paste0("loading fit from ", .r))
     source(.r, local=TRUE)
     ret <- get(file)
     if (.didUnzip) {
@@ -396,4 +415,196 @@ loadFit <- function(file) {
   } else {
     stop("cannot find fit file ", file, " or ", .r, " or ", .zip, call.=FALSE)
   }
+}
+
+.assign <- new.env(parent=emptyenv())
+.assign$parent <- globalenv()
+#' This returns or assigns the environment used in the `:=` operator
+#'
+#'
+#' @param env environment to assign to; if `NULL` (the default), the current parent environment is returned.
+#'
+#' @return the environment used in the `:=` operator
+#'
+#' @export
+#'
+#' @author Matthew L. Fidler
+#'
+#' @keywords internal
+#'
+#' @examples
+#' .assignParent()
+.assignParent <- function(env=NULL) {
+  if (is.null(env)) return(.assign$parent)
+  if (is.environment(env)) {
+    .assign$parent <- env
+    return(env)
+  } else {
+    stop("env must be an environment", call.=FALSE)
+  }
+}
+
+#' This assignment operator is meant to assign or load a nlmixr2 fit
+#' (and other objects)
+#'
+#' By default it is equivalent to the standard assignment operator `<-`, but
+#' it is a S3 generic so it can have other behaviors for specific classes.
+#'
+#' For example, when used with a nlmixr2 call, say:
+#'
+#' fit := nlmixr2(one.cmt, theo_sd, est="focei")
+#'
+#' the `:=` operator will assign the result of the `nlmixr2` call to
+#' `fit`, but it will also save the fit to a file named "fit.zip" in
+#' the current working directory.
+#'
+#' If the "fit.zip" file already exists, it will be loaded instead of
+#' running the possibly expensive fitting process (as long as the md5
+#' hash of the arguments are the same).
+#'
+#' This allows for easy saving and loading of fitted models without
+#' having to explicitly call a save function.
+#'
+#' This S3 generic can be extended to other classes as needed, allowing for
+#' custom behaviors when assigning values to objects of those classes.
+#'
+#' When trying to save expensive evaluations like the output of a
+#' `nlmixr2()` fit, the s3 dispach would be to `:=.assign_nlmixr2(x,
+#' value)` or whatever function is used in the call.  This allows
+#' checking the arguments to see if there can be a cache that will be
+#' loaded.
+#'
+#' Otherwise, the default s3 method would be `:=.class` where `class`
+#' instead. Unlike the un-evaluated function dispach there is no way
+#' to check the arguments for a cache, so loading from cache is not possible.
+#'
+#' @param x the name of the object to assign the value to
+#'
+#' @param value the value to assign to the object, because R can use
+#'   non-standard evaluation, this expression may not be evaluated
+#'   when passed to the function. In the case of the `nlmixr2`
+#'   function, the expression will be evaluated only if the fit needs
+#'   to be refit (i.e. if the zip file does not exist or if the md5
+#'   hash of the arguments does not match).
+#'
+#' @return the value that was assigned to the object, invisibly. It
+#'   also has the side effect of assigning the value to the parent environment.
+#'
+#' @seealso [saveFit()] for saving fitted model objects to files,
+#'   [loadFit()] for loading fitted model objects from files, and
+#'   [.assignParent()] for getting or setting the environment used in
+#'   the `:=` operator.
+#'
+#' @author Matthew L. Fidler
+#'
+#' @examples
+#'
+#' \donttest{
+#'  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
+#'    library(nlmixr2est)
+#'   library(nlmixr2data)
+#'   withr::with_tempdir({
+#'      one.cmt <- function() {
+#'        ini({
+#'          tka <- 0.45
+#'          tcl <- log(c(0, 2.7, 100))
+#'          tv <- 3.45
+#'          eta.ka ~ 0.6
+#'          eta.cl ~ 0.3
+#'          eta.v ~ 0.1
+#'          add.sd <- 0.7
+#'        })
+#'        model({
+#'         ka <- exp(tka + eta.ka)
+#'         cl <- exp(tcl + eta.cl)
+#'         v  <- exp(tv + eta.v)
+#'         linCmt() ~ add(add.sd)
+#'        })
+#'     }
+#'     # First fit creates fit.zip
+#'     fit := nlmixr2(one.cmt, theo_sd, est="focei")
+#'
+#'     # Second fit loads from fit.zip since it had the same options
+#'     fit := nlmixr2(one.cmt, theo_sd, est="focei")
+#'
+#'     # Third fit refits since the options are different
+#'     fit := nlmixr2(one.cmt, theo_sd, est="saem")
+#'   })
+#'  }
+#' }
+#' @export
+`:=` <- function(x, value) {
+  .assignParent(parent.frame())
+  .subs <- substitute(value)
+  if (is.call(.subs)) {
+    .cls <- gsub(".*::", "", deparse1(.subs[[1]]))
+    class(.subs) <- c(paste0("assign_", .cls), "assign_default")
+    return(UseMethod(":=", .subs))
+  }
+  UseMethod(":=", value)
+}
+
+#' @rdname colon-equals
+#' @export
+`:=.assign_default` <- function(x, value) {
+  assign(as.character(substitute(x)), value, envir=.assignParent())
+}
+
+#' @rdname colon-equals
+#' @export
+`:=.nlmixr2FitCore` <- function(x, value) {
+  # This will be evaluated
+  saveFit(value, as.character(substitute(x)), zip=TRUE)
+  assign(as.character(substitute(x)), value, envir=.assignParent())
+}
+
+#' @rdname colon-equals
+#' @export
+`:=.assign_nlmixr2FitData` <- `:=.nlmixr2FitCore`
+
+
+#' @rdname colon-equals
+#' @export
+`:=.assign_nlmixr2` <- function(x, value) {
+  # First see if the zip file exists
+  .x <- as.character(substitute(x))
+  .zip <- paste0(.x, ".zip")
+  .md5 <- substitute(value)
+  .md5[[1]] <- quote(`list`)
+  .md5 <- digest::digest(.md5)
+  if (file.exists(.zip)) {
+    .fit <- loadFit(.x)
+    if (inherits(.fit, "nlmixr2FitData") &&
+          get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .md5) {
+      assign(as.character(substitute(x)), .fit,
+             envir=.assignParent())
+      return(invisible(.fit))
+    } else if (!inherits(.fit, "nlmixr2FitData") &&
+                 inherits(.fit, "nlmixr2FitCore") &&
+                 get("nlmixr2save", .fit) == .md5) {
+      assign(as.character(substitute(x)), .fit,
+             envir=.assignParent())
+      return(invisible(.fit))
+    }
+    .minfo("fit in ", .zip, " does not match current fit; removing and refitting")
+    unlink(.zip)
+    .fit <- NULL
+  }
+  .fit <- force(value)
+  if (inherits(.fit, "nlmixr2FitData")) {
+    assign("nlmixr2save", .md5, attr(class(.fit), ".foceiEnv"))
+    saveFit(.fit, as.character(substitute(x)), zip=TRUE)
+  } else if (inherits(.fit, "nlmixr2FitCore")) {
+    assign("nlmixr2save", .md5, envir=.fit)
+    saveFit(.fit, as.character(substitute(x)), zip=TRUE)
+  }
+  assign(as.character(substitute(x)), value, envir=.assignParent())
+  invisible(.fit)
+}
+
+#' @rdname colon-equals
+#' @export
+`:=.default` <- function(x, value) {
+  .val <- as.character(substitute(x))
+  assign(.val, value, envir=.assignParent())
 }
