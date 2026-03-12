@@ -320,11 +320,6 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
       fit2NL2 <- loadFit("fitNL2")
       fitEquals(fitNL2, fit2NL2)
-
-
-
-
-
     })
 
     test_that("test assignment", {
