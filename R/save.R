@@ -575,18 +575,22 @@ loadFit <- function(file) {
   if (file.exists(.zip)) {
     .fit <- loadFit(.x)
     if (inherits(.fit, "nlmixr2FitData") &&
+          is.environment(attr(class(.fit), ".foceiEnv")) &&
+          exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
           get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .md5) {
       assign(as.character(substitute(x)), .fit,
              envir=.assignParent())
       return(invisible(.fit))
     } else if (!inherits(.fit, "nlmixr2FitData") &&
                  inherits(.fit, "nlmixr2FitCore") &&
+                 is.environment(.fit) &&
+                 exists("nlmixr2save", .fit) &&
                  get("nlmixr2save", .fit) == .md5) {
       assign(as.character(substitute(x)), .fit,
              envir=.assignParent())
       return(invisible(.fit))
     }
-    .minfo("fit in ", .zip, " does not match current fit; removing and refitting")
+    .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
     unlink(.zip)
     .fit <- NULL
   }
@@ -601,6 +605,10 @@ loadFit <- function(file) {
   assign(as.character(substitute(x)), value, envir=.assignParent())
   invisible(.fit)
 }
+
+#' @rdname colon-equals
+#' @export
+`:=.assign_nlmixr` <- `:=.assign_nlmixr2`
 
 #' @rdname colon-equals
 #' @export

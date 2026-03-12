@@ -6,6 +6,7 @@
 \alias{:=.nlmixr2FitCore}
 \alias{:=.assign_nlmixr2FitData}
 \alias{:=.assign_nlmixr2}
+\alias{:=.assign_nlmixr}
 \alias{:=.default}
 \title{This assignment operator is meant to assign or load a nlmixr2 fit
 (and other objects)}
@@ -19,6 +20,8 @@
 \method{:=}{assign_nlmixr2FitData}(x, value)
 
 \method{:=}{assign_nlmixr2}(x, value)
+
+\method{:=}{assign_nlmixr}(x, value)
 
 \method{:=}{default}(x, value)
 }
@@ -71,14 +74,10 @@ to check the arguments for a cache, so loading from cache is not possible.
 \examples{
 
 \donttest{
- if (requireNamespace("nlmixr2est", quietly=TRUE) &&
- requireNamespace("withr")) {
-
+ if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
    library(nlmixr2est)
   library(nlmixr2data)
   withr::with_tempdir({
-
-
      one.cmt <- function() {
        ini({
          tka <- 0.45
