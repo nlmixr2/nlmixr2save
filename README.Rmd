@@ -38,6 +38,7 @@ remotes::install_github("nlmixr2/nlmixr2save")
 This is a basic example which shows you how to solve a common problem:
 
 ```{r example}
+
 library(nlmixr2)
 library(nlmixr2save) # eventually nlmixr2 will include this if available
 one.cmt <- function() {
@@ -69,18 +70,7 @@ saveFit(fitF)
 
 # You can also load this with `loadFit(fitF)`
 
-loadFit(fitF)
-
-# You can also automatically load a fit if the arguments for nlmixr2 do not change
-# by using the := assignmt operator introduced in this package
-
-fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
-
-# Now using the same arguments it loads
-fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
-
-# But if we use different arguments, say using saem, it will rerun.
-fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALSE))de
+print(loadFit(fitF))
 ```
 
 This creates a ".zip" file that includes a "fitF.R" file.  This fit
@@ -98,3 +88,50 @@ The reason for this extra package saving models:
 
 In the future, this could be used in conjunction with `vroom`, `altrep` and other
 similar tools to partially load fit without loading the corresponding datasets.
+
+In addition to introducing the R-independent zip file for nlmixr2
+fits, this also introduced the cache assignment operator `:=` which
+will cache functions calls when assigning them.
+
+In the case of `nlmixr2` fits, these cached values will be the zip
+files described above; Otherwise, this will be a `rds` file that has
+the object and the md5 of the arguments in a list.
+
+If the object is NOT a function, it cannot load the cache, but may
+have some side effects.
+
+In the case of a nlmixr2 fit, you could assign it as follows
+
+``` r
+fit2 := fit # The fit2.zip is created to save the fit
+```
+
+Here are some annotated examples of the cache assignment operator in
+pratice:
+
+```{r example2}
+# You can also automatically load a fit if the arguments for nlmixr2 do not change
+# by using the := cached assignment operator introduced in this package
+
+fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+
+# Now using the same arguments it loads
+fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+
+# But if we use different arguments, say using saem, it will rerun.
+fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALSE))
+
+# note this approach does not evaluate the first function only,
+# everything else is evaluated so `suppressMessage(nlmixr(...))` would always run
+# the model, never loading the cached model.
+
+# The cached assignment operator works for generic functions too, but saves
+# as a rds file.  For example,
+
+sim := rxSolve(one.cmt, theo_sd) # First simulate
+
+sim := rxSolve(one.cmt, theo_sd) # Same arguments, load instead
+
+sim := rxSolve(one.cmt, theo_sd, nStud=4) # Different arguments, resimulate
+
+```

@@ -23,6 +23,8 @@
 
 \method{:=}{assign_nlmixr}(x, value)
 
+\method{:=}{assign_default}(x, value)
+
 \method{:=}{default}(x, value)
 }
 \arguments{

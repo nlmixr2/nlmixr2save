@@ -569,6 +569,7 @@ loadFit <- function(file) {
   # First see if the zip file exists
   .x <- as.character(substitute(x))
   .zip <- paste0(.x, ".zip")
+  .rds <- paste0(.x, ".rds")
   .md5 <- substitute(value)
   .md5[[1]] <- quote(`list`)
   .md5 <- digest::digest(.md5)
@@ -593,6 +594,20 @@ loadFit <- function(file) {
     .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
     unlink(.zip)
     .fit <- NULL
+  } else if (file.exists(.rds)) {
+    .minfo(paste0("loading fit from ", .rds))
+    .rdsInfo <- readRDS(.rds)
+    if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
+          all(c("fit", "md5") %in% names(.rdsInfo)) &&
+          .rdsInfo$md5 == .md5) {
+      .minfo(paste0("loading from ", .rds))
+      assign(as.character(substitute(x)), .rdsInfo$fit,
+             envir=.assignParent())
+      return(invisible(.rdsInfo$fit))
+    } else {
+      .minfo(paste0("fit in ", .rds, " does not match md5, removing and re-running nlmixr2"))
+      unlink(.rds)
+    }
   }
   .fit <- force(value)
   if (inherits(.fit, "nlmixr2FitData")) {
@@ -601,6 +616,10 @@ loadFit <- function(file) {
   } else if (inherits(.fit, "nlmixr2FitCore")) {
     assign("nlmixr2save", .md5, envir=.fit)
     saveFit(.fit, as.character(substitute(x)), zip=TRUE)
+  } else {
+    .rdsInfo <- list(fit=.fit, md5=.md5)
+    saveRDS(.rdsInfo, paste0(.x, ".rds"))
+    .minfo(paste0("fit is not a nlmixr2 fit, saving to ", .x, ".rds"))
   }
   assign(as.character(substitute(x)), value, envir=.assignParent())
   invisible(.fit)
@@ -609,6 +628,36 @@ loadFit <- function(file) {
 #' @rdname colon-equals
 #' @export
 `:=.assign_nlmixr` <- `:=.assign_nlmixr2`
+
+#' @rdname colon-equals
+#' @export
+`:=.assign_default` <- function(x, value) {
+  .x <- as.character(substitute(x))
+  .rds <- paste0(.x, ".rds")
+  .md5 <- substitute(value)
+  .md5[[1]] <- quote(`list`)
+  .md5 <- digest::digest(.md5)
+  if (file.exists(.rds)) {
+    .minfo(paste0("loading fit from ", .rds))
+    .rdsInfo <- readRDS(.rds)
+    if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
+          all(c("fit", "md5") %in% names(.rdsInfo)) &&
+          .rdsInfo$md5 == .md5) {
+      .minfo(paste0("loading from ", .rds))
+      assign(as.character(substitute(x)), .rdsInfo$fit,
+             envir=.assignParent())
+      return(invisible(.rdsInfo$fit))
+    } else {
+      .minfo(paste0("fit in ", .rds, " does not match argument md5, removing and re-running command"))
+      unlink(.rds)
+    }
+  }
+  .value <- force(value)
+  .rdsInfo <- list(fit=.value, md5=.md5)
+  saveRDS(.rdsInfo, paste0(.x, ".rds"))
+  assign(as.character(substitute(x)), value, envir=.assignParent())
+  invisible(.value)
+}
 
 #' @rdname colon-equals
 #' @export
