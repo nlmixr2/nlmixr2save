@@ -4,33 +4,6 @@ By default it is equivalent to the standard assignment operator `<-`,
 but it is a S3 generic so it can have other behaviors for specific
 classes.
 
-## Usage
-
-``` r
-`:=`(x, value)
-
-# S3 method for class 'assign_default'
-`:=`(x, value)
-
-# S3 method for class 'nlmixr2FitCore'
-`:=`(x, value)
-
-# S3 method for class 'assign_nlmixr2FitData'
-`:=`(x, value)
-
-# S3 method for class 'assign_nlmixr2'
-`:=`(x, value)
-
-# S3 method for class 'assign_nlmixr'
-`:=`(x, value)
-
-# S3 method for class 'assign_default'
-`:=`(x, value)
-
-# Default S3 method
-`:=`(x, value)
-```
-
 ## Arguments
 
 - x:

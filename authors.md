@@ -8,12 +8,11 @@
 ## Citation
 
 Fidler M (2026). *nlmixr2save: This package saves 'nlmixr2' fits into a
-format that can be read outside of 'nlmixr2'*. R package version
-0.0.0.9000.
+format that can be read outside of 'nlmixr2'*. R package version 0.1.0.
 
     @Manual{,
       title = {nlmixr2save: This package saves 'nlmixr2' fits into a format that can be read outside of 'nlmixr2'},
       author = {Matthew Fidler},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0},
     }
