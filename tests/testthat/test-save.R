@@ -86,7 +86,6 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
   if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         requireNamespace("nlmixr2data", quietly = TRUE)) {
-
     fitEquals <- function(fitF, fit2F) {
       fitName <- as.character(substitute(fitF))
       for (n in ls(fitF$env, all.names=TRUE)) {
@@ -193,139 +192,8 @@ if (requireNamespace("withr", quietly = TRUE)) {
         })
       }
     }
-
-    withr::with_tempdir({
-
-      library(nlmixr2est)
-      library(nlmixr2data)
-
-      one.cmt <- function() {
-        ini({
-          ## You may label each parameter with a comment
-          tka <- 0.45 # Log Ka
-          tcl <- log(c(0, 2.7, 100)) # Log Cl
-          ## This works with interactive models
-          ## You may also label the preceding line with label("label text")
-          tv <- 3.45; label("log V")
-          ## the label("Label name") works with all models
-          eta.ka ~ 0.6
-          eta.cl ~ 0.3
-          eta.v ~ 0.1
-          add.sd <- 0.7
-        })
-        model({
-          ka <- exp(tka + eta.ka)
-          cl <- exp(tcl + eta.cl)
-          v <- exp(tv + eta.v)
-          linCmt() ~ add(add.sd)
-        })
-      }
-
-      fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
-                                      control=list(print=0, compress=FALSE)))
-
-      fitS <- suppressMessages(nlmixr(one.cmt, theo_sd, est="saem",
-                                      control=list(print=0, compress=FALSE)))
-
-      # now try iov
-      theo_iov <- nlmixr2data::theo_md
-      theo_iov$occ <- 1
-      theo_iov$occ[theo_iov$TIME >= 144] <- 2
-
-      one.cmt.iov <- function() {
-        ini({
-          tka <- 0.45 # Log Ka
-          tcl <- log(c(0, 2.7, 100)) # Log Cl
-          tv <- 3.45; label("log V")
-          eta.ka ~ 0.6
-          eta.cl ~ 0.3
-          eta.v ~ 0.1
-          iov.cl ~ 0.1 | occ
-          add.sd <- 0.7
-        })
-        model({
-          ka <- exp(tka + eta.ka)
-          cl <- exp(tcl + eta.cl + iov.cl)
-          v <- exp(tv + eta.v)
-          linCmt() ~ add(add.sd)
-        })
-      }
-
-      fitIF <- suppressMessages(nlmixr(one.cmt.iov, theo_iov, est="focei",
-                                       control=list(print=0)))
-
-      fitIS <- suppressMessages(nlmixr(one.cmt.iov, theo_iov, est="saem",
-                                       control=list(print=0)))
-
-      test_that("saving fits do not generate errors", {
-        expect_error(suppressMessages(saveFit(fitS)), NA)
-        expect_true(file.exists("fitS.zip"))
-
-        expect_error(suppressMessages(saveFit(fitF, "fitF")), NA)
-        expect_true(file.exists("fitF.zip"))
-
-        expect_error(suppressMessages(saveFit(fitIF)), NA)
-        expect_true(file.exists("fitIF.zip"))
-
-        expect_error(suppressMessages(saveFit(fitIS)), NA)
-        expect_true(file.exists("fitIS.zip"))
-      })
-
-      fit2F <- suppressMessages(loadFit("fitF"))
-      fit2S <- suppressMessages(loadFit(fitS))
-
-      fitEquals(fitF, fit2F)
-      fitEquals(fitS, fit2S)
-
-      fit2IF <- loadFit("fitIF")
-      fitEquals(fitIF, fit2IF)
-
-      fit2IS <- loadFit("fitIS")
-      fitEquals(fitIS, fit2IS)
-
-      one.cmt.nlm <- function() {
-        ini({
-          tka <- 0.45 # Log Ka
-          tcl <- log(c(0, 2.7, 100)) # Log Cl
-          tv <- 3.45; label("log V")
-          add.sd <- 0.7
-        })
-        model({
-          ka <- exp(tka)
-          cl <- exp(tcl)
-          v <- exp(tv)
-          linCmt() ~ add(add.sd)
-        })
-      }
-
-      fitNL <- suppressMessages(nlmixr(one.cmt.nlm, theo_sd, est="nlm",
-                                       control=list(print=0, compress=FALSE)))
-
-      test_that("saving fits do not generate errors", {
-        expect_error(suppressMessages(saveFit(fitNL, "fitNL")), NA)
-        expect_true(file.exists("fitNL.zip"))
-      })
-
-      fit2NL <- loadFit("fitNL")
-      fitEquals(fitNL, fit2NL)
-
-      fitNL2 <- suppressMessages(nlmixr(one.cmt.nlm, theo_sd, est="nlm",
-                                        control=list(print=0, compress=FALSE,
-                                                     calcTables=FALSE)))
-
-      test_that("saving fits do not generate errors", {
-        expect_error(suppressMessages(saveFit(fitNL2)), NA)
-        expect_true(file.exists("fitNL2.zip"))
-      })
-
-      fit2NL2 <- loadFit("fitNL2")
-      fitEquals(fitNL2, fit2NL2)
-    })
-
-    test_that("test assignment", {
-
-      suppressMessages(withr::with_tempdir({
-
+    if (identical(Sys.getenv("NOT_CRAN"), "true")) {
+      withr::with_tempdir({
         library(nlmixr2est)
         library(nlmixr2data)
 
@@ -351,51 +219,184 @@ if (requireNamespace("withr", quietly = TRUE)) {
           })
         }
 
-        fitF := nlmixr(one.cmt, theo_sd, est="focei",
-                       control=list(print=0, compress=FALSE))
+        fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
+                                        control=list(print=0, compress=FALSE)))
 
-        expect_true(file.exists("fitF.zip"))
-        hash1 <- tools::md5sum("fitF.zip")
+        fitS <- suppressMessages(nlmixr(one.cmt, theo_sd, est="saem",
+                                        control=list(print=0, compress=FALSE)))
 
-        fitF := nlmixr(one.cmt, theo_sd, est="focei",
-                       control=list(print=0, compress=FALSE))
-        expect_true(file.exists("fitF.zip"))
-        hash2 <- tools::md5sum("fitF.zip")
+        # now try iov
+        theo_iov <- nlmixr2data::theo_md
+        theo_iov$occ <- 1
+        theo_iov$occ[theo_iov$TIME >= 144] <- 2
 
-        expect_equal(hash1, hash2)
+        one.cmt.iov <- function() {
+          ini({
+            tka <- 0.45 # Log Ka
+            tcl <- log(c(0, 2.7, 100)) # Log Cl
+            tv <- 3.45; label("log V")
+            eta.ka ~ 0.6
+            eta.cl ~ 0.3
+            eta.v ~ 0.1
+            iov.cl ~ 0.1 | occ
+            add.sd <- 0.7
+          })
+          model({
+            ka <- exp(tka + eta.ka)
+            cl <- exp(tcl + eta.cl + iov.cl)
+            v <- exp(tv + eta.v)
+            linCmt() ~ add(add.sd)
+          })
+        }
 
-        fitF := nlmixr(one.cmt, theo_sd, est="saem",
-                       control=list(print=0, compress=FALSE))
+        fitIF <- suppressMessages(nlmixr(one.cmt.iov, theo_iov, est="focei",
+                                         control=list(print=0)))
 
-        expect_true(file.exists("fitF.zip"))
-        hash3 <- tools::md5sum("fitF.zip")
-        expect_false(identical(hash1, hash3))
+        fitIS <- suppressMessages(nlmixr(one.cmt.iov, theo_iov, est="saem",
+                                         control=list(print=0)))
 
-        # Without tables
-        fitF := nlmixr(one.cmt, theo_sd, est="focei",
-                       control=list(print=0, compress=FALSE, calcTables=FALSE))
+        test_that("saving fits do not generate errors", {
+          expect_error(suppressMessages(saveFit(fitS)), NA)
+          expect_true(file.exists("fitS.zip"))
 
-        expect_true(file.exists("fitF.zip"))
-        hash4 <- tools::md5sum("fitF.zip")
+          expect_error(suppressMessages(saveFit(fitF, "fitF")), NA)
+          expect_true(file.exists("fitF.zip"))
 
-        expect_false(identical(hash1, hash4))
+          expect_error(suppressMessages(saveFit(fitIF)), NA)
+          expect_true(file.exists("fitIF.zip"))
 
-        fitF := nlmixr(one.cmt, theo_sd, est="focei",
-                       control=list(print=0, compress=FALSE, calcTables=FALSE))
+          expect_error(suppressMessages(saveFit(fitIS)), NA)
+          expect_true(file.exists("fitIS.zip"))
+        })
 
-        expect_true(file.exists("fitF.zip"))
-        hash5 <- tools::md5sum("fitF.zip")
+        fit2F <- suppressMessages(loadFit("fitF"))
+        fit2S <- suppressMessages(loadFit(fitS))
 
-        expect_equal(hash5, hash4)
-        fitF := nlmixr(one.cmt, theo_sd, est="saem",
-                       control=list(print=0, compress=FALSE))
+        fitEquals(fitF, fit2F)
+        fitEquals(fitS, fit2S)
 
-        expect_true(file.exists("fitF.zip"))
-        hash6 <- tools::md5sum("fitF.zip")
-        expect_false(identical(hash4, hash6))
+        fit2IF <- loadFit("fitIF")
+        fitEquals(fitIF, fit2IF)
+
+        fit2IS <- loadFit("fitIS")
+        fitEquals(fitIS, fit2IS)
+
+        one.cmt.nlm <- function() {
+          ini({
+            tka <- 0.45 # Log Ka
+            tcl <- log(c(0, 2.7, 100)) # Log Cl
+            tv <- 3.45; label("log V")
+            add.sd <- 0.7
+          })
+          model({
+            ka <- exp(tka)
+            cl <- exp(tcl)
+            v <- exp(tv)
+            linCmt() ~ add(add.sd)
+          })
+        }
+
+        fitNL <- suppressMessages(nlmixr(one.cmt.nlm, theo_sd, est="nlm",
+                                         control=list(print=0, compress=FALSE)))
+
+        test_that("saving fits do not generate errors", {
+          expect_error(suppressMessages(saveFit(fitNL, "fitNL")), NA)
+          expect_true(file.exists("fitNL.zip"))
+        })
+
+        fit2NL <- loadFit("fitNL")
+        fitEquals(fitNL, fit2NL)
+
+        fitNL2 <- suppressMessages(nlmixr(one.cmt.nlm, theo_sd, est="nlm",
+                                          control=list(print=0, compress=FALSE,
+                                                       calcTables=FALSE)))
+
+        test_that("saving fits do not generate errors", {
+          expect_error(suppressMessages(saveFit(fitNL2)), NA)
+          expect_true(file.exists("fitNL2.zip"))
+        })
+
+        fit2NL2 <- loadFit("fitNL2")
+        fitEquals(fitNL2, fit2NL2)
+      })
 
 
-      }))
-    })
+      test_that("test assignment", {
+
+        suppressMessages(withr::with_tempdir({
+
+          library(nlmixr2est)
+          library(nlmixr2data)
+
+          one.cmt <- function() {
+            ini({
+              ## You may label each parameter with a comment
+              tka <- 0.45 # Log Ka
+              tcl <- log(c(0, 2.7, 100)) # Log Cl
+              ## This works with interactive models
+              ## You may also label the preceding line with label("label text")
+              tv <- 3.45; label("log V")
+              ## the label("Label name") works with all models
+              eta.ka ~ 0.6
+              eta.cl ~ 0.3
+              eta.v ~ 0.1
+              add.sd <- 0.7
+            })
+            model({
+              ka <- exp(tka + eta.ka)
+              cl <- exp(tcl + eta.cl)
+              v <- exp(tv + eta.v)
+              linCmt() ~ add(add.sd)
+            })
+          }
+
+          fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                         control=list(print=0, compress=FALSE))
+
+          expect_true(file.exists("fitF.zip"))
+          hash1 <- tools::md5sum("fitF.zip")
+
+          fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                         control=list(print=0, compress=FALSE))
+          expect_true(file.exists("fitF.zip"))
+          hash2 <- tools::md5sum("fitF.zip")
+
+          expect_equal(hash1, hash2)
+
+          fitF := nlmixr(one.cmt, theo_sd, est="saem",
+                         control=list(print=0, compress=FALSE))
+
+          expect_true(file.exists("fitF.zip"))
+          hash3 <- tools::md5sum("fitF.zip")
+          expect_false(identical(hash1, hash3))
+
+          # Without tables
+          fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                         control=list(print=0, compress=FALSE, calcTables=FALSE))
+
+          expect_true(file.exists("fitF.zip"))
+          hash4 <- tools::md5sum("fitF.zip")
+
+          expect_false(identical(hash1, hash4))
+
+          fitF := nlmixr(one.cmt, theo_sd, est="focei",
+                         control=list(print=0, compress=FALSE, calcTables=FALSE))
+
+          expect_true(file.exists("fitF.zip"))
+          hash5 <- tools::md5sum("fitF.zip")
+
+          expect_equal(hash5, hash4)
+          fitF := nlmixr(one.cmt, theo_sd, est="saem",
+                         control=list(print=0, compress=FALSE))
+
+          expect_true(file.exists("fitF.zip"))
+          hash6 <- tools::md5sum("fitF.zip")
+          expect_false(identical(hash4, hash6))
+
+
+        }))
+      })
+
+    }
   }
 }
