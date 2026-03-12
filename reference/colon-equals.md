@@ -21,6 +21,9 @@ classes.
 # S3 method for class 'assign_nlmixr2'
 `:=`(x, value)
 
+# S3 method for class 'assign_nlmixr'
+`:=`(x, value)
+
 # Default S3 method
 `:=`(x, value)
 ```
@@ -89,14 +92,10 @@ Matthew L. Fidler
 
 ``` r
 # \donttest{
- if (requireNamespace("nlmixr2est", quietly=TRUE) &&
- requireNamespace("withr")) {
-
+ if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
    library(nlmixr2est)
   library(nlmixr2data)
   withr::with_tempdir({
-
-
      one.cmt <- function() {
        ini({
          tka <- 0.45
@@ -261,7 +260,7 @@ Matthew L. Fidler
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
 #> ℹ removing unzipped fit files
-#> ℹ fit in 
+#> ℹ fit in fit.zip does not match current fit; removing and refitting
 #>  
 #>  
 #>  
@@ -291,7 +290,7 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6592
-#> → compress parHistData in nlmixr2 object, save 8296
+#> → compress parHistData in nlmixr2 object, save 8288
 #> → compress phiM in nlmixr2 object, save 312904
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
