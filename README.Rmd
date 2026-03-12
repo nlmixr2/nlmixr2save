@@ -66,6 +66,21 @@ fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
                                 control=list(print=0, compress=FALSE)))
 
 saveFit(fitF)
+
+# You can also load this with `loadFit(fitF)`
+
+loadFit(fitF)
+
+# You can also automatically load a fit if the arguments for nlmixr2 do not change
+# by using the := assignmt operator introduced in this package
+
+fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+
+# Now using the same arguments it loads
+fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+
+# But if we use different arguments, say using saem, it will rerun.
+fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALSE))de
 ```
 
 This creates a ".zip" file that includes a "fitF.R" file.  This fit

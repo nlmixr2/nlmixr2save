@@ -31,11 +31,11 @@ This is a basic example which shows you how to solve a common problem:
 ``` r
 library(nlmixr2)
 #> ── Attaching packages ───────────────────────────────────────── nlmixr2 5.0.0 ──
-#> ✔ lotri         1.0.2          ✔ monolix2rx    0.0.6     
+#> ✔ lotri         1.0.3          ✔ monolix2rx    0.0.6     
 #> ✔ nlmixr2data   2.0.9          ✔ nlmixr2lib    0.3.2     
 #> ✔ nlmixr2est    5.0.2.9000     ✔ nlmixr2rpt    0.2.2     
 #> ✔ nlmixr2extra  5.0.0          ✔ nonmem2rx     0.1.9     
-#> ✔ nlmixr2plot   5.0.0          ✔ posologyr     1.2.8     
+#> ✔ nlmixr2plot   5.0.1          ✔ posologyr     1.2.8     
 #> ✔ rxode2        5.0.1.9000     ✔ shinyMixR     0.5.3     
 #> ✔ babelmixr2    0.1.11         ✔ xpose.nlmixr2 0.4.1     
 #> ✔ ggPMX         1.3.2
@@ -151,6 +151,65 @@ saveFit(fitF)
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
+
+# You can also load this with `loadFit(fitF)`
+
+loadFit(fitF)
+#> ℹ loading fit from fitF.R
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> ℹ removing unzipped fit files
+```
+
+``` r
+
+# You can also automatically load a fit if the arguments for nlmixr2 do not change
+# by using the := assignmt operator introduced in this package
+
+fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> calculating covariance matrix
+#> [====|====|====|====|====|====|====|====|====|====done
+#> → Calculating residuals/tables
+#> ✔ done
+
+# Now using the same arguments it loads
+fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> calculating covariance matrix
+#> [====|====|====|====|====|====|====|====|====|====done
+#> → Calculating residuals/tables
+#> ✔ done
+
+# But if we use different arguments, say using saem, it will rerun.
+fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALSE))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> → loading into symengine environment...
+#> → pruning branches (`if`/`else`) of saem model...
+#> ✔ done
+#> → finding duplicate expressions in saem model...
+#> [====|====|====|====|====|====|====|====|====|====
+#> ====|====|====|====|====|====|====|====|====|====] 0:00:00
+#> ✔ done
+#> ℹ calculate uninformed etas
+#> ℹ done
+#> Calculating covariance matrix
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
+#> → loading into symengine environment...
+#> → pruning branches (`if`/`else`) of saem model...
+#> ✔ done
+#> → finding duplicate expressions in saem predOnly model 0...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
+#> → finding duplicate expressions in saem predOnly model 1...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
+#> → finding duplicate expressions in saem predOnly model 2...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
+#> ✔ done
+#> → Calculating residuals/tables
+#> ✔ done
 ```
 
 This creates a “.zip” file that includes a “fitF.R” file. This fit
