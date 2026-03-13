@@ -6,20 +6,6 @@
   cli::cli_alert_info(gettext(text), ..., .envir = .envir)
 }
 
-#' This sees if you have rxode2 installed and if you want to use it
-#'
-#' When `nlmixr2.rxode2` option is set to `FALSE`, this function will return
-#' `FALSE` even if `rxode2` is installed, allowing testing of non-rxode2 code paths.
-#'
-#' @return boolean
-#' @keywords internal
-#' @author Matthew L. Fidler
-#' @noRd
-.hasRxode2 <- function() {
-  requireNamespace("rxode2", quietly = TRUE) &&
-    isTRUE(getOption("nlmixr2.rxode2", TRUE))
-}
-
 #' Save a fitted model item to a file
 #'
 #' This is a generic function to save a fitted model item to a file.
@@ -40,19 +26,15 @@ saveFitItem <- function(item, name, file) {
 #' @export
 saveFitItem.rxUi <- function(item, name, file) {
   v <- NULL
-  if (.hasRxode2()) {
-    v <- try(writeLines(paste0(name, " <- ", paste(deparse(as.function(item)), collapse="\n"),
-                      "\n",
-                      paste0(name, " <- rxode2::rxode2(", name, ")\n"),
-                      paste0(name, " <- rxode2::rxUiDecompress(", name, ")\n"),
-                      paste0("assign(\"modelName\", ", deparse1(item$modelName),
-                             ", envir=, ", name, ")\n"),
-                      paste0("rm(\"model\", envir=", name, ")\n"),
-                      paste0(name, " <- rxode2::rxUiCompress(", name, ")\n")),
-               con = paste0(file,"-", name, ".R")))
-  } else {
-    v <- try(saveRDS(item, paste0(file,"-", name, ".rds")))
-  }
+  v <- try(writeLines(paste0(name, " <- ", paste(deparse(as.function(item)), collapse="\n"),
+                             "\n",
+                             paste0(name, " <- rxode2::rxode2(", name, ")\n"),
+                             paste0(name, " <- rxode2::rxUiDecompress(", name, ")\n"),
+                             paste0("assign(\"modelName\", ", deparse1(item$modelName),
+                                    ", envir=, ", name, ")\n"),
+                             paste0("rm(\"model\", envir=", name, ")\n"),
+                             paste0(name, " <- rxode2::rxUiCompress(", name, ")\n")),
+                      con = paste0(file,"-", name, ".R")))
   if (inherits(v, "try-error")) {
     return(FALSE) # nocov
   }
@@ -98,9 +80,6 @@ saveFitItem.saemFit <- function(item, name, file) {
 #' @rdname saveFitItem
 #' @export
 saveFitItem.foceiModelList <- function(item, name, file) {
-  if (!.hasRxode2()) {
-    stop("cannot save foceiModelList without rxode2 installed", call.=FALSE)
-  }
   .r <- c(paste0(name, " <- list()\n"),
              vapply(seq_along(item),
                     function(i) {
@@ -130,26 +109,18 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' @return R expression of name `<-` R expression
 #' @noRd
 #' @author Matthew L. Fidler
-.saveDeparse <- function(obj, name, useRxode=TRUE) {
-  if (useRxode && .hasRxode2()) {
-    .expr <- try(rxode2::rxUiDeparse(obj, name), silent=TRUE)
-    if (inherits(.expr, "try-error")) {
-      return(.saveDeparse(obj, name , useRxode=FALSE))
-    } else if (is.null(.expr)) {
-      return(NULL)
-    } else {
-      return(as.list(.expr))
-    }
+.saveDeparse <- function(obj, name) {
+  .expr <- try(rxode2::rxUiDeparse(obj, name), silent=TRUE)
+  if (inherits(.expr, "try-error") ||
+        is.null(.expr)) {
+    .expr <- try(str2lang(paste0(name, "<-", deparse1(obj))), silent=TRUE) # nocov
+  }
+  if (inherits(.expr, "try-error")) {
+    return(NULL) # nocov
+  } else if (is.null(.expr)) { # nocov
+    return(NULL) # nocov
   } else {
-    .expr <- try(deparse1(obj), silent=TRUE)
-    if (inherits(.expr, "try-error")) {
-      return(NULL)
-    } else if (is.null(.expr)) {
-      return(NULL)
-    } else {
-      .expr <- str2lang(paste0(name, " <- ", .expr))
-      return(as.list(.expr))
-    }
+    return(as.list(.expr))
   }
 }
 
@@ -416,7 +387,7 @@ loadFit <- function(file) {
     }
     return(ret)
   } else {
-    stop("cannot find fit file ", file, " or ", .r, " or ", .zip, call.=FALSE)
+    stop("cannot find fit file ", file, " or ", .r, " or ", .zip, call.=FALSE) # nocov
   }
 }
 
@@ -599,9 +570,10 @@ loadFit <- function(file) {
   } else if (file.exists(.rds)) {
     .minfo(paste0("loading fit from ", .rds))
     .rdsInfo <- readRDS(.rds)
-    if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
-          all(c("fit", "md5") %in% names(.rdsInfo)) &&
-          .rdsInfo$md5 == .md5) {
+    if (is.list(.rdsInfo) && length(.rdsInfo) == 3 &&
+          all(c("fit", "md5", "random") %in% names(.rdsInfo)) &&
+          ((.rdsInfo$random && .rdsInfo$md5 == digest::digest(list(.md5, .Random.seed))) ||
+             (!.rdsInfo$random && .rdsInfo$md5 == .md5))) {
       .minfo(paste0("loading from ", .rds))
       assign(as.character(substitute(x)), .rdsInfo$fit,
              envir=.assignParent())
@@ -637,23 +609,55 @@ loadFit <- function(file) {
   .md5 <- substitute(value)
   .md5[[1]] <- quote(`list`)
   .md5 <- digest::digest(.md5)
+  .random <- FALSE
+  .old <- rxode2::.rxGetSeed()
   if (file.exists(.rds)) {
-    .minfo(paste0("loading fit from ", .rds))
     .rdsInfo <- readRDS(.rds)
-    if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
-          all(c("fit", "md5") %in% names(.rdsInfo)) &&
-          .rdsInfo$md5 == .md5) {
-      .minfo(paste0("loading from ", .rds))
-      assign(as.character(substitute(x)), .rdsInfo$fit,
-             envir=.assignParent())
-      return(invisible(.rdsInfo$fit))
+    if (is.list(.rdsInfo) && length(.rdsInfo) == 4 &&
+          all(c("ret", "md5", "random", "seed") %in% names(.rdsInfo))) {
+      if (.rdsInfo$random) {
+        # Here a random number has changed in some way, need to adapt
+        # the md5 to account for the change in random seed
+        .md5 <- digest::digest(list(.md5, .old))
+        if (.rdsInfo$md5 != .md5) {
+          .minfo(paste0(.rds, " does not match prior arguments or seed state, removing and re-running"))
+          unlink(.rds)
+        }
+      } else if (.rdsInfo$md5 != .md5) {
+        .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
+        unlink(.rds)
+      }
+      if (file.exists(.rds)) {
+        .minfo(paste0("loading from ", .rds))
+        assign(as.character(substitute(x)), .rdsInfo$ret,
+               envir=.assignParent())
+        if (.rdsInfo$random) {
+          # Restore the seed to what it would have been if the command
+          # had been run, so that the state of the random seed is the
+          # same as if the command had been run, which is important
+          # for reproducibility if the command changes the random seed
+          # state.
+          rxode2::.rxSetSeed(.rdsInfo$seed)
+          .minfo("restoring random seed to state after run")
+        }
+      }
     } else {
-      .minfo(paste0("fit in ", .rds, " does not match argument md5, removing and re-running command"))
+      .minfo(paste0(.rds, " does not match argument md5, removing and re-running"))
       unlink(.rds)
     }
   }
+  # Get random seed before evaluating value, so that if the value
+  # changes the seed will be different and thus the md5 needs to change
   .value <- force(value)
-  .rdsInfo <- list(fit=.value, md5=.md5)
+  .new <- rxode2::.rxGetSeed()
+  if (!identical(.old, .new)) {
+    .md5 <- digest::digest(list(.md5, .old))
+    .random <- TRUE
+  }
+  # The seed is saved so it will restore the state as if the command
+  # had been run, which is important for reproducibility if the
+  # command changes the random seed state.
+  .rdsInfo <- list(fit=.value, md5=.md5, random=.random, seed=.new)
   saveRDS(.rdsInfo, paste0(.x, ".rds"))
   assign(as.character(substitute(x)), value, envir=.assignParent())
   invisible(.value)
