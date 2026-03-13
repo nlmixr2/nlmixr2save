@@ -83,6 +83,36 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
+#> → loading into symengine environment...
+#> → pruning branches (`if`/`else`) of full model...
+#> ✔ done
+#> → calculate jacobian
+#> → calculate ∂(f)/∂(η)
+#> → calculate ∂(R²)/∂(η)
+#> → finding duplicate expressions in inner model...
+#> → optimizing duplicate expressions in inner model...
+#> → finding duplicate expressions in EBE model...
+#> → optimizing duplicate expressions in EBE model...
+#> → compiling inner model...
+#>  
+#>  
+#> ✔ done
+#> → finding duplicate expressions in FD model...
+#> → compiling EBE model...
+#>  
+#>  
+#> ✔ done
+#> → compiling events FD model...
+#>  
+#>  
+#> ✔ done
+#> rxode2 5.0.1.9000 using 2 threads (see ?getRxThreads)
+#>   no cache: create with `rxCreateCache()`
+#> 
+#> Attaching package: ‘rxode2’
+#> The following objects are masked from ‘package:nlmixr2est’:
+#> 
+#>     boxCox, yeoJohnson
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .rownum
@@ -177,8 +207,8 @@ Matthew L. Fidler
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>            setup optimize covariance table compress    other
-#> elapsed 0.001789 0.379495   0.379497  0.05    0.001 1.959219
+#>            setup optimize covariance table    other
+#> elapsed 0.014659 0.385552   0.385555 0.053 5.295234
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
