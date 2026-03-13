@@ -602,8 +602,8 @@ loadFit <- function(file) {
 #' @export
 `:=.assign_nlmixr` <- `:=.assign_nlmixr2`
 
-
-.assignSimulation <- function(x, value) {
+#' @export
+`:=.assign_default` <- function(x, value) {
   .x <- as.character(substitute(x))
   .rds <- paste0(.x, ".rds")
   .md5 <- substitute(value)
@@ -662,59 +662,6 @@ loadFit <- function(file) {
   assign(as.character(substitute(x)), value, envir=.assignParent())
   invisible(.value)
 }
-
-.assignDefault <- function(x, value) {
-  .x <- as.character(substitute(x))
-  .rds <- paste0(.x, ".rds")
-  .md5 <- substitute(value)
-  .md5[[1]] <- quote(`list`)
-  .md5 <- digest::digest(.md5)
-  if (file.exists(.rds)) {
-    .rdsInfo <- readRDS(.rds)
-    if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
-          all(c("ret", "md5") %in% names(.rdsInfo))) {
-      if (.rdsInfo$md5 != .md5) {
-        .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
-        unlink(.rds)
-      }
-      if (file.exists(.rds)) {
-        .minfo(paste0("loading from ", .rds))
-        assign(as.character(substitute(x)), .rdsInfo$ret,
-               envir=.assignParent())
-      }
-    } else {
-      .minfo(paste0(.rds, " does not match argument md5, removing and re-running"))
-      unlink(.rds)
-    }
-  }
-
-  # Get random seed before evaluating value, so that if the value
-  # changes the seed will be different and thus the md5 needs to change
-  .value <- force(value)
-  .rdsInfo <- list(fit=.value, md5=.md5)
-  saveRDS(.rdsInfo, paste0(.x, ".rds"))
-  assign(as.character(substitute(x)), value, envir=.assignParent())
-  invisible(.value)
-}
-
-#' @export
-`:=.assign_default` <- function(x, value) {
-  .assignDefault(x, value)
-}
-
-#' @export
-`:=.assign_simulate` <- function(x, value) {
-  .assignRandom(x, value)
-}
-
-#' @export
-`:=.assign_rxSolve` <-  `:=.assign_simulate`
-
-#' @export
-`:=.assign_mrgsim` <-  `:=.assign_simulate`
-
-#' @export
-`:=.assign_sim` <-  `:=.assign_simulate`
 
 #' @export
 `:=.default` <- function(x, value) {
