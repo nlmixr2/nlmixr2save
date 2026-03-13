@@ -1,6 +1,10 @@
 .saveFitEnv <- new.env(parent = emptyenv())
 .saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed")
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData", "iniDf0")
+.saveFitEnv$parent <- NULL
+.saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim")
+.saveFitEnv$randomEst <- "rxSolve"
+.saveFitEnv$fun <- ""
 
 .minfo <- function (text, ..., .envir = parent.frame()) {
   cli::cli_alert_info(gettext(text), ..., .envir = .envir)
@@ -391,8 +395,6 @@ loadFit <- function(file) {
   }
 }
 
-.assign <- new.env(parent=emptyenv())
-.assign$parent <- globalenv()
 #' This returns or assigns the environment used in the `:=` operator
 #'
 #'
@@ -409,9 +411,9 @@ loadFit <- function(file) {
 #' @examples
 #' .assignParent()
 .assignParent <- function(env=NULL) {
-  if (is.null(env)) return(.assign$parent)
+  if (is.null(env)) return(.saveFitEnv$parent)
   if (is.environment(env)) {
-    .assign$parent <- env
+    .saveFitEnv$parent <- env
     return(env)
   } else {
     stop("env must be an environment", call.=FALSE)
@@ -433,7 +435,7 @@ loadFit <- function(file) {
 #' the current working directory.
 #'
 #' If the "fit.zip" file already exists, it will be loaded instead of
-#' running the possibly expensive fitting process (as long as the md5
+#' running the possibly expensive fitting process (as long as the sha1
 #' hash of the arguments are the same).
 #'
 #' This allows for easy saving and loading of fitted models without
@@ -458,7 +460,7 @@ loadFit <- function(file) {
 #'   non-standard evaluation, this expression may not be evaluated
 #'   when passed to the function. In the case of the `nlmixr2`
 #'   function, the expression will be evaluated only if the fit needs
-#'   to be refit (i.e. if the zip file does not exist or if the md5
+#'   to be refit (i.e. if the zip file does not exist or if the sha1
 #'   hash of the arguments does not match).
 #'
 #' @return the value that was assigned to the object, invisibly. It
@@ -515,15 +517,11 @@ loadFit <- function(file) {
   .subs <- substitute(value)
   if (is.call(.subs)) {
     .cls <- gsub(".*::", "", deparse1(.subs[[1]]))
+    .saveFitEnv$fun <- .cls
     class(.subs) <- c(paste0("assign_", .cls), "assign_default")
     return(UseMethod(":=", .subs))
   }
   UseMethod(":=", value)
-}
-
-#' @export
-`:=.assign_default` <- function(x, value) {
-  assign(as.character(substitute(x)), value, envir=.assignParent())
 }
 
 #' @export
@@ -535,7 +533,88 @@ loadFit <- function(file) {
 
 #' @export
 `:=.assign_nlmixr2FitData` <- `:=.nlmixr2FitCore`
-
+#' This gets the estimation method for nlmixr2;
+#'
+#' This is used to determine if this is a simulation method like `rxSolve`
+#'
+#' @inheritParams nlmixr2est::nlmixr2
+#' @param ... additional arguments for nlmixr2 but ignored for this call.
+#' @return estimation method
+#' @author Matthew L. Fidler
+#' @noRd
+.nlmixr2saveEst <- function(object, data, est = NULL, ...) {
+  # Change data
+  if (is.character(data) && length(data) == 1 &&
+        data %in% nlmixr2est::nlmixr2AllEst() &&
+        is.null(est)) {
+    est <- data
+    data <- NULL
+  }
+  est
+}
+#' Convert environment to hash stable list
+#'
+#' @param env environment to convert
+#' @return a list that is stable for hashing
+#' @noRd
+#' @author Matthew L. Fidler
+.env2list <- function(env) {
+  .names <- ls(env, all.names=TRUE)
+  stats::setNames(.names,
+                  lapply(.names,
+                         function(x){
+                           .ret <- get(x, envir=env)
+                           if (is.environment(.ret)) {
+                             .env2list(.ret)
+                           } else if (is.list(.ret)) {
+                             .stableLst(.ret)
+                           } else if (is.function(.ret)) {
+                             deparse1(.ret)
+                           } else {
+                             .ret
+                           }
+                         }),
+                  .names)
+}
+#' Return hash table stable list
+#'
+#' @param lst list to make hash stable
+#' @return a list that is stable for hashing
+#' @noRd
+#' @author Matthew L. Fidler
+.stableLst <- function(lst) {
+  lapply(seq_along(lst), function(i) {
+    if (is.environment(lst[[i]])) {
+      .env2list(lst[[i]])
+    } else if (is.function(lst[[i]])){
+      deparse1(lst[[i]])
+    } else if (is.list(lst[[i]])) {
+      .stableLst(lst[[i]])
+    } else {
+      return(lst[[i]])
+    }
+  })
+}
+#' Digest a list object
+#'
+#'
+#' @param lst list object
+#' @return a hash of the list object
+#' @noRd
+#' @author Matthew L. Fidler
+.digest1 <- function(lst) {
+  digest::sha1(.stableLst(lst))
+}
+#' Digest the arguments to a function call
+#'
+#'
+#' @param ... arguments to hash
+#' @return a hash of the arguments
+#' @noRd
+#' @author Matthew L. Fidler
+.digest <- function(...) {
+  .digest1(list(...))
+}
 
 #' @export
 `:=.assign_nlmixr2` <- function(x, value) {
@@ -543,15 +622,22 @@ loadFit <- function(file) {
   .x <- as.character(substitute(x))
   .zip <- paste0(.x, ".zip")
   .rds <- paste0(.x, ".rds")
-  .md5 <- substitute(value)
-  .md5[[1]] <- quote(`list`)
-  .md5 <- digest::digest(.md5)
+  .sha1 <- substitute(value)
+  .sha1[[1]] <- quote(`.nlmixr2saveEst`)
+  .est <- eval(.sha1, envir=.assignParent())
+  if (.est %in% .saveFitEnv$randomEst) {
+    return(.assignSimulation(x, value))
+  }
+  .sha1[[1]] <- quote(`list`)
+  .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
+  .random <- FALSE
+  .old <- rxode2::.rxGetSeed()
   if (file.exists(.zip)) {
     .fit <- loadFit(.x)
     if (inherits(.fit, "nlmixr2FitData") &&
           is.environment(attr(class(.fit), ".foceiEnv")) &&
           exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
-          get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .md5) {
+          get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .sha1) {
       assign(as.character(substitute(x)), .fit,
              envir=.assignParent())
       return(invisible(.fit))
@@ -559,7 +645,7 @@ loadFit <- function(file) {
                  inherits(.fit, "nlmixr2FitCore") &&
                  is.environment(.fit) &&
                  exists("nlmixr2save", .fit) &&
-                 get("nlmixr2save", .fit) == .md5) {
+                 get("nlmixr2save", .fit) == .sha1) {
       assign(as.character(substitute(x)), .fit,
              envir=.assignParent())
       return(invisible(.fit))
@@ -568,32 +654,18 @@ loadFit <- function(file) {
     unlink(.zip)
     .fit <- NULL
   } else if (file.exists(.rds)) {
-    .minfo(paste0("loading fit from ", .rds))
-    .rdsInfo <- readRDS(.rds)
-    if (is.list(.rdsInfo) && length(.rdsInfo) == 3 &&
-          all(c("fit", "md5", "random") %in% names(.rdsInfo)) &&
-          ((.rdsInfo$random && .rdsInfo$md5 == digest::digest(list(.md5, .Random.seed))) ||
-             (!.rdsInfo$random && .rdsInfo$md5 == .md5))) {
-      .minfo(paste0("loading from ", .rds))
-      assign(as.character(substitute(x)), .rdsInfo$fit,
-             envir=.assignParent())
-      return(invisible(.rdsInfo$fit))
-    } else {
-      .minfo(paste0("fit in ", .rds, " does not match md5, removing and re-running nlmixr2"))
-      unlink(.rds)
-    }
+    return(`:=.assign_default`(x, value))
   }
   .fit <- force(value)
   if (inherits(.fit, "nlmixr2FitData")) {
-    assign("nlmixr2save", .md5, attr(class(.fit), ".foceiEnv"))
+    assign("nlmixr2save", .sha1, attr(class(.fit), ".foceiEnv"))
     saveFit(.fit, as.character(substitute(x)), zip=TRUE)
   } else if (inherits(.fit, "nlmixr2FitCore")) {
-    assign("nlmixr2save", .md5, envir=.fit)
+    assign("nlmixr2save", .sha1, envir=.fit)
     saveFit(.fit, as.character(substitute(x)), zip=TRUE)
   } else {
-    .rdsInfo <- list(fit=.fit, md5=.md5)
-    saveRDS(.rdsInfo, paste0(.x, ".rds"))
     .minfo(paste0("fit is not a nlmixr2 fit, saving to ", .x, ".rds"))
+    return(.saveRds(.fit, .sha1, .x))
   }
   assign(as.character(substitute(x)), value, envir=.assignParent())
   invisible(.fit)
@@ -602,28 +674,67 @@ loadFit <- function(file) {
 #' @export
 `:=.assign_nlmixr` <- `:=.assign_nlmixr2`
 
-
+#' Save rds with seed information
+#'
+#' @param value forced value
+#' @param old old random seed state
+#' @param sha1 hash of the arguments
+#' @param x name of the object to assign to and save
+#' @return the value that was assigned to the object, invisibly. It
+#'   also has the side effect of assigning the value to the parent
+#'   environment.
+#' @noRd
+#' @author Matthew L. Fidler
+.saveSimRds <- function(value, old, sha1, x) {
+  .new <- rxode2::.rxGetSeed()
+  if (!identical(old, .new)) {
+    .sha1 <- .digest(list(sha1, .old))
+    .random <- TRUE
+  } else {
+    .random <- FALSE
+    .sha1 <- sha1
+  }
+  # The seed is saved so it will restore the state as if the command
+  # had been run, which is important for reproducibility if the
+  # command changes the random seed state.
+  .rdsInfo <- list(fit=value, sha1=.sha1, random=.random, seed=.new)
+  saveRDS(.rdsInfo, paste0(x, ".rds"))
+  assign(x, value, envir=.assignParent())
+  invisible(value)
+}
+#' Assign a simulation evaluation, checking for a cache and saving with seed information
+#'
+#'
+#' @param x the name of the object to assign the value to
+#' @param value the lazy function call to evaluate and assign to the
+#'   object
+#' @return the value that was assigned to the object, invisibly. It
+#'   also has the side effect of assigning the value to the parent
+#'   environment and saving the value to an rds file with seed
+#'   information.
+#' @noRd
+#' @author Matthew L. Fidler
 .assignSimulation <- function(x, value) {
   .x <- as.character(substitute(x))
   .rds <- paste0(.x, ".rds")
-  .md5 <- substitute(value)
-  .md5[[1]] <- quote(`list`)
-  .md5 <- digest::digest(.md5)
+  .sha1 <- substitute(value)
+  .sha1[[1]] <- quote(`list`)
+  .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
   .random <- FALSE
   .old <- rxode2::.rxGetSeed()
   if (file.exists(.rds)) {
     .rdsInfo <- readRDS(.rds)
     if (is.list(.rdsInfo) && length(.rdsInfo) == 4 &&
-          all(c("ret", "md5", "random", "seed") %in% names(.rdsInfo))) {
+          all(c("ret", "sha1", "random", "seed") %in% names(.rdsInfo))) {
       if (.rdsInfo$random) {
         # Here a random number has changed in some way, need to adapt
-        # the md5 to account for the change in random seed
-        .md5 <- digest::digest(list(.md5, .old))
-        if (.rdsInfo$md5 != .md5) {
+        # the sha1 to account for the change in random seed
+        .sha1 <- .digest(list(.sha1, .old))
+        if (.rdsInfo$sha1 != .sha1) {
           .minfo(paste0(.rds, " does not match prior arguments or seed state, removing and re-running"))
           unlink(.rds)
         }
-      } else if (.rdsInfo$md5 != .md5) {
+      } else if (.rdsInfo$sha1 != .sha1) {
         .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
         unlink(.rds)
       }
@@ -642,38 +753,53 @@ loadFit <- function(file) {
         }
       }
     } else {
-      .minfo(paste0(.rds, " does not match argument md5, removing and re-running"))
+      .minfo(paste0(.rds, " does not match argument sha1, removing and re-running"))
       unlink(.rds)
     }
   }
   # Get random seed before evaluating value, so that if the value
-  # changes the seed will be different and thus the md5 needs to change
+  # changes the seed will be different and thus the sha1 needs to change
   .value <- force(value)
-  .new <- rxode2::.rxGetSeed()
-  if (!identical(.old, .new)) {
-    .md5 <- digest::digest(list(.md5, .old))
-    .random <- TRUE
-  }
-  # The seed is saved so it will restore the state as if the command
-  # had been run, which is important for reproducibility if the
-  # command changes the random seed state.
-  .rdsInfo <- list(fit=.value, md5=.md5, random=.random, seed=.new)
-  saveRDS(.rdsInfo, paste0(.x, ".rds"))
-  assign(as.character(substitute(x)), value, envir=.assignParent())
-  invisible(.value)
+  .saveSimRds(.value, .old, .sha1, .x)
 }
-
+#' This saves the fit info without seed information
+#'
+#' @param value forced value
+#' @param sha1 sha1 hash of the arguments
+#' @param x name of the object to assign to and save
+#' @return the value that was assigned to the object, invisibly. It
+#'   also has the side effect of assigning the value to the parent
+#'   environment.
+#' @noRd
+#' @author Matthew L. Fidler
+.saveRds <- function(value, sha1, x) {
+  .rdsInfo <- list(fit=value, sha1=.sha1)
+  saveRDS(.rdsInfo, paste0(x, ".rds"))
+  assign(x, value, envir=.assignParent())
+  invisible(value)
+}
+#' Default assignment, without seed
+#'
+#' @param x the name of the object to assign the value to
+#' @param value the lazy function call to evaluate and assign to the
+#'   object
+#' @return the value that was assigned to the object, invisibly. It
+#'   also has the side effect of assigning the value to the parent
+#'   environment and saving the value to an rds file with sha1
+#'   information.
+#' @noRd
+#' @author Matthew L. Fidler
 .assignDefault <- function(x, value) {
   .x <- as.character(substitute(x))
   .rds <- paste0(.x, ".rds")
-  .md5 <- substitute(value)
-  .md5[[1]] <- quote(`list`)
-  .md5 <- digest::digest(.md5)
+  .sha1 <- substitute(value)
+  .sha1[[1]] <- quote(`list`)
+  .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
   if (file.exists(.rds)) {
     .rdsInfo <- readRDS(.rds)
     if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
-          all(c("ret", "md5") %in% names(.rdsInfo))) {
-      if (.rdsInfo$md5 != .md5) {
+          all(c("ret", "sha1") %in% names(.rdsInfo))) {
+      if (.rdsInfo$sha1 != .sha1) {
         .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
         unlink(.rds)
       }
@@ -683,38 +809,28 @@ loadFit <- function(file) {
                envir=.assignParent())
       }
     } else {
-      .minfo(paste0(.rds, " does not match argument md5, removing and re-running"))
+      .minfo(paste0(.rds, " does not match argument sha1, removing and re-running"))
       unlink(.rds)
     }
   }
 
   # Get random seed before evaluating value, so that if the value
-  # changes the seed will be different and thus the md5 needs to change
+  # changes the seed will be different and thus the sha1 needs to change
   .value <- force(value)
-  .rdsInfo <- list(fit=.value, md5=.md5)
-  saveRDS(.rdsInfo, paste0(.x, ".rds"))
-  assign(as.character(substitute(x)), value, envir=.assignParent())
-  invisible(.value)
+  .saveRds(.value, .sha1, .x)
 }
 
 #' @export
 `:=.assign_default` <- function(x, value) {
-  .assignDefault(x, value)
+  if (checkmate::testCharacter(.saveFitEnv$fun,
+                               any.missing=FALSE,
+                               min.chars=1L) &&
+        .saveFitEnv$fun %in% .saveFitEnv$random) {
+    .assignSimulation(x, value)
+  } else {
+    .assignDefault(x, value)
+  }
 }
-
-#' @export
-`:=.assign_simulate` <- function(x, value) {
-  .assignRandom(x, value)
-}
-
-#' @export
-`:=.assign_rxSolve` <-  `:=.assign_simulate`
-
-#' @export
-`:=.assign_mrgsim` <-  `:=.assign_simulate`
-
-#' @export
-`:=.assign_sim` <-  `:=.assign_simulate`
 
 #' @export
 `:=.default` <- function(x, value) {
