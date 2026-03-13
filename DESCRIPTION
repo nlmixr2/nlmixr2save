@@ -20,11 +20,11 @@ Imports:
     cli,
     digest,
     Rcpp,
-    rxode2 (> 5.0.1),
     zip
 Suggests:
     nlmixr2data,
     nlmixr2est (> 5.0.2),
+    rxode2 (> 5.0.1),
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
