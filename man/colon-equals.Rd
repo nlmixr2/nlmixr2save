@@ -11,7 +11,7 @@
 non-standard evaluation, this expression may not be evaluated
 when passed to the function. In the case of the \code{nlmixr2}
 function, the expression will be evaluated only if the fit needs
-to be refit (i.e. if the zip file does not exist or if the md5
+to be refit (i.e. if the zip file does not exist or if the sha1
 hash of the arguments does not match).}
 }
 \value{
@@ -32,7 +32,7 @@ the \verb{:=} operator will assign the result of the \code{nlmixr2} call to
 the current working directory.
 
 If the "fit.zip" file already exists, it will be loaded instead of
-running the possibly expensive fitting process (as long as the md5
+running the possibly expensive fitting process (as long as the sha1
 hash of the arguments are the same).
 
 This allows for easy saving and loading of fitted models without

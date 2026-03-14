@@ -541,7 +541,8 @@ loadFit <- function(file) {
 #' @param ... additional arguments for nlmixr2 but ignored for this call.
 #' @return estimation method
 #' @author Matthew L. Fidler
-#' @noRd
+#' @export
+#' @keywords internal
 .nlmixr2saveEst <- function(object, data, est = NULL, ...) {
   # Change data
   if (is.character(data) && length(data) == 1 &&
@@ -623,7 +624,7 @@ loadFit <- function(file) {
   .zip <- paste0(.x, ".zip")
   .rds <- paste0(.x, ".rds")
   .sha1 <- substitute(value)
-  .sha1[[1]] <- quote(`.nlmixr2saveEst`)
+  .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveEst")
   .est <- eval(.sha1, envir=.assignParent())
   if (.est %in% .saveFitEnv$randomEst) {
     return(NextMethod())
