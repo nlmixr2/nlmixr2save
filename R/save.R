@@ -626,7 +626,8 @@ loadFit <- function(file) {
   .sha1[[1]] <- quote(`.nlmixr2saveEst`)
   .est <- eval(.sha1, envir=.assignParent())
   if (.est %in% .saveFitEnv$randomEst) {
-    return(.assignSimulation(x, value))
+    return(NextMethod())
+#    return(`:=.`(x, value))
   }
   .sha1[[1]] <- quote(`list`)
   .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
@@ -688,7 +689,7 @@ loadFit <- function(file) {
 .saveSimRds <- function(value, old, sha1, x) {
   .new <- rxode2::.rxGetSeed()
   if (!identical(old, .new)) {
-    .sha1 <- .digest(list(sha1, .old))
+    .sha1 <- .digest(list(sha1, old))
     .random <- TRUE
   } else {
     .random <- FALSE
@@ -697,70 +698,10 @@ loadFit <- function(file) {
   # The seed is saved so it will restore the state as if the command
   # had been run, which is important for reproducibility if the
   # command changes the random seed state.
-  .rdsInfo <- list(fit=value, sha1=.sha1, random=.random, seed=.new)
+  .rdsInfo <- list(ret=value, sha1=.sha1, random=.random, seed=.new)
   saveRDS(.rdsInfo, paste0(x, ".rds"))
   assign(x, value, envir=.assignParent())
   invisible(value)
-}
-#' Assign a simulation evaluation, checking for a cache and saving with seed information
-#'
-#'
-#' @param x the name of the object to assign the value to
-#' @param value the lazy function call to evaluate and assign to the
-#'   object
-#' @return the value that was assigned to the object, invisibly. It
-#'   also has the side effect of assigning the value to the parent
-#'   environment and saving the value to an rds file with seed
-#'   information.
-#' @noRd
-#' @author Matthew L. Fidler
-.assignSimulation <- function(x, value) {
-  .x <- as.character(substitute(x))
-  .rds <- paste0(.x, ".rds")
-  .sha1 <- substitute(value)
-  .sha1[[1]] <- quote(`list`)
-  .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
-  .random <- FALSE
-  .old <- rxode2::.rxGetSeed()
-  if (file.exists(.rds)) {
-    .rdsInfo <- readRDS(.rds)
-    if (is.list(.rdsInfo) && length(.rdsInfo) == 4 &&
-          all(c("ret", "sha1", "random", "seed") %in% names(.rdsInfo))) {
-      if (.rdsInfo$random) {
-        # Here a random number has changed in some way, need to adapt
-        # the sha1 to account for the change in random seed
-        .sha1 <- .digest(list(.sha1, .old))
-        if (.rdsInfo$sha1 != .sha1) {
-          .minfo(paste0(.rds, " does not match prior arguments or seed state, removing and re-running"))
-          unlink(.rds)
-        }
-      } else if (.rdsInfo$sha1 != .sha1) {
-        .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
-        unlink(.rds)
-      }
-      if (file.exists(.rds)) {
-        .minfo(paste0("loading from ", .rds))
-        assign(as.character(substitute(x)), .rdsInfo$ret,
-               envir=.assignParent())
-        if (.rdsInfo$random) {
-          # Restore the seed to what it would have been if the command
-          # had been run, so that the state of the random seed is the
-          # same as if the command had been run, which is important
-          # for reproducibility if the command changes the random seed
-          # state.
-          rxode2::.rxSetSeed(.rdsInfo$seed)
-          .minfo("restoring random seed to state after run")
-        }
-      }
-    } else {
-      .minfo(paste0(.rds, " does not match argument sha1, removing and re-running"))
-      unlink(.rds)
-    }
-  }
-  # Get random seed before evaluating value, so that if the value
-  # changes the seed will be different and thus the sha1 needs to change
-  .value <- force(value)
-  .saveSimRds(.value, .old, .sha1, .x)
 }
 #' This saves the fit info without seed information
 #'
@@ -826,9 +767,56 @@ loadFit <- function(file) {
                                any.missing=FALSE,
                                min.chars=1L) &&
         .saveFitEnv$fun %in% .saveFitEnv$random) {
-    .assignSimulation(x, value)
+    .x <- as.character(substitute(x))
+    .rds <- paste0(.x, ".rds")
+    .sha1 <- substitute(value)
+    .sha1[[1]] <- quote(`list`)
+    .sha0 <- .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
+    .random <- FALSE
+    .old <- rxode2::.rxGetSeed()
+    if (file.exists(.rds)) {
+      .rdsInfo <- readRDS(.rds)
+      if (is.list(.rdsInfo) && length(.rdsInfo) == 4 &&
+            all(c("ret", "sha1", "random", "seed") %in% names(.rdsInfo))) {
+        if (.rdsInfo$random) {
+          # Here a random number has changed in some way, need to adapt
+          # the sha1 to account for the change in random seed
+          .sha1 <- .digest(list(.sha1, .old))
+          if (.rdsInfo$sha1 != .sha1) {
+            .minfo(paste0(.rds, " does not match prior arguments or seed state, removing and re-running"))
+            unlink(.rds)
+            .sha1 <- .sha0
+          }
+        } else if (.rdsInfo$sha1 != .sha1) {
+          .minfo(paste0(.rds, " does not match prior argument, removing and re-running"))
+          unlink(.rds)
+        }
+        if (file.exists(.rds)) {
+          .minfo(paste0("loading from ", .rds))
+          assign(as.character(substitute(x)), .rdsInfo$ret,
+                 envir=.assignParent())
+          if (.rdsInfo$random) {
+            # Restore the seed to what it would have been if the command
+            # had been run, so that the state of the random seed is the
+            # same as if the command had been run, which is important
+            # for reproducibility if the command changes the random seed
+            # state.
+            rxode2::.rxSetSeed(.rdsInfo$seed)
+            .minfo("restoring random seed to state after run")
+          }
+          return(invisible(.rdsInfo$ret))
+        }
+      } else {
+        .minfo(paste0(.rds, " does not match argument sha1, removing and re-running"))
+        unlink(.rds)
+      }
+    }
+    # Get random seed before evaluating value, so that if the value
+    # changes the seed will be different and thus the sha1 needs to change
+    .value <- force(value)
+    .saveSimRds(.value, .old, .sha1, .x)
   } else {
-    .assignDefault(x, value)
+    .assignDefault(x, substitute(value))
   }
 }
 

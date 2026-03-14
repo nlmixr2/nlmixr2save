@@ -6,7 +6,54 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
+
+
 if (requireNamespace("withr", quietly = TRUE)) {
+
+  test_that(":= with rxSolve requires seed to be set to restore", {
+    withr::with_tempdir({
+
+      rxode2::rxWithSeed(42, {
+
+        library(rxode2)
+        library(nlmixr2data)
+
+        one.cmt <- function() {
+          ini({
+            ## You may label each parameter with a comment
+            tka <- 0.45 # Log Ka
+            tcl <- log(c(0, 2.7, 100)) # Log Cl
+            ## This works with interactive models
+            ## You may also label the preceding line with label("label text")
+            tv <- 3.45; label("log V")
+            ## the label("Label name") works with all models
+            eta.ka ~ 0.6
+            eta.cl ~ 0.3
+            eta.v ~ 0.1
+            add.sd <- 0.7
+          })
+          model({
+            ka <- exp(tka + eta.ka)
+            cl <- exp(tcl + eta.cl)
+            v <- exp(tv + eta.v)
+            linCmt() ~ add(add.sd)
+          })
+        }
+
+        .old <- rxode2::.rxGetSeed()
+        solve42 := rxSolve(one.cmt, theo_sd)
+        .new <- rxode2::.rxGetSeed()
+
+        skip_if(!file.exists("solve42.rds"))
+
+        .r <- readRDS("solve42.rds")
+        expect_true(.r$random)
+        expect_equal(.new, .r$seed)
+
+      })
+    })
+  })
+
   withr::with_tempdir({
     test_that("test rxUi item saving with rxode2", {
 
