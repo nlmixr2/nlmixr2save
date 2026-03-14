@@ -715,7 +715,7 @@ loadFit <- function(file) {
 #' @noRd
 #' @author Matthew L. Fidler
 .saveRds <- function(value, sha1, x) {
-  .rdsInfo <- list(fit=value, sha1=.sha1)
+  .rdsInfo <- list(fit=value, sha1=sha1)
   saveRDS(.rdsInfo, paste0(x, ".rds"))
   assign(x, value, envir=.assignParent())
   invisible(value)
