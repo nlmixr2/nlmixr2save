@@ -192,12 +192,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
       .obj <- eval(str2lang(paste0("fit$", .i))) # decompresses object
     }
     if (!saveFitItem(.obj, .i, file)) {
-      .expr <- .saveDeparse(.obj, .i)
-      if (!is.null(.expr)) {
-        .expr[[1]] <- quote(`=`)
-        .expr <- as.call(.expr)
-        .str <- c(.str, paste(deparse(.expr), collapse="\n"))
-      } else if (.i %in% c("phiC", "phiH")) {
+      if (.i %in% c("phiC", "phiH")) {
         .lines <- deparse(as.call(c(quote(`list`), lapply(seq_along(.obj), function(i) {
           .ret <- .saveDeparse(.obj[[i]], "x")
           if (!is.null(.ret)) {
@@ -212,9 +207,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
         }
         writeLines(.lines, con = paste0(file,"-", .i, ".R"))
       } else {
-        warning("could not determine how to save object of class ", paste(class(.obj), collapse=", "),
-                " for item ", .i, "; as a text-file, reverting to .rds format", call.=FALSE)
-        saveRDS(.obj, paste0(file, "-", .i, ".rds"))
+        .expr <- .saveDeparse(.obj, .i)
+        if (!is.null(.expr)) {
+          .expr[[1]] <- quote(`=`)
+          .expr <- as.call(.expr)
+          .str <- c(.str, paste(deparse(.expr), collapse="\n"))
+        } else {
+          warning("could not determine how to save object of class ", paste(class(.obj), collapse=", "),
+                  " for item ", .i, "; as a text-file, reverting to .rds format", call.=FALSE)
+          saveRDS(.obj, paste0(file, "-", .i, ".rds"))
+        }
       }
     }
   }
