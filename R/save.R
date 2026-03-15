@@ -730,19 +730,6 @@ loadFit <- function(file) {
   assign(x, value, envir=.assignParent())
   invisible(value)
 }
-#' Default assignment, without seed
-#'
-#' @param x the name of the object to assign the value to
-#' @param value the lazy function call to evaluate and assign to the
-#'   object
-#' @return the value that was assigned to the object, invisibly. It
-#'   also has the side effect of assigning the value to the parent
-#'   environment and saving the value to an rds file with sha1
-#'   information.
-#' @noRd
-#' @author Matthew L. Fidler
-.assignDefault <- function(x, value) {
-}
 
 #' @export
 `:=.assign_default` <- function(x, value) {

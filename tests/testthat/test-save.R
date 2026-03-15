@@ -6,8 +6,6 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
-
-
 if (requireNamespace("withr", quietly = TRUE)) {
 
   test_that(":= with rxSolve requires seed to be set to restore", {
@@ -50,6 +48,19 @@ if (requireNamespace("withr", quietly = TRUE)) {
         expect_true(.r$random)
         expect_equal(.new, .r$seed)
 
+        if (requireNamespace("nlmixr2est", quietly = TRUE)) {
+
+          library(nlmixr2est)
+
+          .old <- rxode2::.rxGetSeed()
+          solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
+          .new <- rxode2::.rxGetSeed()
+          skip_if(!file.exists("solveEst.rds"))
+          .r <- readRDS("solveEst.rds")
+          expect_true(.r$random)
+          expect_equal(.new, .r$seed)
+
+        }
       })
     })
   })
