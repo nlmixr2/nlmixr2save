@@ -4,6 +4,7 @@
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim")
 .saveFitEnv$randomEst <- "rxSolve"
+.saveFitEnv$isRandom <- FALSE
 .saveFitEnv$fun <- ""
 
 .minfo <- function (text, ..., .envir = parent.frame()) {
@@ -198,7 +199,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
           if (!is.null(.ret)) {
             return(.ret[[3]])
           }
-          NULL
+          NULL # nocov
         }))))
         .lines[1] <- paste0(.i, " <- ", .lines[1])
         if (!is.null(names(.obj))) {
@@ -283,7 +284,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                      val <- substr(f, nchar(file)+2, nchar(f)-4)
                      return(paste0("env$`", val, "` <- readRDS('", f, "')\n"))
                    }
-                   NULL
+                   NULL # nocov
                  }))
   .r <- paste0(.r, collapse="\n")
   writeLines(paste0(file, " <- function() {\n",
@@ -516,10 +517,21 @@ loadFit <- function(file) {
 #' @export
 `:=` <- function(x, value) {
   .assignParent(parent.frame())
+  .saveFitEnv$isRandom <- FALSE
   .subs <- substitute(value)
   if (is.call(.subs)) {
     .cls <- gsub(".*::", "", deparse1(.subs[[1]]))
     .saveFitEnv$fun <- .cls
+    if (.cls %in% c("nlmixr2", "nlmixr")) {
+      .est <- .subs
+      .est[[1]] <- str2lang("nlmixr2save::.nlmixr2saveEst")
+      .est <- eval(.est, envir=.assignParent())
+      if (.est %in% .saveFitEnv$randomEst) {
+        class(.subs) <- "assign_default"
+        .saveFitEnv$isRandom <- TRUE
+        return(UseMethod(":=", .subs))
+      }
+    }
     class(.subs) <- c(paste0("assign_", .cls), "assign_default")
     return(UseMethod(":=", .subs))
   }
@@ -628,10 +640,6 @@ loadFit <- function(file) {
   .sha1 <- substitute(value)
   .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveEst")
   .est <- eval(.sha1, envir=.assignParent())
-  if (.est %in% .saveFitEnv$randomEst) {
-    return(NextMethod())
-#    return(`:=.`(x, value))
-  }
   .sha1[[1]] <- quote(`list`)
   .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
   .random <- FALSE
@@ -734,34 +742,6 @@ loadFit <- function(file) {
 #' @noRd
 #' @author Matthew L. Fidler
 .assignDefault <- function(x, value) {
-  .x <- as.character(substitute(x))
-  .rds <- paste0(.x, ".rds")
-  .sha1 <- substitute(value)
-  .sha1[[1]] <- quote(`list`)
-  .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
-  if (file.exists(.rds)) {
-    .rdsInfo <- readRDS(.rds)
-    if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
-          all(c("ret", "sha1") %in% names(.rdsInfo))) {
-      if (.rdsInfo$sha1 != .sha1) {
-        .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
-        unlink(.rds)
-      }
-      if (file.exists(.rds)) {
-        .minfo(paste0("loading from ", .rds))
-        assign(as.character(substitute(x)), .rdsInfo$ret,
-               envir=.assignParent())
-      }
-    } else {
-      .minfo(paste0(.rds, " does not match argument sha1, removing and re-running"))
-      unlink(.rds)
-    }
-  }
-
-  # Get random seed before evaluating value, so that if the value
-  # changes the seed will be different and thus the sha1 needs to change
-  .value <- force(value)
-  .saveRds(.value, .sha1, .x)
 }
 
 #' @export
@@ -769,7 +749,7 @@ loadFit <- function(file) {
   if (checkmate::testCharacter(.saveFitEnv$fun,
                                any.missing=FALSE,
                                min.chars=1L) &&
-        .saveFitEnv$fun %in% .saveFitEnv$random) {
+        (.saveFitEnv$isRandom || .saveFitEnv$fun %in% .saveFitEnv$random)) {
     .x <- as.character(substitute(x))
     .rds <- paste0(.x, ".rds")
     .sha1 <- substitute(value)
@@ -819,7 +799,34 @@ loadFit <- function(file) {
     .value <- force(value)
     .saveSimRds(.value, .old, .sha1, .x)
   } else {
-    .assignDefault(x, substitute(value))
+    .x <- as.character(substitute(x))
+    .rds <- paste0(.x, ".rds")
+    .sha1 <- substitute(value)
+    .sha1[[1]] <- quote(`list`)
+    .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
+    if (file.exists(.rds)) {
+      .rdsInfo <- readRDS(.rds)
+      if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
+            all(c("ret", "sha1") %in% names(.rdsInfo))) {
+        if (.rdsInfo$sha1 != .sha1) {
+          .minfo(paste0("fit in ", .rds, " does not match prior argument, removing and re-running"))
+          unlink(.rds)
+        }
+        if (file.exists(.rds)) {
+          .minfo(paste0("loading from ", .rds))
+          assign(as.character(substitute(x)), .rdsInfo$ret,
+                 envir=.assignParent())
+        }
+      } else {
+        .minfo(paste0(.rds, " does not match argument sha1, removing and re-running"))
+        unlink(.rds)
+      }
+    }
+
+    # Get random seed before evaluating value, so that if the value
+    # changes the seed will be different and thus the sha1 needs to change
+    .value <- force(value)
+    .saveRds(.value, .sha1, .x)
   }
 }
 
