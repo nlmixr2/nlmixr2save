@@ -77,6 +77,59 @@ if (requireNamespace("withr", quietly = TRUE)) {
           solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
           expect_true(.assignRestore())
           expect_equal(.new, rxode2::.rxGetSeed())
+
+          if (requireNamespace("babelmixr2", quietly = TRUE) &&
+                requireNamespace("PopED", quietly = TRUE)) {
+
+            f <- function() {
+              ini({
+                tKA <- 0.25
+                tCL <- 3.75
+                tV <- 72.8
+                Favail <- fix(0.9)
+                eta.ka ~ 0.09
+                eta.cl ~ 0.25 ^ 2
+                eta.v ~ 0.09
+                prop.sd <- sqrt(0.04)
+                add.sd <- sqrt(0.0025)
+              })
+              model({
+                ka <- tKA * exp(eta.ka)
+                v <- tV * exp(eta.v)
+                cl <- tCL * exp(eta.cl)
+                d/dt(depot) <- -ka * depot
+                d/dt(central) <- ka * depot - cl / v * central
+                cp <- central / v
+                f(depot) <- DOSE * Favail
+                cp ~ add(add.sd) + prop(prop.sd)
+              })
+            }
+
+            f <- f() # compile/check nlmixr2/rxode2 model
+
+            e <- et(amt=1, ii=24, until=250) %>%
+              et(time=c(1,2,8,240,245)) %>%
+              as.data.frame() %>%
+              dplyr::mutate(low=c(NA_real_, 0, 0, 0, 240, 240),
+                            high=c(NA_real_, 10, 10, 10, 248, 248))
+
+            # Create a PopED database for `nlmixr2`:
+            poped := nlmixr(f, e, "poped",
+                            popedControl(a=list(c(DOSE=20),
+                                                c(DOSE=40)),
+                                         maxa=c(DOSE=200),
+                                         mina=c(DOSE=0)))
+            expect_true(file.exists("poped.rds"))
+            expect_false(.assignRestore())
+
+            poped := nlmixr(f, e, "poped",
+                            popedControl(a=list(c(DOSE=20),
+                                                c(DOSE=40)),
+                                         maxa=c(DOSE=200),
+                                         mina=c(DOSE=0)))
+            expect_true(.assignRestore())
+
+          }
         }
       })
     })

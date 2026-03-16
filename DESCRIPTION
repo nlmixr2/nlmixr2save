@@ -24,8 +24,10 @@ Imports:
     rxode2 (> 5.0.1),
     zip
 Suggests:
+    babelmixr2,
     nlmixr2data,
     nlmixr2est (> 5.0.2),
+    PopED,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
