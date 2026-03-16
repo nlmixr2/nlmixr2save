@@ -40,6 +40,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
         .old <- rxode2::.rxGetSeed()
         solve42 := rxSolve(one.cmt, theo_sd)
+        expect_false(.assignRestore())
         .new <- rxode2::.rxGetSeed()
 
         skip_if(!file.exists("solve42.rds"))
@@ -48,6 +49,13 @@ if (requireNamespace("withr", quietly = TRUE)) {
         expect_true(.r$random)
         expect_equal(.new, .r$seed)
 
+        rxode2::.rxSetSeed(.old)
+        if (identical(.old, rxode2::.rxGetSeed())) {
+          stop("Seed was not changed by rxSolve, cannot test restore")
+        }
+        solve42 := rxSolve(one.cmt, theo_sd)
+        expect_true(.assignRestore())
+
         if (requireNamespace("nlmixr2est", quietly = TRUE)) {
 
           library(nlmixr2est)
@@ -55,15 +63,23 @@ if (requireNamespace("withr", quietly = TRUE)) {
           .old <- rxode2::.rxGetSeed()
           solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
           .new <- rxode2::.rxGetSeed()
+
+          expect_false(.assignRestore())
+
           skip_if(!file.exists("solveEst.rds"))
           .r <- readRDS("solveEst.rds")
           expect_true(.r$random)
           expect_equal(.new, .r$seed)
 
+          rxode2::.rxSetSeed(.old)
+          solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
+          expect_true(.assignRestore())
+          expect_equal(.new, rxode2::.rxGetSeed())
         }
       })
     })
   })
+  stop("here")
 
   withr::with_tempdir({
     test_that("test rxUi item saving with rxode2", {
