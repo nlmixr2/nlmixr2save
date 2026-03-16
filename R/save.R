@@ -700,7 +700,6 @@ loadFit <- function(file) {
 #' Save rds with seed information
 #'
 #' @param value forced value
-#' @param old old random seed state
 #' @param sha1 hash of the arguments
 #' @param x name of the object to assign to and save
 #' @return the value that was assigned to the object, invisibly. It
@@ -708,17 +707,13 @@ loadFit <- function(file) {
 #'   environment.
 #' @noRd
 #' @author Matthew L. Fidler
-.saveSimRds <- function(value, old, sha1, x) {
-  .new <- rxode2::.rxGetSeed()
-  if (!identical(old, .new)) {
-    .random <- TRUE
-  } else {
-    .random <- FALSE
-  }
+.saveSimRds <- function(value, sha1, x) {
   # The seed is saved so it will restore the state as if the command
   # had been run, which is important for reproducibility if the
   # command changes the random seed state.
-  .rdsInfo <- list(ret=value, sha1=sha1, random=.random, old=old, seed=.new)
+  .new <- rxode2::.rxGetSeed()
+  .rdsInfo <- list(ret=value, sha1=sha1, random=!identical(.saveFitEnv$old, .new),
+                   old=.saveFitEnv$old, seed=.new)
   saveRDS(.rdsInfo, paste0(x, ".rds"))
   assign(x, value, envir=.assignParent())
   invisible(value)
@@ -746,7 +741,7 @@ loadFit <- function(file) {
                                any.missing=FALSE,
                                min.chars=1L) &&
         (.saveFitEnv$isRandom || .saveFitEnv$fun %in% .saveFitEnv$random)) {
-    .old <- rxode2::.rxGetSeed()
+    .saveFitEnv$old <- rxode2::.rxGetSeed()
     .x <- as.character(substitute(x))
     .rds <- paste0(.x, ".rds")
     .sha1 <- substitute(value)
@@ -763,7 +758,7 @@ loadFit <- function(file) {
           if (.rdsInfo$sha1 != .sha1) {
             .minfo(paste0(.rds, " does not match prior arguments, removing and re-running"))
             unlink(.rds)
-          } else if (!identical(.old, .rdsInfo$old)) {
+          } else if (!identical(.saveFitEnv$old, .rdsInfo$old)) {
             .minfo(paste0(.rds, " was not started with the same random state, removing and re-running"))
             unlink(.rds)
           }
@@ -795,7 +790,7 @@ loadFit <- function(file) {
     # Get random seed before evaluating value, so that if the value
     # changes the seed will be different and thus the sha1 needs to change
     .value <- force(value)
-    .saveSimRds(.value, .old, .sha1, .x)
+    .saveSimRds(.value, .sha1, .x)
   } else {
     .x <- as.character(substitute(x))
     .rds <- paste0(.x, ".rds")

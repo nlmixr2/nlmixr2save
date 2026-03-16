@@ -38,7 +38,8 @@ if (requireNamespace("withr", quietly = TRUE)) {
           })
         }
 
-        .old <- rxode2::.rxGetSeed()
+        rxode2::rxSetSeed(42)
+        set.seed(42)
         solve42 := rxSolve(one.cmt, theo_sd)
         expect_false(.assignRestore())
         .new <- rxode2::.rxGetSeed()
@@ -49,18 +50,18 @@ if (requireNamespace("withr", quietly = TRUE)) {
         expect_true(.r$random)
         expect_equal(.new, .r$seed)
 
-        rxode2::.rxSetSeed(.old)
-        if (identical(.old, rxode2::.rxGetSeed())) {
-          stop("Seed was not changed by rxSolve, cannot test restore")
-        }
+        rxode2::rxSetSeed(42)
+        set.seed(42)
         solve42 := rxSolve(one.cmt, theo_sd)
         expect_true(.assignRestore())
+        expect_equal(.new, rxode2::.rxGetSeed())
 
         if (requireNamespace("nlmixr2est", quietly = TRUE)) {
 
           library(nlmixr2est)
 
-          .old <- rxode2::.rxGetSeed()
+          rxode2::rxSetSeed(42)
+          set.seed(42)
           solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
           .new <- rxode2::.rxGetSeed()
 
@@ -71,7 +72,8 @@ if (requireNamespace("withr", quietly = TRUE)) {
           expect_true(.r$random)
           expect_equal(.new, .r$seed)
 
-          rxode2::.rxSetSeed(.old)
+          rxode2::rxSetSeed(42)
+          set.seed(42)
           solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
           expect_true(.assignRestore())
           expect_equal(.new, rxode2::.rxGetSeed())
@@ -79,7 +81,6 @@ if (requireNamespace("withr", quietly = TRUE)) {
       })
     })
   })
-  stop("here")
 
   withr::with_tempdir({
     test_that("test rxUi item saving with rxode2", {
