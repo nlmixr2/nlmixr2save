@@ -25,6 +25,7 @@ Imports:
     zip
 Suggests:
     babelmixr2,
+    dplyr,
     nlmixr2data,
     nlmixr2est (> 5.0.2),
     PopED,
