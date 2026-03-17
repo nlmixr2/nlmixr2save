@@ -10,6 +10,12 @@
 .saveFitEnv$restore <- FALSE
 
 .minfo <- function (text, ..., .envir = parent.frame()) {
+  .opt <- getOption("nlmixr2save.quiet", FALSE)
+  if (checkmate::testLogical(.opt,
+                             any.missing=FALSE, len=1) &&
+        .opt) {
+    return(invisible())
+  }
   cli::cli_alert_info(gettext(text), ..., .envir = .envir)
 }
 

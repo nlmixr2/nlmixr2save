@@ -1,3 +1,8 @@
+
+oldOpt <- getOption("nlmixr2save.quiet", FALSE)
+
+options("nlmixr2save.quiet" = TRUE)
+
 test_that("saveFit errors on number", {
   expect_error(saveFit(1), "saveFit not implemented")
 })
@@ -139,7 +144,8 @@ if (requireNamespace("withr", quietly = TRUE)) {
           }
 
           if (requireNamespace("babelmixr2", quietly = TRUE) &&
-                requireNamespace("PopED", quietly = TRUE)) {
+                requireNamespace("PopED", quietly = TRUE) &&
+                requireNamespace("dplyr", quietly = TRUE)) {
 
             library(babelmixr2)
             library(PopED)
@@ -573,3 +579,5 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
 
   }
 }
+
+options("nlmixr2save.quiet" = oldOpt)
