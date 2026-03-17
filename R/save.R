@@ -2,7 +2,8 @@
 .saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed")
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData", "iniDf0")
 .saveFitEnv$parent <- NULL
-.saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim", "predict")
+.saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
+                        "predict")
 .saveFitEnv$randomEst <- c("rxSolve", "predict")
 .saveFitEnv$isRandom <- FALSE
 .saveFitEnv$fun <- ""
