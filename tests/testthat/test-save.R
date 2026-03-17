@@ -117,8 +117,9 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
             obs <- theo_sd[theo_sd$EVID == 0,]
 
-            # This automatically caches the values under
-            # vpcstats but magritter does not.
+            # This *should* automatically cache the values under
+            # vpcstats with R pipe
+
             vpc :=
               observed(obs, x=TIME, y=DV) |>
               simulated(solveVpc, x=time, y=sim) |>

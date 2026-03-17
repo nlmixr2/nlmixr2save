@@ -618,6 +618,10 @@ loadFit <- function(file) {
       .env2list(lst[[i]])
     } else if (is.function(lst[[i]])){
       deparse1(lst[[i]])
+    } else if (inherits(lst[[i]], "rxode2")) {
+      rxode2::rxNorm(lst[[i]])
+    } else if (inherits(lst[[i]], "data.table")) {
+      as.data.frame(lst[[i]])
     } else if (is.list(lst[[i]])) {
       .stableLst(lst[[i]])
     } else {
@@ -684,12 +688,12 @@ loadFit <- function(file) {
     .rdsInfo <- readRDS(.rds)
     if (is.list(.rdsInfo) &&
           length(.rdsInfo) == 2 &&
-          all(c("fit", "sha1") %in% names(.rdsInfo))) {
+          all(c("ret", "sha1") %in% names(.rdsInfo))) {
       if (.rdsInfo$sha1 == .sha1) {
-        assign(as.character(substitute(x)), .rdsInfo$fit,
+        assign(as.character(substitute(x)), .rdsInfo$ret,
                envir=.assignParent())
         .saveFitEnv$restore <- TRUE
-        return(invisible(.rdsInfo$fit))
+        return(invisible(.rdsInfo$ret))
       } else {
         .minfo(paste0("fit in ", .rds, " does not match current fit; removing and refitting"))
         unlink(.rds)
@@ -781,14 +785,14 @@ loadFit <- function(file) {
 #' @noRd
 #' @author Matthew L. Fidler
 .saveRds <- function(value, sha1, x) {
-  .rdsInfo <- list(fit=value, sha1=sha1)
+  .rdsInfo <- list(ret=value, sha1=sha1)
   saveRDS(.rdsInfo, paste0(x, ".rds"))
   assign(x, value, envir=.assignParent())
   invisible(value)
 }
 
 #' @export
-`:=.assign_default` <- function(x, value) {
+`:=.assign_default` <- function(x, value){
   if (checkmate::testCharacter(.saveFitEnv$fun,
                                any.missing=FALSE,
                                min.chars=1L) &&
@@ -869,7 +873,6 @@ loadFit <- function(file) {
         unlink(.rds)
       }
     }
-
     # Get random seed before evaluating value, so that if the value
     # changes the seed will be different and thus the sha1 needs to change
     .value <- force(value)
