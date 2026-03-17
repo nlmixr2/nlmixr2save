@@ -589,8 +589,7 @@ loadFit <- function(file) {
 #' @author Matthew L. Fidler
 .env2list <- function(env) {
   .names <- ls(env, all.names=TRUE)
-  stats::setNames(.names,
-                  lapply(.names,
+  stats::setNames(lapply(.names,
                          function(x){
                            .ret <- get(x, envir=env)
                            if (is.environment(.ret)) {
