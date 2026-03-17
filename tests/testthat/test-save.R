@@ -56,6 +56,23 @@ if (requireNamespace("withr", quietly = TRUE)) {
         expect_true(.assignRestore())
         expect_equal(.new, rxode2::.rxGetSeed())
 
+        rxode2::rxSetSeed(43)
+        set.seed(43)
+        solve42 := rxSolve(one.cmt, theo_sd)
+        expect_false(.assignRestore())
+        expect_false(identical(.new, rxode2::.rxGetSeed()))
+
+        rxode2::rxSetSeed(43)
+        set.seed(43)
+        solve42 := rxSolve(one.cmt, theo_sd)
+        expect_true(.assignRestore())
+
+        rxode2::rxSetSeed(43)
+        set.seed(43)
+        solve42 := rxSolve(one.cmt, theo_sd, nStud=2)
+        expect_false(.assignRestore())
+        expect_false(identical(.new, rxode2::.rxGetSeed()))
+
         if (requireNamespace("nlmixr2est", quietly = TRUE)) {
 
           library(nlmixr2est)
@@ -78,8 +95,54 @@ if (requireNamespace("withr", quietly = TRUE)) {
           expect_true(.assignRestore())
           expect_equal(.new, rxode2::.rxGetSeed())
 
+
+          # Here solveEst is rds but may not have come from a rds file
+
+          solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
+                              control=foceiControl(print=0))
+          expect_false(.assignRestore())
+
+          solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
+                              control=foceiControl(print=0))
+          expect_true(.assignRestore())
+
+
+          rxSetSeed(42)
+          solveVpc := vpcSim(solveEst, n=100)
+          expect_false(.assignRestore())
+
+          if (requireNamespace("tidyvpc", quietly = TRUE)) {
+
+            library(tidyvpc)
+
+            obs <- theo_sd[theo_sd$EVID == 0,]
+
+            # This *should* automatically cache the values under
+            # vpcstats with R pipe
+
+            vpc :=
+              observed(obs, x=TIME, y=DV) |>
+              simulated(solveVpc, x=time, y=sim) |>
+              binning(bin = "jenks") |>
+              vpcstats()
+
+            expect_false(.assignRestore())
+
+            vpc :=
+              observed(obs, x=TIME, y=DV) |>
+              simulated(solveVpc, x=time, y=sim) |>
+              binning(bin = "jenks") |>
+              vpcstats()
+
+            expect_true(.assignRestore())
+
+          }
+
           if (requireNamespace("babelmixr2", quietly = TRUE) &&
                 requireNamespace("PopED", quietly = TRUE)) {
+
+            library(babelmixr2)
+            library(PopED)
 
             f <- function() {
               ini({
