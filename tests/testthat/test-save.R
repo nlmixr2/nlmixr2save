@@ -95,6 +95,48 @@ if (requireNamespace("withr", quietly = TRUE)) {
           expect_true(.assignRestore())
           expect_equal(.new, rxode2::.rxGetSeed())
 
+
+          # Here solveEst is rds but may not have come from a rds file
+
+          solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
+                              control=foceiControl(print=0))
+          expect_false(.assignRestore())
+
+          solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
+                              control=foceiControl(print=0))
+          expect_true(.assignRestore())
+
+
+          rxSetSeed(42)
+          solveVpc := vpcSim(solveEst, n=100)
+          expect_false(.assignRestore())
+
+          if (requireNamespace("tidyvpc", quietly = TRUE)) {
+
+            library(tidyvpc)
+
+            obs <- theo_sd[theo_sd$EVID == 0,]
+
+            # This automatically caches the values under
+            # vpcstats but magritter does not.
+            vpc :=
+              observed(obs, x=TIME, y=DV) |>
+              simulated(solveVpc, x=time, y=sim) |>
+              binning(bin = "jenks") |>
+              vpcstats()
+
+            expect_false(.assignRestore())
+
+            vpc :=
+              observed(obs, x=TIME, y=DV) |>
+              simulated(solveVpc, x=time, y=sim) |>
+              binning(bin = "jenks") |>
+              vpcstats()
+
+            expect_true(.assignRestore())
+
+          }
+
           if (requireNamespace("babelmixr2", quietly = TRUE) &&
                 requireNamespace("PopED", quietly = TRUE)) {
 

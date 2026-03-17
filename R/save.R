@@ -3,7 +3,7 @@
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData", "iniDf0")
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
-                        "predict")
+                        "predict", "vpcSim")
 .saveFitEnv$randomEst <- c("rxSolve", "predict")
 .saveFitEnv$isRandom <- FALSE
 .saveFitEnv$fun <- ""
