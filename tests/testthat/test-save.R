@@ -56,6 +56,12 @@ if (requireNamespace("withr", quietly = TRUE)) {
         expect_true(.assignRestore())
         expect_equal(.new, rxode2::.rxGetSeed())
 
+        rxode2::rxSetSeed(43)
+        set.seed(43)
+        solve42 := rxSolve(one.cmt, theo_sd)
+        expect_false(.assignRestore())
+        expect_false(identical(.new, rxode2::.rxGetSeed()))
+
         if (requireNamespace("nlmixr2est", quietly = TRUE)) {
 
           library(nlmixr2est)
