@@ -534,15 +534,15 @@ loadFit <- function(file) {
         # the default method, with random save information flagged.
         class(.subs) <- "assign_default"
         .saveFitEnv$isRandom <- TRUE
+        # If this was a fit object, it is expired so remove it
+        .x <- as.character(substitute(x))
+        if (file.exists(paste0(.x, ".zip"))) {
+          .minfo(paste0("removing expired fit file ", .x, ".zip"))
+          unlink(paste0(.x, ".zip"))
+        }
         return(UseMethod(":=", .subs))
       }
       .x <- as.character(substitute(x))
-      if (file.exists(paste0(.x, ".rds"))) {
-        # Here the file exists but is a rds file, so it isn't a
-        # nlmixr2 fit, so use the default method.
-        class(.subs) <- "assign_default"
-        return(UseMethod(":=", .subs))
-      }
     }
     class(.subs) <- c(paste0("assign_", .cls), "assign_default")
     return(UseMethod(":=", .subs))
@@ -648,9 +648,10 @@ loadFit <- function(file) {
 
 #' @export
 `:=.assign_nlmixr2` <- function(x, value) {
-  # First see if the zip file exists
+  # First see if the zip or rds file exists
   .x <- as.character(substitute(x))
   .zip <- paste0(.x, ".zip")
+  .rds <- paste0(.x, ".rds")
   .sha1 <- substitute(value)
   .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveEst")
   .est <- eval(.sha1, envir=.assignParent())
@@ -679,6 +680,56 @@ loadFit <- function(file) {
     .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
     unlink(.zip)
     .fit <- NULL
+  } else if (file.exists(.rds)) {
+    .rdsInfo <- readRDS(.rds)
+    if (is.list(.rdsInfo) &&
+          length(.rdsInfo) == 2 &&
+          all(c("fit", "sha1") %in% names(.rdsInfo))) {
+      if (.rdsInfo$sha1 == .sha1) {
+        assign(as.character(substitute(x)), .rdsInfo$fit,
+               envir=.assignParent())
+        .saveFitEnv$restore <- TRUE
+        return(invisible(.rdsInfo$fit))
+      } else {
+        .minfo(paste0("fit in ", .rds, " does not match current fit; removing and refitting"))
+        unlink(.rds)
+      }
+    } else if (is.list(.rdsInfo) && length(.rdsInfo) == 5 &&
+                 all(c("ret", "sha1", "random", "old",  "seed") %in% names(.rdsInfo))) {
+      if (.rdsInfo$random) {
+        # Here a random number has changed in some way, need to adapt
+        # the sha1 to account for the change in random seed
+        if (.rdsInfo$sha1 != .sha1) {
+          .minfo(paste0(.rds, " does not match prior arguments, removing and re-running"))
+          unlink(.rds)
+        } else if (!identical(.saveFitEnv$old, .rdsInfo$old)) {
+          .minfo(paste0(.rds, " was not started with the same random state, removing and re-running"))
+          unlink(.rds)
+        }
+      } else if (.rdsInfo$sha1 != .sha1) {
+        .minfo(paste0(.rds, " does not match prior argument, removing and re-running"))
+        unlink(.rds)
+      }
+      if (file.exists(.rds)) {
+        .minfo(paste0("loading from ", .rds))
+        assign(as.character(substitute(x)), .rdsInfo$ret,
+               envir=.assignParent())
+        if (.rdsInfo$random) {
+          # Restore the seed to what it would have been if the command
+          # had been run, so that the state of the random seed is the
+          # same as if the command had been run, which is important
+          # for reproducibility if the command changes the random seed
+          # state.
+          rxode2::.rxSetSeed(.rdsInfo$seed)
+          .minfo("restoring random seed to state after run")
+        }
+        .saveFitEnv$restore <- TRUE
+        return(invisible(.rdsInfo$ret))
+      }
+    } else {
+      .minfo(paste0("fit in ", .rds, " is not in expected format; removing and refitting"))
+      unlink(.rds)
+    }
   }
   .fit <- force(value)
   if (inherits(.fit, "nlmixr2FitData")) {
