@@ -178,7 +178,7 @@ Matthew L. Fidler
 #> ── Time (sec $time): ──
 #> 
 #>            setup optimize covariance table compress    other
-#> elapsed 0.001748 0.430029    0.43004 0.066    0.001 1.702183
+#> elapsed 0.001759 0.351969    0.35197 0.052    0.001 1.774302
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
