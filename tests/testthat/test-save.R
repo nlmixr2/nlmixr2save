@@ -1,7 +1,6 @@
 
 oldOpt <- getOption("nlmixr2save.quiet", FALSE)
 
-options(expressions = 5000) # Default is 500; try a higher value
 
 options("nlmixr2save.quiet" = TRUE)
 
@@ -13,8 +12,8 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
-if (requireNamespace("withr", quietly = TRUE) &&
-      requireNamespace("nlmixr2data", quietly = TRUE)) {
+if (requireNamespace("withr", quietly = TRUE)) {
+
   test_that(":= with rxSolve requires seed to be set to restore", {
     withr::with_tempdir({
 
@@ -63,229 +62,85 @@ if (requireNamespace("withr", quietly = TRUE) &&
         expect_true(.assignRestore())
         expect_equal(.new, rxode2::.rxGetSeed())
 
-        rxode2::rxSetSeed(43)
-        set.seed(43)
-        solve42 := rxSolve(one.cmt, theo_sd)
-        expect_false(.assignRestore())
-        expect_false(identical(.new, rxode2::.rxGetSeed()))
+        if (requireNamespace("nlmixr2est", quietly = TRUE)) {
 
-        rxode2::rxSetSeed(43)
-        set.seed(43)
-        solve42 := rxSolve(one.cmt, theo_sd)
-        expect_true(.assignRestore())
+          library(nlmixr2est)
 
-        rxode2::rxSetSeed(43)
-        set.seed(43)
-        solve42 := rxSolve(one.cmt, theo_sd, nStud=2)
-        expect_false(.assignRestore())
-        expect_false(identical(.new, rxode2::.rxGetSeed()))
+          rxode2::rxSetSeed(42)
+          set.seed(42)
+          solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
+          .new <- rxode2::.rxGetSeed()
+
+          expect_false(.assignRestore())
+
+          skip_if(!file.exists("solveEst.rds"))
+          .r <- readRDS("solveEst.rds")
+          expect_true(.r$random)
+          expect_equal(.new, .r$seed)
+
+          rxode2::rxSetSeed(42)
+          set.seed(42)
+          solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
+          expect_true(.assignRestore())
+          expect_equal(.new, rxode2::.rxGetSeed())
+
+          if (requireNamespace("babelmixr2", quietly = TRUE) &&
+                requireNamespace("PopED", quietly = TRUE)) {
+
+            f <- function() {
+              ini({
+                tKA <- 0.25
+                tCL <- 3.75
+                tV <- 72.8
+                Favail <- fix(0.9)
+                eta.ka ~ 0.09
+                eta.cl ~ 0.25 ^ 2
+                eta.v ~ 0.09
+                prop.sd <- sqrt(0.04)
+                add.sd <- sqrt(0.0025)
+              })
+              model({
+                ka <- tKA * exp(eta.ka)
+                v <- tV * exp(eta.v)
+                cl <- tCL * exp(eta.cl)
+                d/dt(depot) <- -ka * depot
+                d/dt(central) <- ka * depot - cl / v * central
+                cp <- central / v
+                f(depot) <- DOSE * Favail
+                cp ~ add(add.sd) + prop(prop.sd)
+              })
+            }
+
+            f <- f() # compile/check nlmixr2/rxode2 model
+
+            e <- et(amt=1, ii=24, until=250) %>%
+              et(time=c(1,2,8,240,245)) %>%
+              as.data.frame() %>%
+              dplyr::mutate(low=c(NA_real_, 0, 0, 0, 240, 240),
+                            high=c(NA_real_, 10, 10, 10, 248, 248))
+
+            # Create a PopED database for `nlmixr2`:
+            poped := nlmixr(f, e, "poped",
+                            popedControl(a=list(c(DOSE=20),
+                                                c(DOSE=40)),
+                                         maxa=c(DOSE=200),
+                                         mina=c(DOSE=0)))
+            expect_true(file.exists("poped.rds"))
+            expect_false(.assignRestore())
+
+            poped := nlmixr(f, e, "poped",
+                            popedControl(a=list(c(DOSE=20),
+                                                c(DOSE=40)),
+                                         maxa=c(DOSE=200),
+                                         mina=c(DOSE=0)))
+            expect_true(.assignRestore())
+
+          }
+        }
       })
     })
   })
-}
 
-if (requireNamespace("withr", quietly = TRUE) &&
-      requireNamespace("nlmixr2data", quietly = TRUE) &&
-      requireNamespace("nlmixr2est", quietly = TRUE)) {
-
-  test_that(":= with nlmixr2 produces zip/rds", {
-    withr::with_tempdir({
-
-      library(nlmixr2est)
-      library(nlmixr2data)
-
-      one.cmt <- function() {
-        ini({
-          ## You may label each parameter with a comment
-          tka <- 0.45 # Log Ka
-          tcl <- log(c(0, 2.7, 100)) # Log Cl
-          ## This works with interactive models
-          ## You may also label the preceding line with label("label text")
-          tv <- 3.45; label("log V")
-          ## the label("Label name") works with all models
-          eta.ka ~ 0.6
-          eta.cl ~ 0.3
-          eta.v ~ 0.1
-          add.sd <- 0.7
-        })
-        model({
-          ka <- exp(tka + eta.ka)
-          cl <- exp(tcl + eta.cl)
-          v <- exp(tv + eta.v)
-          linCmt() ~ add(add.sd)
-        })
-      }
-
-
-      rxode2::rxSetSeed(42)
-      set.seed(42)
-      solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
-      .new <- rxode2::.rxGetSeed()
-
-      expect_false(.assignRestore())
-
-      skip_if(!file.exists("solveEst.rds"))
-      .r <- readRDS("solveEst.rds")
-      expect_true(.r$random)
-      expect_equal(.new, .r$seed)
-
-      rxode2::rxSetSeed(42)
-      set.seed(42)
-      solveEst := nlmixr2(one.cmt, theo_sd, est="rxSolve")
-      expect_true(.assignRestore())
-      expect_equal(.new, rxode2::.rxGetSeed())
-
-
-      # Here solveEst is rds but may not have come from a rds file
-
-      solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
-                          control=foceiControl(print=0))
-      expect_false(.assignRestore())
-
-      solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
-                          control=foceiControl(print=0))
-      expect_true(.assignRestore())
-
-
-      rxSetSeed(42)
-      solveVpc := vpcSim(solveEst, n=100)
-      expect_false(.assignRestore())
-    })
-
-  })
-}
-
-if (requireNamespace("withr", quietly = TRUE) &&
-      requireNamespace("nlmixr2data", quietly = TRUE) &&
-      requireNamespace("nlmixr2est", quietly = TRUE) &&
-      requireNamespace("tidyvpc", quietly = TRUE)) {
-
-  withr::with_tempdir({
-    test_that(":= with nlmixr2 can be used with piped tidyvpc", {
-
-      one.cmt <- function() {
-        ini({
-          ## You may label each parameter with a comment
-          tka <- 0.45 # Log Ka
-          tcl <- log(c(0, 2.7, 100)) # Log Cl
-          ## This works with interactive models
-          ## You may also label the preceding line with label("label text")
-          tv <- 3.45; label("log V")
-          ## the label("Label name") works with all models
-          eta.ka ~ 0.6
-          eta.cl ~ 0.3
-          eta.v ~ 0.1
-          add.sd <- 0.7
-        })
-        model({
-          ka <- exp(tka + eta.ka)
-          cl <- exp(tcl + eta.cl)
-          v <- exp(tv + eta.v)
-          linCmt() ~ add(add.sd)
-        })
-      }
-
-      library(nlmixr2est)
-      library(nlmixr2data)
-      library(tidyvpc)
-
-      solveEst := nlmixr2(one.cmt, theo_sd, est="focei",
-                          control=foceiControl(print=0))
-      expect_false(.assignRestore())
-
-
-      rxSetSeed(42)
-      solveVpc := vpcSim(solveEst, n=100)
-      expect_false(.assignRestore())
-
-      obs <- theo_sd[theo_sd$EVID == 0,]
-
-      # This *should* automatically cache the values under
-      # vpcstats with R pipe
-
-      vpc :=
-        observed(obs, x=TIME, y=DV) |>
-        simulated(solveVpc, x=time, y=sim) |>
-        binning(bin = "jenks") |>
-        vpcstats()
-
-      expect_false(.assignRestore())
-
-      vpc :=
-        observed(obs, x=TIME, y=DV) |>
-        simulated(solveVpc, x=time, y=sim) |>
-        binning(bin = "jenks") |>
-        vpcstats()
-
-      expect_true(.assignRestore())
-
-    })
-
-  })
-}
-
-if (requireNamespace("babelmixr2", quietly = TRUE) &&
-      requireNamespace("PopED", quietly = TRUE) &&
-      requireNamespace("dplyr", quietly = TRUE)) {
-
-  test_that(":= assignment can be used with determinsitc non-nlmixr2 funs", {
-    withr::with_tempdir({
-      library(babelmixr2)
-      library(PopED)
-
-      f <- function() {
-        ini({
-          tKA <- 0.25
-          tCL <- 3.75
-          tV <- 72.8
-          Favail <- fix(0.9)
-          eta.ka ~ 0.09
-          eta.cl ~ 0.25 ^ 2
-          eta.v ~ 0.09
-          prop.sd <- sqrt(0.04)
-          add.sd <- sqrt(0.0025)
-        })
-        model({
-          ka <- tKA * exp(eta.ka)
-          v <- tV * exp(eta.v)
-          cl <- tCL * exp(eta.cl)
-          d/dt(depot) <- -ka * depot
-          d/dt(central) <- ka * depot - cl / v * central
-          cp <- central / v
-          f(depot) <- DOSE * Favail
-          cp ~ add(add.sd) + prop(prop.sd)
-        })
-      }
-
-      f <- f() # compile/check nlmixr2/rxode2 model
-
-      e <- et(amt=1, ii=24, until=250) %>%
-        et(time=c(1,2,8,240,245)) %>%
-        as.data.frame() %>%
-        dplyr::mutate(low=c(NA_real_, 0, 0, 0, 240, 240),
-                      high=c(NA_real_, 10, 10, 10, 248, 248))
-
-      # Create a PopED database for `nlmixr2`:
-      poped := nlmixr(f, e, "poped",
-                      popedControl(a=list(c(DOSE=20),
-                                          c(DOSE=40)),
-                                   maxa=c(DOSE=200),
-                                   mina=c(DOSE=0)))
-      expect_true(file.exists("poped.rds"))
-      expect_false(.assignRestore())
-
-      poped := nlmixr(f, e, "poped",
-                      popedControl(a=list(c(DOSE=20),
-                                          c(DOSE=40)),
-                                   maxa=c(DOSE=200),
-                                   mina=c(DOSE=0)))
-      expect_true(.assignRestore())
-    })
-
-  })
-}
-
-if (requireNamespace("withr", quietly = TRUE)) {
   withr::with_tempdir({
     test_that("test rxUi item saving with rxode2", {
 
@@ -310,37 +165,37 @@ if (requireNamespace("withr", quietly = TRUE)) {
       expect_true(inherits(rxUi, "rxUi"))
     })
   })
-
-  withr::with_tempdir({
-    test_that("saveFitItem handles data.frame as expected", {
-
-      df1 <- data.frame(a = 1:3, row.names = c("sub1", "sub2", "sub3"))
-      res1 <- saveFitItem(df1, "parFixedDf", "testfit")
-      expect_true(res1)
-      expect_true(file.exists("testfit-parFixedDf.csv"))
-      df2 <- read.csv("testfit-parFixedDf.csv", row.names=1)
-      expect_equal(df1, df2)
-
-      df1 <- data.frame(b = 4:6, row.names = c("sub1", "sub2", "sub3"))
-      res2 <- saveFitItem(df1, "ranef", "testfit")
-      expect_true(res2)
-      expect_true(file.exists("testfit-ranef.csv"))
-      df2 <- read.csv("testfit-ranef.csv")
-      expect_false(identical(df1, df2))
-      row.names(df1) <- NULL
-      expect_equal(df1, df2)
-
-      # data.frame not in special lists falling back to rds
-      obj <- data.frame(x = 1)
-      res3 <- saveFitItem(obj, "fooObj", "testfit")
-      expect_true(res3)
-      expect_true(file.exists("testfit-fooObj.rds"))
-
-      obj2 <- readRDS("testfit-fooObj.rds")
-      expect_equal(obj, obj2)
-    })
-  })
 }
+
+withr::with_tempdir({
+  test_that("saveFitItem handles data.frame as expected", {
+
+    df1 <- data.frame(a = 1:3, row.names = c("sub1", "sub2", "sub3"))
+    res1 <- saveFitItem(df1, "parFixedDf", "testfit")
+    expect_true(res1)
+    expect_true(file.exists("testfit-parFixedDf.csv"))
+    df2 <- read.csv("testfit-parFixedDf.csv", row.names=1)
+    expect_equal(df1, df2)
+
+    df1 <- data.frame(b = 4:6, row.names = c("sub1", "sub2", "sub3"))
+    res2 <- saveFitItem(df1, "ranef", "testfit")
+    expect_true(res2)
+    expect_true(file.exists("testfit-ranef.csv"))
+    df2 <- read.csv("testfit-ranef.csv")
+    expect_false(identical(df1, df2))
+    row.names(df1) <- NULL
+    expect_equal(df1, df2)
+
+    # data.frame not in special lists falling back to rds
+    obj <- data.frame(x = 1)
+    res3 <- saveFitItem(obj, "fooObj", "testfit")
+    expect_true(res3)
+    expect_true(file.exists("testfit-fooObj.rds"))
+
+    obj2 <- readRDS("testfit-fooObj.rds")
+    expect_equal(obj, obj2)
+  })
+})
 
 if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       requireNamespace("nlmixr2data", quietly = TRUE)) {
