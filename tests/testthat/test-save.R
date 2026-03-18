@@ -87,6 +87,9 @@ if (requireNamespace("withr", quietly = TRUE)) {
           if (requireNamespace("babelmixr2", quietly = TRUE) &&
                 requireNamespace("PopED", quietly = TRUE)) {
 
+            library(babelmixr2)
+            library(PopED)
+
             f <- function() {
               ini({
                 tKA <- 0.25
