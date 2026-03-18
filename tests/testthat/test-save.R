@@ -1,6 +1,8 @@
 
 oldOpt <- getOption("nlmixr2save.quiet", FALSE)
 
+options(expressions = 5000) # Default is 500; try a higher value
+
 options("nlmixr2save.quiet" = TRUE)
 
 test_that("saveFit errors on number", {
