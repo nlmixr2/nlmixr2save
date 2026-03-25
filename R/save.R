@@ -591,18 +591,20 @@ loadFit <- function(file) {
 #' Convert environment to hash stable list
 #'
 #' @param env environment to convert
-#' @param .visited list of already-visited environment objects for cycle detection
+#' @param .visited environment used as an O(1) hash set of already-visited
+#'   environment ids for cycle detection (keyed on `format(env)`)
 #' @return a list that is stable for hashing
 #' @noRd
 #' @author Matthew L. Fidler
-.env2list <- function(env, .visited=list()) {
+.env2list <- function(env, .visited=new.env(parent=emptyenv())) {
   if (inherits(env, "rxode2")) {
     return(rxode2::rxNorm(env))
   }
-  if (any(vapply(.visited, identical, logical(1L), y=env))) {
+  .id <- format(env)
+  if (exists(.id, envir=.visited, inherits=FALSE)) {
     return(NULL)
   }
-  .visited <- c(.visited, list(env))
+  assign(.id, TRUE, envir=.visited)
   .names <- ls(env, all.names=TRUE)
   stats::setNames(lapply(.names,
                          function(x){
@@ -624,11 +626,12 @@ loadFit <- function(file) {
 #' Return hash table stable list
 #'
 #' @param lst list to make hash stable
-#' @param .visited list of already-visited environment objects for cycle detection
+#' @param .visited environment used as an O(1) hash set of already-visited
+#'   environment ids for cycle detection
 #' @return a list that is stable for hashing
 #' @noRd
 #' @author Matthew L. Fidler
-.stableLst <- function(lst, .visited=list()) {
+.stableLst <- function(lst, .visited=new.env(parent=emptyenv())) {
   lapply(seq_along(lst), function(i) {
     if (inherits(lst[[i]], "rxode2")) {
       rxode2::rxNorm(lst[[i]])
