@@ -129,7 +129,7 @@ Matthew L. Fidler
 #>  
 #>  
 #> ✔ done
-#> rxode2 5.0.1.9000 using 2 threads (see ?getRxThreads)
+#> rxode2 5.0.2 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
