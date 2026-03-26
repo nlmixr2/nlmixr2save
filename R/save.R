@@ -639,7 +639,11 @@ loadFit <- function(file) {
     } else if (inherits(lst[[i]], "data.table")) {
       as.data.frame(lst[[i]])
     } else if (is.list(lst[[i]])) {
-      .stableLst(lst[[i]], .visited)
+      if (identical(class(lst[[i]]), "list")) {
+        .stableLst(lst[[i]], .visited)
+      } else {
+        base::serialize(lst[[i]], NULL)
+      }
     } else {
       return(lst[[i]])
     }
