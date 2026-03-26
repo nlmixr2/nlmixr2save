@@ -202,32 +202,31 @@ withr::with_tempdir({
 
 if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       requireNamespace("nlmixr2data", quietly = TRUE)) {
+  # Consolidated helper: compares all ui and env items in two fits using two
+  # test_that blocks (instead of one per item) to avoid exhausting R's node
+  # protection stack when testthat processes hundreds of accumulated results.
   fitEquals <- function(fitF, fit2F) {
     fitName <- as.character(substitute(fitF))
-    for (n in ls(fitF$env, all.names=TRUE)) {
-      if (n == "ui") {
-        for (m in names(fitF$ui)) {
-          if (m == "control") {
-            next
-          }
-          if (m %in% c("mv0", "mvL")) {
-            test_that(paste0(fitName, "$env$ui$", m), {
-              expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
-                           rxode2::rxNorm(fit2F$ui[[m]]))
-            })
-          } else {
-            test_that(paste0(fitName, "$env$ui$", m), {
-              expect_equal(fitF$ui[[m]], fit2F$ui[[m]])
-            })
-          }
+
+    test_that(paste0(fitName, " ui items match after load"), {
+      for (m in names(fitF$ui)) {
+        if (m == "control") next
+        if (m %in% c("mv0", "mvL")) {
+          expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
+                       rxode2::rxNorm(fit2F$ui[[m]]),
+                       label = paste0(fitName, "$env$ui$", m))
+        } else {
+          expect_equal(fitF$ui[[m]], fit2F$ui[[m]],
+                       label = paste0(fitName, "$env$ui$", m))
         }
-        next
       }
-      if (n %in% c("foceiModel", "saemModel", "saem0")) {
-        next
-      }
-      if (n == "omega") {
-        test_that(paste0(fitName, " env item ", n, " matches after load"), {
+    })
+
+    test_that(paste0(fitName, " env items match after load"), {
+      for (n in ls(fitF$env, all.names=TRUE)) {
+        if (n == "ui") next
+        if (n %in% c("foceiModel", "saemModel", "saem0")) next
+        if (n == "omega") {
           .omega <- fitF$env[[n]]
           .dn <- dimnames(.omega)
           attr(.omega, ".match.hash") <- NULL
@@ -244,12 +243,11 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
           attr(.dn[[2]], ".match.hash") <- NULL
           dimnames(.omega2) <- .dn
 
-          expect_equal(.omega, .omega2)
-        })
-        next
-      }
-      if (n %in% c("phiH", "phiC")) {
-        test_that(paste0(fitName, " env item ", n, " matches after load"), {
+          expect_equal(.omega, .omega2,
+                       label = paste0(fitName, " env item omega"))
+          next
+        }
+        if (n %in% c("phiH", "phiC")) {
           .phiHF <- fitF$env[[n]]
           .n <- names(.phiHF)
           .phiHF <- lapply(seq_along(.phiHF), function(i) {
@@ -266,7 +264,6 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
           names(.phiHF) <- .n
 
           .phiH2F <- fit2F$env[[n]]
-
           .n <- names(.phiH2F)
           .phiH2F <- lapply(seq_along(.phiH2F), function(i) {
             if (is.matrix(.phiH2F[[i]])) {
@@ -275,38 +272,34 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
               attr(.dn, ".match.hash") <- NULL
               attr(.dn[[1]], ".match.hash") <- NULL
               attr(.dn[[2]], ".match.hash") <- NULL
-
               dimnames(.phiH2F[[i]]) <- .dn
             }
             .phiH2F[[i]]
           })
           names(.phiH2F) <- .n
-          expect_equal(.phiHF, .phiH2F)
-        })
-        next
-      }
-      if (any(grepl("Control$", class(fitF$env[[n]])))) {
-        f1 <- rxode2::rxUiDeparse(fitF$env[[n]], "ctl")
-        f2 <- rxode2::rxUiDeparse(fit2F$env[[n]], "ctl")
-        test_that(paste0("fitF env Control item", n, " match after load (using `rxUiDeparse()`)"), {
-          expect_equal(f1, f2)
-        })
-        next
-      }
-      test_that(paste0(fitName, " env item ", n, " matches after load"), {
-        if (is.raw(fitF$env[[n]]) ||
-              is.raw(fit2F$env[[n]])) {
+          expect_equal(.phiHF, .phiH2F,
+                       label = paste0(fitName, " env item ", n))
+          next
+        }
+        if (any(grepl("Control$", class(fitF$env[[n]])))) {
+          f1 <- rxode2::rxUiDeparse(fitF$env[[n]], "ctl")
+          f2 <- rxode2::rxUiDeparse(fit2F$env[[n]], "ctl")
+          expect_equal(f1, f2,
+                       label = paste0(fitName, " env item Control ", n))
+          next
+        }
+        if (is.raw(fitF$env[[n]]) || is.raw(fit2F$env[[n]])) {
           # the saved fit is never compressed internally
           .fit1 <- eval(str2lang(paste0("fitF$", n)))
           .fit2 <- eval(str2lang(paste0("fit2F$", n)))
-          expect_equal(.fit1, .fit2)
+          expect_equal(.fit1, .fit2,
+                       label = paste0(fitName, " env item ", n))
         } else {
-          expect_equal(fitF$env[[n]],
-                       fit2F$env[[n]])
+          expect_equal(fitF$env[[n]], fit2F$env[[n]],
+                       label = paste0(fitName, " env item ", n))
         }
-
-      })
-    }
+      }
+    })
   }
   if (identical(Sys.getenv("NOT_CRAN"), "true")) {
     withr::with_tempdir({

@@ -591,18 +591,28 @@ loadFit <- function(file) {
 #' Convert environment to hash stable list
 #'
 #' @param env environment to convert
+#' @param .visited list of already-visited environment objects for cycle detection
 #' @return a list that is stable for hashing
 #' @noRd
 #' @author Matthew L. Fidler
-.env2list <- function(env) {
+.env2list <- function(env, .visited=list()) {
+  if (inherits(env, "rxode2")) {
+    return(rxode2::rxNorm(env))
+  }
+  if (any(vapply(.visited, identical, logical(1L), y=env))) {
+    return(NULL)
+  }
+  .visited <- c(.visited, list(env))
   .names <- ls(env, all.names=TRUE)
   stats::setNames(lapply(.names,
                          function(x){
                            .ret <- get(x, envir=env)
-                           if (is.environment(.ret)) {
-                             .env2list(.ret)
+                           if (inherits(.ret, "rxode2")) {
+                             rxode2::rxNorm(.ret)
+                           } else if (is.environment(.ret)) {
+                             .env2list(.ret, .visited)
                            } else if (is.list(.ret)) {
-                             .stableLst(.ret)
+                             .stableLst(.ret, .visited)
                            } else if (is.function(.ret)) {
                              deparse1(.ret)
                            } else {
@@ -614,21 +624,26 @@ loadFit <- function(file) {
 #' Return hash table stable list
 #'
 #' @param lst list to make hash stable
+#' @param .visited list of already-visited environment objects for cycle detection
 #' @return a list that is stable for hashing
 #' @noRd
 #' @author Matthew L. Fidler
-.stableLst <- function(lst) {
+.stableLst <- function(lst, .visited=list()) {
   lapply(seq_along(lst), function(i) {
-    if (is.environment(lst[[i]])) {
-      .env2list(lst[[i]])
+    if (inherits(lst[[i]], "rxode2")) {
+      rxode2::rxNorm(lst[[i]])
+    } else if (is.environment(lst[[i]])) {
+      .env2list(lst[[i]], .visited)
     } else if (is.function(lst[[i]])){
       deparse1(lst[[i]])
-    } else if (inherits(lst[[i]], "rxode2")) {
-      rxode2::rxNorm(lst[[i]])
     } else if (inherits(lst[[i]], "data.table")) {
       as.data.frame(lst[[i]])
     } else if (is.list(lst[[i]])) {
-      .stableLst(lst[[i]])
+      if (identical(class(lst[[i]]), "list")) {
+        .stableLst(lst[[i]], .visited)
+      } else {
+        base::serialize(lst[[i]], NULL)
+      }
     } else {
       return(lst[[i]])
     }
