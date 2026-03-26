@@ -29,8 +29,9 @@ Suggests:
     nlmixr2data,
     nlmixr2est (> 5.0.2),
     PopED,
-    tinytest,
+    testthat (>= 3.0.0),
     tidyvpc,
     withr
+Config/testthat/edition: 3
 LinkingTo:
     Rcpp
