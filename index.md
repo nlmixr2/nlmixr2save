@@ -10,6 +10,7 @@ You can install the development version of nlmixr2save from
 [GitHub](https://github.com/) with:
 
 ``` r
+
 # install.packages("remotes")
 remotes::install_github("nlmixr2/nlmixr2save")
 ```
@@ -19,6 +20,7 @@ remotes::install_github("nlmixr2/nlmixr2save")
 This is a basic example which shows you how to solve a common problem:
 
 ``` r
+
 
 library(nlmixr2)
 #> ── Attaching packages ───────────────────────────────────────── nlmixr2 5.0.0 ──
@@ -229,6 +231,7 @@ some side effects.
 In the case of a nlmixr2 fit, you could assign it as follows
 
 ``` r
+
 fit2 := fit # The fit2.zip is created to save the fit
 ```
 
@@ -236,6 +239,7 @@ Here are some annotated examples of the cache assignment operator in
 pratice:
 
 ``` r
+
 # You can also automatically load a fit if the arguments for nlmixr2 do not change
 # by using the := cached assignment operator introduced in this package
 

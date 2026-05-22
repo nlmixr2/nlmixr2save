@@ -67,6 +67,7 @@ Matthew L. Fidler
 ## Examples
 
 ``` r
+
 # \donttest{
  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
    library(nlmixr2est)
@@ -102,6 +103,14 @@ Matthew L. Fidler
 #> Loading required package: nlmixr2data
 #>  
 #>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#>  
+#>  
 #>  
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
@@ -129,7 +138,7 @@ Matthew L. Fidler
 #>  
 #>  
 #> ✔ done
-#> rxode2 5.0.2 using 2 threads (see ?getRxThreads)
+#> rxode2 5.1.0 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
@@ -186,6 +195,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: nAGQ
 #> ℹ saving fit item: nEstOmega
 #> ℹ saving fit item: nlmixr2save
+#> ℹ saving fit item: nlmixr2saveOrig
 #> ℹ saving fit item: nobs
 #> ℹ saving fit item: nsub
 #> ℹ saving fit item: objDf
@@ -209,9 +219,18 @@ Matthew L. Fidler
 #> ℹ saving fit item: shrink
 #> ℹ saving fit item: table
 #> ℹ saving fit item: time
+#> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> ℹ loading fit from fit.R
 #>  
 #>  
@@ -224,6 +243,14 @@ Matthew L. Fidler
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
 #> ℹ removing unzipped fit files
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> ℹ loading fit from fit.R
 #>  
 #>  
@@ -252,7 +279,7 @@ Matthew L. Fidler
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
-#> params:  tka tcl tv  V(eta.ka)   V(eta.cl)   V(eta.v)    add.sd
+#> params:  tka rxBoundedTr.tcl tv  V(eta.ka)   V(eta.v)    V(eta.cl)   add.sd
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -260,14 +287,15 @@ Matthew L. Fidler
 #> → finding duplicate expressions in saem predOnly model 0...
 #> → finding duplicate expressions in saem predOnly model 1...
 #> → finding duplicate expressions in saem predOnly model 2...
+#> → optimizing duplicate expressions in saem predOnly model 2...
 #> ✔ done
 #>  
 #>  
 #> → Calculating residuals/tables
 #> ✔ done
-#> → compress origData in nlmixr2 object, save 6592
+#> → compress origData in nlmixr2 object, save 6584
 #> → compress parHistData in nlmixr2 object, save 8296
-#> → compress phiM in nlmixr2 object, save 312904
+#> → compress phiM in nlmixr2 object, save 429424
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
@@ -300,6 +328,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: nAGQ
 #> ℹ saving fit item: nEstOmega
 #> ℹ saving fit item: nlmixr2save
+#> ℹ saving fit item: nlmixr2saveOrig
 #> ℹ saving fit item: nobs
 #> ℹ saving fit item: nsub
 #> ℹ saving fit item: objDf
@@ -324,6 +353,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: shrink
 #> ℹ saving fit item: table
 #> ℹ saving fit item: time
+#> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
