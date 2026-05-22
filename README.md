@@ -1,7 +1,8 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# nlmixr2save
+\# nlmixr2save
+<img src="man/figures/logo.png" align="right" height="120" alt="" />
 
 <!-- badges: start -->
 
@@ -32,13 +33,13 @@ This is a basic example which shows you how to solve a common problem:
 
 library(nlmixr2)
 #> ── Attaching packages ───────────────────────────────────────── nlmixr2 5.0.0 ──
-#> ✔ lotri         1.0.3          ✔ monolix2rx    0.0.6     
+#> ✔ lotri         1.0.5          ✔ monolix2rx    0.0.6     
 #> ✔ nlmixr2data   2.0.9          ✔ nlmixr2lib    0.3.2     
 #> ✔ nlmixr2est    5.0.2.9000     ✔ nlmixr2rpt    0.2.2     
 #> ✔ nlmixr2extra  5.0.0          ✔ nonmem2rx     0.1.9     
 #> ✔ nlmixr2plot   5.0.1          ✔ posologyr     1.2.8     
-#> ✔ rxode2        5.0.1.9000     ✔ shinyMixR     0.5.3     
-#> ✔ babelmixr2    0.1.11         ✔ xpose.nlmixr2 0.4.1     
+#> ✔ rxode2        5.1.0          ✔ shinyMixR     0.5.3     
+#> ✔ babelmixr2    0.1.11         ✔ xpose.nlmixr2 0.4.2     
 #> ✔ ggPMX         1.3.2
 #> ── Optional Packages Loaded/Ignored ─────────────────────────── nlmixr2 5.0.0 ──
 #> ✔ babelmixr2        ✔ nonmem2rx    
@@ -74,6 +75,25 @@ one.cmt <- function() {
 
 fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
                                 control=list(print=0, compress=FALSE)))
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
+#> 
 #> calculating covariance matrix
 #> [====|====|====|====|====|====|====|====|====|====] 0:00:00 
 #> done
@@ -149,6 +169,7 @@ saveFit(fitF)
 #> ℹ saving fit item: Sper
 #> ℹ saving fit item: table
 #> ℹ saving fit item: time
+#> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
@@ -168,7 +189,7 @@ print(loadFit(fitF))
 #> ── Time (sec $time): ──
 #> 
 #>            setup optimize covariance table compress    other
-#> elapsed 0.002021 0.252837   0.252838 0.077    0.001 2.668304
+#> elapsed 0.003785 0.441136   0.441138 0.072    0.001 5.195941
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
@@ -200,8 +221,8 @@ print(loadFit(fitF))
 #>      ID  TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES
 #>   <int> <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>
 #> 1     1  0     0.74  0     0.74   1.07   0     0.74   1.07   0     0.74   1.07 
-#> 2     1  0.25  2.84  3.26 -0.419 -0.505  3.85 -1.01  -1.45   3.49 -0.652 -0.744
-#> 3     1  0.57  6.57  5.82  0.746  0.699  6.78 -0.215 -0.310  6.16  0.409  0.349
+#> 2     1  0.25  2.84  3.26 -0.419 -0.223  3.85 -1.01  -1.45   3.21 -0.374 -0.175
+#> 3     1  0.57  6.57  5.82  0.746  0.299  6.78 -0.215 -0.310  5.77  0.802  0.289
 #> # ℹ 129 more rows
 #> # ℹ 10 more variables: eta.ka <dbl>, eta.cl <dbl>, eta.v <dbl>, depot <dbl>,
 #> #   central <dbl>, ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <int>
@@ -250,6 +271,10 @@ pratice:
 # by using the := cached assignment operator introduced in this package
 
 fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> ℹ loading fit from fitF.R
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
@@ -299,6 +324,7 @@ fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FAL
 #> ℹ saving fit item: nAGQ
 #> ℹ saving fit item: nEstOmega
 #> ℹ saving fit item: nlmixr2save
+#> ℹ saving fit item: nlmixr2saveOrig
 #> ℹ saving fit item: nobs
 #> ℹ saving fit item: nsub
 #> ℹ saving fit item: objDf
@@ -332,12 +358,17 @@ fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FAL
 #> ℹ saving fit item: Sper
 #> ℹ saving fit item: table
 #> ℹ saving fit item: time
+#> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
 
 # Now using the same arguments it loads
 fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FALSE))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> ℹ loading fit from fitF.R
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
@@ -345,6 +376,10 @@ fitF := nlmixr(one.cmt, theo_sd, est="focei", control=list(print=0, compress=FAL
 
 # But if we use different arguments, say using saem, it will rerun.
 fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALSE))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> ℹ loading fit from fitF.R
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
@@ -371,6 +406,8 @@ fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALS
 #> → finding duplicate expressions in saem predOnly model 1...
 #> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → finding duplicate expressions in saem predOnly model 2...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
+#> → optimizing duplicate expressions in saem predOnly model 2...
 #> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> ✔ done
 #> → Calculating residuals/tables
@@ -407,6 +444,7 @@ fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALS
 #> ℹ saving fit item: nAGQ
 #> ℹ saving fit item: nEstOmega
 #> ℹ saving fit item: nlmixr2save
+#> ℹ saving fit item: nlmixr2saveOrig
 #> ℹ saving fit item: nobs
 #> ℹ saving fit item: nsub
 #> ℹ saving fit item: objDf
@@ -431,6 +469,7 @@ fitF := nlmixr(one.cmt, theo_sd, est="saem", control=list(print=0, compress=FALS
 #> ℹ saving fit item: shrink
 #> ℹ saving fit item: table
 #> ℹ saving fit item: time
+#> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
@@ -447,12 +486,12 @@ sim := rxSolve(one.cmt, theo_sd) # First simulate
 #> ℹ Need to run with the source intact to parse comments
 
 sim := rxSolve(one.cmt, theo_sd) # Same arguments, load instead
-#> ℹ loading fit from sim.rds
-#> ℹ loading from sim.rds
+#> ℹ sim.rds was not started with the same random state, removing and re-running
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 
 sim := rxSolve(one.cmt, theo_sd, nStud=4) # Different arguments, resimulate
-#> ℹ loading fit from sim.rds
-#> ℹ fit in sim.rds does not match argument md5, removing and re-running command
+#> ℹ sim.rds does not match prior arguments, removing and re-running
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
 ```

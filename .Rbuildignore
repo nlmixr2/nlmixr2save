@@ -1,3 +1,4 @@
+^sim.rds$
 ^LICENSE\.md$
 ^README\.Rmd$
 ^\.github$
