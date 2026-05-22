@@ -173,26 +173,26 @@ Matthew L. Fidler
 #> ℹ removing unzipped fit files
 #> ── nlmixr² FOCEi (outer: nlminb) ──
 #> 
-#>          OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.812 373.4118 393.5914      -179.7059        68.29718        9.353349
+#>           OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
+#> FOCEi 116.8044 373.4042 393.5838      -179.7021         68.7787        9.398479
 #> 
 #> ── Time (sec $time): ──
 #> 
 #>            setup optimize covariance table compress    other
-#> elapsed 0.003351 0.299467   0.299469  0.04    0.001 1.560713
+#> elapsed 0.003252 0.311105   0.311106 0.036    0.001 1.331537
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
 #>         Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka    0.461  0.195 42.4       1.59 (1.08, 2.32)     70.3      1.59% 
-#> tcl     1.01 0.0751 7.42       2.75 (2.37, 3.19)     26.7      4.03% 
-#> tv      3.46 0.0436 1.26       31.8 (29.2, 34.6)     14.2      11.0% 
-#> add.sd 0.692                               0.692                     
+#> tka    0.464  0.195 42.1       1.59 (1.08, 2.33)     70.6      1.94% 
+#> tcl     1.01 0.0751 7.42       2.75 (2.38, 3.19)     26.8      3.96% 
+#> tv      3.46 0.0435 1.26       31.8 (29.2, 34.6)     13.9      10.3% 
+#> add.sd 0.693                               0.693                     
 #>  
 #>   Covariance Type ($covMethod): r,s
 #>   Some strong fixed parameter correlations exist ($cor) :
 #>     cor:tcl,tka  cor:tv,tka  cor:tv,tcl 
-#>      0.158        0.421       0.743  
+#>      0.157        0.422       0.744  
 #>  
 #> 
 #>   No correlations in between subject variability (BSV) matrix
@@ -211,8 +211,8 @@ Matthew L. Fidler
 #>      ID  TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES
 #>   <int> <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>
 #> 1     1  0     0.74  0     0.74   1.07   0     0.74   1.07   0     0.74   1.07 
-#> 2     1  0.25  2.84  3.26 -0.417 -0.223  3.84 -1.00  -1.45   3.21 -0.372 -0.174
-#> 3     1  0.57  6.57  5.82  0.746  0.299  6.78 -0.215 -0.311  5.77  0.802  0.290
+#> 2     1  0.25  2.84  3.26 -0.424 -0.226  3.85 -1.01  -1.45   3.22 -0.380 -0.178
+#> 3     1  0.57  6.57  5.83  0.738  0.296  6.79 -0.215 -0.310  5.78  0.793  0.286
 #> # ℹ 129 more rows
 #> # ℹ 10 more variables: eta.ka <dbl>, eta.cl <dbl>, eta.v <dbl>, depot <dbl>,
 #> #   central <dbl>, ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <int>
