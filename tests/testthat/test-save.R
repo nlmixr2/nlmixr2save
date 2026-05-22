@@ -166,6 +166,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
       source("testfit-rxUi.R", local=TRUE)
       expect_true(exists("rxUi"))
       expect_true(inherits(rxUi, "rxUi"))
+
     })
   })
 }
@@ -197,11 +198,13 @@ withr::with_tempdir({
 
     obj2 <- readRDS("testfit-fooObj.rds")
     expect_equal(obj, obj2)
+
   })
 })
 
 if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       requireNamespace("nlmixr2data", quietly = TRUE)) {
+
   # Consolidated helper: compares all ui and env items in two fits using two
   # test_that blocks (instead of one per item) to avoid exhausting R's node
   # protection stack when testthat processes hundreds of accumulated results.
@@ -303,6 +306,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
   }
   if (identical(Sys.getenv("NOT_CRAN"), "true")) {
     withr::with_tempdir({
+
       library(nlmixr2est)
       library(nlmixr2data)
 
@@ -506,6 +510,60 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         hash6 <- tools::md5sum("fitF.zip")
         expect_false(identical(hash4, hash6))
 
+
+      }))
+    })
+
+    test_that("dataset changes: irrelevant column does not refit; DV change does", {
+
+      suppressMessages(withr::with_tempdir({
+
+        library(nlmixr2est)
+        library(nlmixr2data)
+
+        one.cmt <- function() {
+          ini({
+            tka <- 0.45
+            tcl <- log(c(0, 2.7, 100))
+            tv <- 3.45
+            eta.ka ~ 0.6
+            eta.cl ~ 0.3
+            eta.v ~ 0.1
+            add.sd <- 0.7
+          })
+          model({
+            ka <- exp(tka + eta.ka)
+            cl <- exp(tcl + eta.cl)
+            v  <- exp(tv + eta.v)
+            linCmt() ~ add(add.sd)
+          })
+        }
+
+        # Baseline fit
+        fitD := nlmixr(one.cmt, theo_sd, est="focei",
+                       control=list(print=0, compress=FALSE))
+        expect_false(.assignRestore())
+        hash_base <- tools::md5sum("fitD.zip")
+
+        # Adding an irrelevant column should restore from cache unchanged
+        theo_sd_extra <- theo_sd
+        theo_sd_extra$.ignored <- "noise"
+        fitD := nlmixr(one.cmt, theo_sd_extra, est="focei",
+                       control=list(print=0, compress=FALSE))
+        expect_true(.assignRestore())
+        hash_extra <- tools::md5sum("fitD.zip")
+        expect_equal(hash_base, hash_extra)
+        # origData in the restored fit reflects the new (extra-column) data
+        expect_equal(fitD$origData, theo_sd_extra)
+
+        # Changing DV values must trigger a refit
+        theo_sd_dv <- theo_sd
+        theo_sd_dv$DV <- theo_sd_dv$DV + 1
+        fitD := nlmixr(one.cmt, theo_sd_dv, est="focei",
+                       control=list(print=0, compress=FALSE))
+        expect_false(.assignRestore())
+        hash_dv <- tools::md5sum("fitD.zip")
+        expect_false(identical(hash_base, hash_dv))
 
       }))
     })

@@ -533,8 +533,9 @@ loadFit <- function(file) {
     .saveFitEnv$fun <- .cls
     if (.cls %in% c("nlmixr2", "nlmixr")) {
       .est <- .subs
-      .est[[1]] <- str2lang("nlmixr2save::.nlmixr2saveEst")
-      .est <- eval(.est, envir=.assignParent())
+      .est[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
+      .tmp <- eval(.est, envir=.assignParent())
+      .est <- .tmp$est
       if (.est %in% .saveFitEnv$randomEst) {
         # This is nlmixr2 but it is a random estimation method, so use
         # the default method, with random save information flagged.
@@ -565,29 +566,79 @@ loadFit <- function(file) {
 
 #' @export
 `:=.assign_nlmixr2FitData` <- `:=.nlmixr2FitCore`
-#' This gets the estimation method for nlmixr2;
+#' This gets the properties of the nlmixr2 call for saving and loading purposes
 #'
-#' This is used to determine if this is a simulation method like `rxSolve`
+#' This is used to:
+#'  - Determine if this is a simulation method like `rxSolve`
+#'
+#'  - Determine the simplified core dataset that is used for estimation
+#'    that allows caching on the minimum dataset.
 #'
 #' @inheritParams nlmixr2est::nlmixr2
 #' @param ... additional arguments for nlmixr2 but ignored for this call.
-#' @return estimation method
+#' @return A list containing
+#'   - `object`: the rxode2 model to be estimated
+#'   - `data`: the simplified dataset used for estimation
+#'   - `est`: the estimation method
+#'   - `control`: the control list used for estimation
+#'   - `table`: the table used for estimation
+#'   - `shaOrig`: the sha1 hash of the original data
+#'   - `dataOrig`: the original data
+#'   - `sha`: the sha1 hash of the list of properties used for estimation
+#'
 #' @author Matthew L. Fidler
 #' @export
 #' @keywords internal
-.nlmixr2saveEst <- function(object, data, est = NULL, ...) {
+.nlmixr2saveProps <- function(object, data, est = NULL, control=NULL, table=NULL, ...) {
+  .nlmixr2data <- NULL
+  if (inherits(object, "nlmixr2FitCore")) {
+    .nlmixr2data <- object$origData
+    object <- object$ui
+  } else if (!inherits(object, "rxUi")) {
+    .object <- try(rxode2::rxode2(object), silent=TRUE)
+    if (inherits(.object, "try-error")) {
+      stop(" in `nlmixr2(object,...)`, object must model or fit", call.=FALSE)
+    }
+    object <- .object
+  }
   if (missing(data) && missing(est)) {
-    return(NULL)
+    if (!is.null(.nlmixr2data)) {
+      data <- .nlmixr2data
+    } else {
+      data <- NULL
+      est <- NULL
+    }
   }
   # Change data
   if (is.character(data) && length(data) == 1 &&
         data %in% nlmixr2est::nlmixr2AllEst() &&
         is.null(est)) {
     est <- data
-    data <- NULL
+    if (!is.null(.nlmixr2data)) {
+      data <- .nlmixr2data
+    } else {
+      data <- NULL
+    }
   }
-  est
+  if (!is.null(data) && is.data.frame(data)) {
+    .dataSimplify <- try(nlmixrDataSimplify(data, object, table), silent=TRUE)
+    if (inherits(.dataSimplify, "try-error")) {
+      .dataSimplify <- data
+    }
+  } else {
+    .dataSimplify <- data
+  }
+  list(object=object,
+       data=.dataSimplify,
+       est=est,
+       control=control,
+       table=table,
+       shaOrig=digest::sha1(data),
+       dataOrig=data,
+       sha=.digest(object$md5, .dataSimplify,
+                   est, control, table, ...))
 }
+
 #' Convert environment to hash stable list
 #'
 #' @param env environment to convert
@@ -677,16 +728,22 @@ loadFit <- function(file) {
   .zip <- paste0(.x, ".zip")
   .rds <- paste0(.x, ".rds")
   .sha1 <- substitute(value)
-  .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveEst")
-  .est <- eval(.sha1, envir=.assignParent())
-  .sha1[[1]] <- quote(`list`)
-  .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
+  .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
+  .prop <- eval(.sha1, envir=.assignParent())
+  .est <- .prop$est
+  .sha1 <- .prop$sha
   if (file.exists(.zip)) {
     .fit <- loadFit(.x)
     if (inherits(.fit, "nlmixr2FitData") &&
           is.environment(attr(class(.fit), ".foceiEnv")) &&
           exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
           get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .sha1) {
+      .env <- attr(class(.fit), ".foceiEnv")
+      if (!exists("nlmixr2saveOrig", envir=.env) ||
+            get("nlmixr2saveOrig", envir=.env) != .prop$shaOrig) {
+        assign("origData", .prop$dataOrig, envir=.env)
+        assign("nlmixr2saveOrig", .prop$shaOrig, envir=.env)
+      }
       assign(as.character(substitute(x)), .fit,
              envir=.assignParent())
       .saveFitEnv$restore <- TRUE
@@ -696,6 +753,11 @@ loadFit <- function(file) {
                  is.environment(.fit) &&
                  exists("nlmixr2save", .fit) &&
                  get("nlmixr2save", .fit) == .sha1) {
+      if (!exists("nlmixr2saveOrig", envir=.fit) ||
+            get("nlmixr2saveOrig", envir=.fit) != .prop$shaOrig) {
+        assign("origData", .prop$dataOrig, envir=.fit)
+        assign("nlmixr2saveOrig", .prop$shaOrig, envir=.fit)
+      }
       assign(as.character(substitute(x)), .fit,
              envir=.assignParent())
       .saveFitEnv$restore <- TRUE
@@ -758,9 +820,11 @@ loadFit <- function(file) {
   .fit <- force(value)
   if (inherits(.fit, "nlmixr2FitData")) {
     assign("nlmixr2save", .sha1, attr(class(.fit), ".foceiEnv"))
+    assign("nlmixr2saveOrig", .prop$shaOrig, attr(class(.fit), ".foceiEnv"))
     saveFit(.fit, as.character(substitute(x)), zip=TRUE)
   } else if (inherits(.fit, "nlmixr2FitCore")) {
     assign("nlmixr2save", .sha1, envir=.fit)
+    assign("nlmixr2saveOrig", .prop$shaOrig, envir=.fit)
     saveFit(.fit, as.character(substitute(x)), zip=TRUE)
   } else {
     .minfo(paste0("fit is not a nlmixr2 fit, saving to ", .x, ".rds"))
