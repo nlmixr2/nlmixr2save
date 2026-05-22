@@ -1,6 +1,6 @@
 .saveFitEnv <- new.env(parent = emptyenv())
-.saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed")
-.saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData", "iniDf0")
+.saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed", "iniDf0")
+.saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData")
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
                         "predict", "vpcSim")
@@ -268,21 +268,21 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                        if (val == "parFixedDf") {
                          ret <- paste0(ret,
                                        "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`)\n")
+                       } else if (val == "iniDf0") {
+                         ret <- paste0(ret,
+                                       "env$iniDf0$ntheta <- as.integer(env$iniDf0$ntheta)\n",
+                                       "env$iniDf0$neta1 <- as.double(env$iniDf0$neta1)\n",
+                                       "env$iniDf0$neta2 <- as.double(env$iniDf0$neta2)\n",
+                                       "env$iniDf0$name <- as.character(env$iniDf0$name)\n",
+                                       "env$iniDf0$lower <- as.double(env$iniDf0$lower)\n",
+                                       "env$iniDf0$upper <- as.double(env$iniDf0$upper)\n",
+                                       "env$iniDf0$est <- as.double(env$iniDf0$est)\n",
+                                       "env$iniDf0$fix <- as.logical(env$iniDf0$fix)\n",
+                                       "env$iniDf0$label <- as.character(env$iniDf0$label)\n",
+                                       "env$iniDf0$backTransform <- as.character(env$iniDf0$backTransform)\n",
+                                       "env$iniDf0$condition <- as.character(env$iniDf0$condition)\n",
+                                       "env$iniDf0$err <- as.character(env$iniDf0$err)\n")
                        }
-                     } else if (val == "iniDf0"){
-                       ret <- paste0("env$iniDf0 <- read.csv('", f, "',check.names=FALSE)\n",
-                                     "env$iniDf0$ntheta <- as.integer(env$iniDf0$ntheta)\n",
-                                     "env$iniDf0$neta1 <- as.double(env$iniDf0$neta1)\n",
-                                     "env$iniDf0$neta2 <- as.double(env$iniDf0$neta2)\n",
-                                     "env$iniDf0$name <- as.character(env$iniDf0$name)\n",
-                                     "env$iniDf0$lower <- as.double(env$iniDf0$lower)\n",
-                                     "env$iniDf0$upper <- as.double(env$iniDf0$upper)\n",
-                                     "env$iniDf0$est <- as.double(env$iniDf0$est)\n",
-                                     "env$iniDf0$fix <- as.logical(env$iniDf0$fix)\n",
-                                     "env$iniDf0$label <- as.character(env$iniDf0$label)\n",
-                                     "env$iniDf0$backTransform <- as.character(env$iniDf0$backTransform)\n",
-                                     "env$iniDf0$condition <- as.character(env$iniDf0$condition)\n",
-                                     "env$iniDf0$err <- as.character(env$iniDf0$err)\n")
                      } else {
                        ret <- paste0("env$`", val, "` <- read.csv('", f, "', check.names=FALSE)\n")
                      }

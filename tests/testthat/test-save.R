@@ -291,7 +291,16 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
                        label = paste0(fitName, " env item Control ", n))
           next
         }
-        if (is.raw(fitF$env[[n]]) || is.raw(fit2F$env[[n]])) {
+        if (n == "iniDf0") {
+          # Row names of iniDf0 may differ in type (integer vs character) after
+          # CSV round-trip with row.names=1; normalize both sides to character
+          .i1 <- fitF$env[[n]]
+          .i2 <- fit2F$env[[n]]
+          row.names(.i1) <- as.character(row.names(.i1))
+          row.names(.i2) <- as.character(row.names(.i2))
+          expect_equal(.i1, .i2,
+                       label = paste0(fitName, " env item iniDf0"))
+        } else if (is.raw(fitF$env[[n]]) || is.raw(fit2F$env[[n]])) {
           # the saved fit is never compressed internally
           .fit1 <- eval(str2lang(paste0("fitF$", n)))
           .fit2 <- eval(str2lang(paste0("fit2F$", n)))
