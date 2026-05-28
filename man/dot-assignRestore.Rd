@@ -14,6 +14,9 @@ file}
 Return if the last \verb{:=} assignment was actually a restore from a
 file
 }
+\examples{
+.assignRestore()
+}
 \author{
 Matthew L. Fidler
 }

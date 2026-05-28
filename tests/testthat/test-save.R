@@ -12,7 +12,40 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
+test_that("saveFitRandom adds and removes registered random functions", {
+  .old <- saveFitRandom()
+  on.exit(.saveFitEnv$random <- .old, add = TRUE)
+
+  saveFitRandom(c("fooRandom", "pkg::barRandom"))
+  .random <- saveFitRandom()
+
+  expect_true(all(c("fooRandom", "barRandom") %in% .random))
+  expect_equal(sum(.random == "fooRandom"), 1)
+  expect_equal(sum(.random == "barRandom"), 1)
+
+  saveFitRandom("barRandom", remove = TRUE)
+  .random <- saveFitRandom()
+
+  expect_true("fooRandom" %in% .random)
+  expect_false("barRandom" %in% .random)
+})
+
 if (requireNamespace("withr", quietly = TRUE)) {
+
+  test_that("saveFitRandom marks registered functions as random", {
+    .old <- saveFitRandom()
+    on.exit(.saveFitEnv$random <- .old, add = TRUE)
+
+    randomFun <- function() 1
+    saveFitRandom(randomFun)
+
+    withr::with_tempdir({
+      rxode2::rxSetSeed(42)
+      res := randomFun()
+      .r <- readRDS("res.rds")
+      expect_named(.r, c("ret", "sha1", "random", "old", "seed"))
+    })
+  })
 
   test_that(":= with rxSolve requires seed to be set to restore", {
     withr::with_tempdir({

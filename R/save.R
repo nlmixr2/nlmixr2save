@@ -430,6 +430,55 @@ loadFit <- function(file) {
   }
 }
 
+#' Manage functions treated as random by `:=`
+#'
+#' Functions registered here are saved with random-state metadata so cached
+#' restores behave like the original call was run again.
+#'
+#' @param fun Function name(s) to add or remove. If `NULL`, the current
+#'   registry is returned without modification.
+#' @param remove Boolean indicating if `fun` should be removed from the
+#'   registry instead of added.
+#'
+#' @return Character vector of registered function names.
+#' @export
+#'
+#' @author Matthew L. Fidler
+#'
+#' @examples
+#' saveFitRandom()
+#' saveFitRandom("myRandomFun")
+#' saveFitRandom("myRandomFun", remove=TRUE)
+saveFitRandom <- function(fun = NULL, remove = FALSE) {
+  if (!checkmate::testLogical(remove, any.missing = FALSE, len = 1L)) {
+    stop("`remove` must be a single logical value", call.=FALSE)
+  }
+  if (is.null(fun)) {
+    return(.saveFitEnv$random)
+  }
+  if (checkmate::testCharacter(fun, any.missing = FALSE, min.chars = 1L)) {
+    .fun <- fun
+  } else if (is.function(fun)) {
+    .fun <- deparse1(substitute(fun))
+    if (grepl("^function\\s*\\(", .fun)) {
+      stop("`fun` must be a named function or character vector", call.=FALSE)
+    }
+  } else {
+    stop("`fun` must be a character vector, function, or `NULL`", call.=FALSE)
+  }
+  .fun <- unique(gsub(".*::", "", .fun))
+  .fun <- .fun[nzchar(.fun)]
+  if (!length(.fun)) {
+    stop("`fun` must contain at least one function name", call.=FALSE)
+  }
+  if (remove) {
+    .saveFitEnv$random <- setdiff(.saveFitEnv$random, .fun)
+  } else {
+    .saveFitEnv$random <- unique(c(.saveFitEnv$random, .fun))
+  }
+  .saveFitEnv$random
+}
+
 #' This assignment operator is meant to assign or load a nlmixr2 fit
 #' (and other objects)
 #'
@@ -976,6 +1025,7 @@ loadFit <- function(file) {
 #' @export
 #' @author Matthew L. Fidler
 #' @examples
+#' .assignRestore()
 .assignRestore <- function() {
   .saveFitEnv$restore
 }
