@@ -16,3 +16,7 @@
 
 - [`saveFit()`](saveFit.md) : Save a fitted model object to a series of
   files
+
+- [`saveFitRandom()`](saveFitRandom.md) :
+
+  Manage functions treated as random by `:=`

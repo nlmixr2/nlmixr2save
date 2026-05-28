@@ -508,3 +508,13 @@ sim := rxSolve(one.cmt, theo_sd, nStud=4) # Different arguments, resimulate
 - [`saveFit()`](saveFit.md) : Save a fitted model object to a series of
   files
 
+- [`saveFitRandom()`](saveFitRandom.md) :
+
+  Manage functions treated as random by `:=`
+
+# Articles
+
+### Getting started
+
+- [Using nlmixr2save](uses.md):
+- [Registering simulation functions](register-simulation-functions.md):

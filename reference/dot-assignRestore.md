@@ -16,3 +16,10 @@ otherwise
 ## Author
 
 Matthew L. Fidler
+
+## Examples
+
+``` r
+.assignRestore()
+#> [1] FALSE
+```
