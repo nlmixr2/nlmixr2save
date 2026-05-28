@@ -1,0 +1,191 @@
+---
+title: "Using nlmixr2save"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using nlmixr2save}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+`nlmixr2save` focuses on two related problems:
+
+1. Saving `nlmixr2` results in a format that stays readable outside of
+   `.rds`.
+
+2. Reusing expensive fits or simulations when nothing important has changed.
+
+## Why save a fit this way?
+
+`saveFit()` writes a saved fit as a collection of files and then optionally zips
+them together.  In practice, most of the saved object is reconstructed from:
+
+- `.R` files for model definitions and objects that can be recreated
+  as source.
+
+- `.csv` files for tabular fit components and datasets.
+
+That means the saved fit is largely inspectable outside of R, and it is not tied
+to the binary serialization format used by a specific version of `nlmixr2` or
+`rxode2`.
+
+```{r, eval = FALSE}
+library(nlmixr2est)
+library(nlmixr2data)
+library(nlmixr2save)
+
+fit <- nlmixr2(one.cmt, theo_sd, est = "focei")
+saveFit(fit, "fit")
+
+restored_fit <- loadFit("fit")
+```
+
+When `loadFit("fit")` runs, it recreates the object by sourcing the
+generated `.R` (for fit this would be `fit.R`) files and reading the
+generated `.csv` files back in.
+
+This is the main protection against a saved fit becoming unreadable
+simply because an internal serialization format changes.
+
+## What gets restored?
+
+For deterministic estimation methods, the restored object includes the full
+saved fit, including the original model, fit results, and `origData`.
+
+This is especially useful for long-running estimation jobs because the saved fit
+can be rebuilt without repeating the estimation itself.
+
+## Dataset-aware caching
+
+This `saveFit()` can automatically be performed and cached with a new
+operator `:=` and is the quickest way to save nlmixr2 fits (and other
+items).  For example:
+
+```{r, eval = FALSE}
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+```
+
+For `nlmixr2` fits, the cache key is based on:
+
+- the normalized model definition,
+- the estimation method,
+- the control and table options, and
+- a simplified version of the dataset that keeps the standard estimation
+  columns, covariates, and requested `table$keep` columns.
+
+This has two important consequences.
+
+### 1. Irrelevant dataset changes do not force a refit
+
+If the new dataset only changes columns that are not used for estimation,
+`nlmixr2save` restores the existing fit instead of rerunning the estimation.
+
+```{r, eval = FALSE}
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+
+theo_sd_extra <- theo_sd
+theo_sd_extra$.ignored <- "notes"
+
+fit := nlmixr2(one.cmt, theo_sd_extra, est = "focei")
+```
+
+The expensive estimation is skipped, but the restored object still updates
+`fit$origData` to the new dataset.  In other words, the cached fit is reused
+only when the meaningful estimation inputs match, while the saved object still
+tracks the latest original dataset you supplied.
+
+### 2. Meaningful dataset changes do force a refit
+
+If you change a column that matters to the fit, such as `DV`, time, dosing
+information, a covariate, or a `table$keep` column, the cache key changes and
+the estimation is run again.
+
+This is the intended safety boundary: harmless dataset changes are absorbed, but
+real estimation changes invalidate the cache.
+
+## Using `:=` for long-running fits and simulations
+
+The `:=` operator caches the result under the object name on the left-hand side.
+If the saved result matches the current call, it restores the cached object
+instead of rerunning the call.
+
+```{r, eval = FALSE}
+fit := nlmixr2(one.cmt, theo_sd, est = "focei") # creates fit.zip
+
+# Same call: restore from cache
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+
+# Different estimation method: rerun
+fit := nlmixr2(one.cmt, theo_sd, est = "saem") # overwrites fit.zip
+```
+
+For deterministic `nlmixr2` fits, the cached form is the text-and-csv-based fit
+bundle described above.  For other functions, the cached form is usually an
+`.rds` file.
+
+## Seed-aware restores for stochastic work
+
+Some calculations depend on the random-number stream.  For those, `:=` stores
+both the result and random-state metadata.  When the result is restored, the
+seed is advanced to the same post-run state so downstream code sees the same
+random stream it would have seen if the expensive call had actually run.
+
+This is what makes `:=` useful for long-running simulations and stochastic
+estimation methods: you can restore the result without silently changing the
+reproducibility of the rest of the script.
+
+## Integrating `nlmixr2save` into your package
+
+There are two common integration paths.
+
+### Deterministic estimation
+
+If your package returns standard `nlmixr2` fit objects through a deterministic
+estimation method, users can already write:
+
+```{r, eval = FALSE}
+fit := nlmixr2(model, data, est = "focei") # saves fit
+```
+
+and get zip-based save/restore behavior automatically.
+
+### Stochastic estimation or simulation
+
+If your package provides a stochastic workflow, use the seed-aware path instead.
+For plain simulation functions, register the function name with
+`saveFitRandom()`.  For `nlmixr2` estimation methods, mark the estimator as
+random so `:=` knows to use the seed-aware cache path.
+
+The companion vignette
+`vignette("register-simulation-functions", package = "nlmixr2save")` shows both
+patterns.
+
+## Limitations
+
+`nlmixr2save` is intentionally conservative, and a few limitations are worth
+keeping in mind:
+
+1. The saved fit is primarily `.R` and `.csv`, but not exclusively.  Some fit
+   components still fall back to `.rds` when they cannot be safely recreated as
+   text.
+
+2. Cache reuse only works when `:=` sees the expensive call directly.  Wrapping
+   the call inside something like `suppressMessages(nlmixr2(...))` forces the
+   call to run before caching can intercept it.
+
+3. If dataset simplification cannot be computed, caching falls back to hashing
+   the full dataset.  That is safe, but it can cause more reruns than strictly
+   necessary.
+
+4. Seed-aware restores require the same starting random state.  If the seed is
+   different, the cached stochastic result is discarded and rerun.
+
+5. The cache files are named from the left-hand-side object name and written in
+   the current working directory, so project-level file management still
+   matters.
