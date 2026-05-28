@@ -4,7 +4,6 @@
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
                         "predict", "vpcSim")
-.saveFitEnv$randomEst <- c("rxSolve", "predict")
 .saveFitEnv$isRandom <- FALSE
 .saveFitEnv$fun <- ""
 .saveFitEnv$restore <- FALSE
@@ -536,7 +535,7 @@ loadFit <- function(file) {
       .est[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
       .tmp <- eval(.est, envir=.assignParent())
       .est <- .tmp$est
-      if (.est %in% .saveFitEnv$randomEst) {
+      if (.isRandomMethod(.est)) {
         # This is nlmixr2 but it is a random estimation method, so use
         # the default method, with random save information flagged.
         class(.subs) <- "assign_default"
@@ -979,4 +978,23 @@ loadFit <- function(file) {
 #' @examples
 .assignRestore <- function() {
   .saveFitEnv$restore
+}
+
+#' Is the nlmixr2 estimation method a random method?
+#'
+#' @param est estimation routine
+#' @param control control object.
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.isRandomMethod <- function(est, control = NULL) {
+  .v <- as.character(utils::methods("nlmixr2Est"))
+  .method <- paste0("nlmixr2Est.", est)
+  if (.method %in% .v) {
+    .random <- attr(utils::getS3method("nlmixr2Est", est), "random")
+    if (is.null(.random)) return(FALSE)
+    if (is.function(.random)) return(isTRUE(.random(control)))
+    return(isTRUE(.random))
+  }
+  FALSE
 }
