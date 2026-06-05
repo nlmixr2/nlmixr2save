@@ -6,7 +6,7 @@
 # * https://r-pkgs.org/testing-design.html#sec-tests-files-overview
 # * https://testthat.r-lib.org/articles/special-files.html
 
-library(testthat)
-library(nlmixr2save)
+suppressWarnings(library(testthat))
+suppressWarnings(library(nlmixr2save))
 
 test_check("nlmixr2save")

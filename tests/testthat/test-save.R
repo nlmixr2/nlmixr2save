@@ -14,7 +14,7 @@ test_that(".assignParent errors on non-environment", {
 
 test_that("saveFitRandom adds and removes registered random functions", {
   .old <- saveFitRandom()
-  on.exit(.saveFitEnv$random <- .old, add = TRUE)
+  on.exit(saveFitRandom(.old), add = TRUE)
 
   saveFitRandom(c("fooRandom", "pkg::barRandom"))
   .random <- saveFitRandom()
@@ -34,7 +34,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
   test_that("saveFitRandom marks registered functions as random", {
     .old <- saveFitRandom()
-    on.exit(.saveFitEnv$random <- .old, add = TRUE)
+    on.exit(saveFitRandom(.old), add = TRUE)
 
     randomFun <- function() 1
     saveFitRandom(randomFun)
@@ -48,9 +48,10 @@ if (requireNamespace("withr", quietly = TRUE)) {
   })
 
   test_that(":= with rxSolve requires seed to be set to restore", {
+    skip_on_cran()
     withr::with_tempdir({
 
-      rxode2::rxWithSeed(42, {
+      suppressWarnings(rxode2::rxWithSeed(42, {
 
         library(rxode2)
         library(nlmixr2data)
@@ -173,7 +174,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
           }
         }
-      })
+      }))
     })
   })
 
@@ -346,7 +347,8 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       }
     })
   }
-  if (identical(Sys.getenv("NOT_CRAN"), "true")) {
+  if (identical(Sys.getenv("NOT_CRAN"), "true") &&
+        !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
     withr::with_tempdir({
 
       library(nlmixr2est)

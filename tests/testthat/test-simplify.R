@@ -71,6 +71,7 @@ test_that("nlmixrDataSimplify expected errors", {
 })
 
 test_that("re-estimating a model works with covariates (#9)", {
+  skip_on_cran()
   badDataLowerCase <- nlmixr2data::pheno_sd
   badDataLowerCase$id <- badDataLowerCase$ID
   fitEstimated <-

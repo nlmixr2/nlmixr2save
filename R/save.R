@@ -146,7 +146,7 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' @author Matthew L. Fidler
 #' @examples
 #' \donttest{
-#'   if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
+#'   if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
 #'     library(nlmixr2est)
 #'     library(nlmixr2data)
 #'     withr::with_tempdir({
@@ -538,7 +538,7 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #' @examples
 #'
 #' \donttest{
-#'  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
+#'  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
 #'    library(nlmixr2est)
 #'   library(nlmixr2data)
 #'   withr::with_tempdir({
