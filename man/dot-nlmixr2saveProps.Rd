@@ -4,7 +4,7 @@
 \alias{.nlmixr2saveProps}
 \title{This gets the properties of the nlmixr2 call for saving and loading purposes}
 \usage{
-.nlmixr2saveProps(object, data, est = NULL, control, table, ...)
+.nlmixr2saveProps(object, data, est = NULL, control = NULL, table = NULL, ...)
 }
 \arguments{
 \item{object}{Fitted object or function specifying the model.}

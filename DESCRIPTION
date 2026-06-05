@@ -15,7 +15,6 @@ Description: 'nlmixr2' allows fitting and comparing nonlinear mixed-effects mode
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     checkmate,
     cli,
@@ -39,3 +38,4 @@ VignetteBuilder:
 Config/testthat/edition: 3
 LinkingTo:
     Rcpp
+Config/roxygen2/version: 8.0.0
