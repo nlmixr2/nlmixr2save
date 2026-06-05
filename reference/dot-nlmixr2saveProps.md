@@ -7,7 +7,7 @@ This is used to:
 ## Usage
 
 ``` r
-.nlmixr2saveProps(object, data, est = NULL, control, table, ...)
+.nlmixr2saveProps(object, data, est = NULL, control = NULL, table = NULL, ...)
 ```
 
 ## Arguments
