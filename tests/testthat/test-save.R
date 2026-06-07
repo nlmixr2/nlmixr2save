@@ -120,6 +120,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
           if (requireNamespace("babelmixr2", quietly = TRUE) &&
                 requireNamespace("PopED", quietly = TRUE)) {
+            skip_on_os("windows")
 
             library(babelmixr2)
             library(PopED)
