@@ -120,6 +120,7 @@ if (requireNamespace("withr", quietly = TRUE)) {
 
           if (requireNamespace("babelmixr2", quietly = TRUE) &&
                 requireNamespace("PopED", quietly = TRUE)) {
+            # PopED/babelmixr2 path is unstable on Windows release checks.
             skip_on_os("windows")
 
             library(babelmixr2)
