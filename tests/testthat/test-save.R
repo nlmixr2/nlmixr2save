@@ -236,6 +236,42 @@ withr::with_tempdir({
   })
 })
 
+withr::with_tempdir({
+  test_that("nlmixr2saveParFixedDf restores both parFixedDf structures", {
+
+    # numeric parFixedDf as produced by nlmixr2est; "CI Lower"/"CI Upper"
+    # and "BSV(SD)" are all NA so read.csv() turns them into logicals
+    df <- data.frame(
+      Estimate = c(0.5, 1.0, 3.4),
+      SE = c(0.2, NA, 0.05),
+      `%RSE` = c(40, NA, 1.5),
+      `Back-transformed` = c(1.6, 2.7, 30),
+      `CI Lower` = rep(NA_real_, 3),
+      `CI Upper` = rep(NA_real_, 3),
+      `BSV(SD)` = rep(NA_real_, 3),
+      `Shrink(SD)%` = c(1.5, 4.2, NA),
+      check.names = FALSE,
+      row.names = c("tka", "tcl", "add.sd"))
+
+    # old structure (nlmixr2est <= 6.0): named Estimate/SE columns
+    # (built as a list since `$<-.data.frame` drops names on columns)
+    dfNamed <- as.list(df)
+    dfNamed$Estimate <- stats::setNames(dfNamed$Estimate, row.names(df))
+    dfNamed$SE <- stats::setNames(dfNamed$SE, row.names(df))
+    dfNamed <- structure(dfNamed, class="data.frame", row.names=row.names(df))
+
+    utils::write.csv(df, "parFixedDf.csv", row.names=TRUE)
+    dfCsv <- read.csv("parFixedDf.csv", check.names=FALSE, row.names=1)
+    expect_true(is.logical(dfCsv$`CI Lower`))
+
+    expect_equal(nlmixr2saveParFixedDf(dfCsv), dfNamed)
+    expect_equal(nlmixr2saveParFixedDf(dfCsv, named=TRUE), dfNamed)
+    # new structure (nlmixr2est $parFixed refactor): unnamed Estimate/SE
+    expect_equal(nlmixr2saveParFixedDf(dfCsv, named=FALSE), df)
+
+  })
+})
+
 if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       requireNamespace("nlmixr2data", quietly = TRUE)) {
 

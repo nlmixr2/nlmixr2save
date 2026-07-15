@@ -4,18 +4,32 @@
 \alias{nlmixr2saveParFixedDf}
 \title{Fix nlmixr2 save output}
 \usage{
-nlmixr2saveParFixedDf(obj)
+nlmixr2saveParFixedDf(obj, named = TRUE)
 }
 \arguments{
 \item{obj}{A list object returned by nlmixr2's save function.}
+
+\item{named}{Logical; when \code{TRUE} (default, matching fits from older
+nlmixr2est) the "Estimate" and "SE" columns are named using the row
+names; when \code{FALSE} they are left as unnamed numeric vectors.}
 }
 \value{
-A modified data.frame object with "Estimate" and "SE" as named numeric vectors
+A modified data.frame object with numeric columns restored to
+the structure of the original fit
 }
 \description{
 This function modifies the output of nlmixr2's save function to ensure that
-the "Estimate" and "SE" fields are numeric vectors with appropriate names,
-rather than data frames. This is necessary for compatibility with other
-functions that expect these fields to be numeric vectors.
+the numeric columns of the \code{parFixedDf} data frame have the types that
+nlmixr2 outputs after a CSV round-trip (all-\code{NA} columns are read back as
+logical vectors, so they are coerced back to numeric here).
+}
+\details{
+Depending on the version of nlmixr2est that created the fit, the
+"Estimate" and "SE" columns are either named numeric vectors (names
+matching the row names; nlmixr2est <= 6.0) or plain unnamed numeric
+vectors (the \verb{$parFixed} refactor in newer nlmixr2est).  The \code{named}
+argument selects which structure is restored; \code{nlmixr2save::saveFit()}
+records the correct value in the generated restore script based on the
+fit being saved.
 }
 \keyword{internal}
