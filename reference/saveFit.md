@@ -43,7 +43,7 @@ Matthew L. Fidler
 
 ``` r
 # \donttest{
-  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
+  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
     library(nlmixr2est)
     library(nlmixr2data)
     withr::with_tempdir({
@@ -83,6 +83,7 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
+#> covType="analytic": a linCmt() model is out of analytic-covariance scope; using the finite-difference covariance instead
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .rownum
@@ -173,28 +174,30 @@ Matthew L. Fidler
 #> ℹ removing unzipped fit files
 #> ── nlmixr² FOCEi (outer: nlminb) ──
 #> 
-#>          OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.812 373.4118 393.5914      -179.7059        68.29718        9.353349
+#>           OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
+#> FOCEi 116.8036 373.4033 393.5829      -179.7017        82.27002        11.65923
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>              setup optimize covariance preprocess postprocess table compress
-#> elapsed 0.01228585 1.857775  0.3605715       0.02       0.014 0.039    0.001
+#>              setup  optimize covariance preprocess postprocess table compress
+#> elapsed 0.09052349 0.8228684  0.3752936      0.021       0.012  0.04    0.001
 #>             other
-#> elapsed 0.2143676
+#> elapsed 0.1353146
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
-#>         Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka    0.461  0.195 42.4       1.59 (1.08, 2.32)     70.3      1.59% 
-#> tcl     1.01 0.0751 7.42       2.75 (2.37, 3.19)     26.7      4.03% 
-#> tv      3.46 0.0436 1.26       31.8 (29.2, 34.6)     14.2      11.0% 
-#> add.sd 0.692                               0.692                     
+#>          Est.      SE  %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
+#> tka    0.4655  0.1954 41.97    1.593 (1.086, 2.336)    70.52      1.893<
+#> tcl     1.012 0.07555 7.464    2.752 (2.373, 3.191)    26.75      3.873<
+#> tv      3.460 0.04289 1.240    31.81 (29.24, 34.60)    13.90      10.31<
+#> add.sd 0.6947 0.09264 13.34 0.6947 (0.5131, 0.8763)                     
 #>  
 #>   Covariance Type ($covMethod): r,s
 #>   Some strong fixed parameter correlations exist ($cor) :
-#>     cor:tcl,tka  cor:tv,tka  cor:tv,tcl 
-#>      0.158        0.421       0.743  
+#>        cor:tcl,tka     cor:tv,tka cor:add.sd,tka     cor:tv,tcl cor:add.sd,tcl 
+#>         0.160           0.429        -0.0528           0.754         -0.204   
+#>  cor:add.sd,tv 
+#>        -0.343  
 #>  
 #> 
 #>   No correlations in between subject variability (BSV) matrix
@@ -202,8 +205,9 @@ Matthew L. Fidler
 #>   Distribution stats (mean/skewness/kurtosis/p-value) available in $shrink 
 #>   Information about run found ($runInfo):
 #>    • gradient problems with initial estimate and covariance; see $scaleInfo 
+#>    • covType="analytic": the analytic covariance is not available for this model; used the finite-difference sandwich ("r,s") covariance instead. 
+#>    • last objective function was not at minimum, possible problems in optimization 
 #>    • ETAs were reset to zero during optimization; (Can control by foceiControl(resetEtaP=.)) 
-#>    • initial ETAs were nudged; (can control by foceiControl(etaNudge=., etaNudge2=)) 
 #>   Censoring ($censInformation): No censoring
 #>   Minimization message ($message):  
 #>     relative convergence (4) 
@@ -213,8 +217,8 @@ Matthew L. Fidler
 #>      ID  TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES
 #>   <int> <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>
 #> 1     1  0     0.74  0     0.74   1.07   0     0.74   1.07   0     0.74   1.07 
-#> 2     1  0.25  2.84  3.26 -0.417 -0.223  3.84 -1.00  -1.45   3.21 -0.372 -0.174
-#> 3     1  0.57  6.57  5.82  0.746  0.299  6.78 -0.215 -0.311  5.77  0.802  0.290
+#> 2     1  0.25  2.84  3.27 -0.426 -0.227  3.85 -1.01  -1.45   3.22 -0.383 -0.179
+#> 3     1  0.57  6.57  5.83  0.735  0.295  6.79 -0.215 -0.310  5.78  0.790  0.286
 #> # ℹ 129 more rows
 #> # ℹ 10 more variables: eta.ka <dbl>, eta.cl <dbl>, eta.v <dbl>, depot <dbl>,
 #> #   central <dbl>, ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <int>

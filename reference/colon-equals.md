@@ -69,7 +69,7 @@ Matthew L. Fidler
 ``` r
 
 # \donttest{
- if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("withr")) {
+ if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
    library(nlmixr2est)
   library(nlmixr2data)
   withr::with_tempdir({
@@ -118,7 +118,6 @@ Matthew L. Fidler
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of full model...
 #> ✔ done
-#> → calculate jacobian
 #> → calculate ∂(f)/∂(η)
 #> → calculate ∂(R²)/∂(η)
 #> → finding duplicate expressions in inner model...
@@ -138,13 +137,14 @@ Matthew L. Fidler
 #>  
 #>  
 #> ✔ done
-#> rxode2 5.1.2 using 2 threads (see ?getRxThreads)
+#> rxode2 5.1.3 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
 #> The following objects are masked from ‘package:nlmixr2est’:
 #> 
 #>     boxCox, yeoJohnson
+#> covType="analytic": a linCmt() model is out of analytic-covariance scope; using the finite-difference covariance instead
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .rownum
@@ -279,7 +279,6 @@ Matthew L. Fidler
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
-#> params:  tka rxBoundedTr.tcl tv  V(eta.ka)   V(eta.v)    V(eta.cl)   add.sd
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -294,10 +293,11 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8296
-#> → compress phiM in nlmixr2 object, save 429424
+#> → compress parHistData in nlmixr2 object, save 8848
+#> → compress phiM in nlmixr2 object, save 443520
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
+#> ℹ saving fit item: .saemFullCov
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
 #> ℹ saving fit item: adjObf
@@ -322,6 +322,10 @@ Matthew L. Fidler
 #> ℹ saving fit item: fullCor
 #> ℹ saving fit item: iniDf0
 #> ℹ saving fit item: logLik
+#> ℹ saving fit item: logThetasF
+#> ℹ saving fit item: logitThetasF
+#> ℹ saving fit item: logitThetasHiF
+#> ℹ saving fit item: logitThetasLowF
 #> ℹ saving fit item: message
 #> ℹ saving fit item: method
 #> ℹ saving fit item: mixIdx
@@ -340,6 +344,9 @@ Matthew L. Fidler
 #> ℹ saving fit item: parFixedDf
 #> ℹ saving fit item: parHistData
 #> ℹ saving fit item: phiM
+#> ℹ saving fit item: probitThetasF
+#> ℹ saving fit item: probitThetasHiF
+#> ℹ saving fit item: probitThetasLowF
 #> ℹ saving fit item: qfirst
 #> ℹ saving fit item: qw
 #> ℹ saving fit item: qx

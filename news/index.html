@@ -32,12 +32,18 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.0" id="nlmixr2save-010">nlmixr2save 0.1.0<a class="anchor" aria-label="anchor" href="#nlmixr2save-010"></a></h2>
+<h2 class="pkg-version" data-toc-text="development version" id="nlmixr2save-development-version">nlmixr2save (development version)<a class="anchor" aria-label="anchor" href="#nlmixr2save-development-version"></a></h2>
+<ul><li><p>Support both <code>$parFixedDf</code> structures produced by nlmixr2est: the current one (named “Estimate”/“SE” columns) and the upcoming <code>$parFixed</code> refactor (nlmixr2est#645, unnamed columns). The structure of the fit is detected when it is saved and recorded in the restore script, so fits round-trip exactly with either version (<code><a href="../reference/nlmixr2saveParFixedDf.html">nlmixr2saveParFixedDf()</a></code> gained a <code>named</code> argument; existing saved zip files continue to load unchanged).</p></li>
+<li><p>Additional all-<code>NA</code> numeric columns of <code>$parFixedDf</code> (for example “CI Lower”/“CI Upper” when there is no covariance step) are now coerced back to numeric when a saved fit is loaded, instead of being left as logical columns from the CSV round-trip.</p></li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0" id="nlmixr2save-010">nlmixr2save 0.1.0<a class="anchor" aria-label="anchor" href="#nlmixr2save-010"></a></h2><p class="text-muted">CRAN release: 2026-06-17</p>
 <ul><li><p>Create zip files that are (mostly) R independent to save nlmixr2 fit items</p></li>
 <li><p>Create a cached assignment operator <code>:=</code> to save nlmixr2 fits automatically; if used, it will load a cached fit if function arguments are the same (a sort of disk memoization of the outermost function)</p></li>
 <li><p>Initial CRAN submission.</p></li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
@@ -45,7 +51,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
