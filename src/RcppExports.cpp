@@ -11,19 +11,20 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // nlmixr2saveParFixedDf
-SEXP nlmixr2saveParFixedDf(SEXP obj);
-RcppExport SEXP _nlmixr2save_nlmixr2saveParFixedDf(SEXP objSEXP) {
+SEXP nlmixr2saveParFixedDf(SEXP obj, bool named);
+RcppExport SEXP _nlmixr2save_nlmixr2saveParFixedDf(SEXP objSEXP, SEXP namedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type obj(objSEXP);
-    rcpp_result_gen = Rcpp::wrap(nlmixr2saveParFixedDf(obj));
+    Rcpp::traits::input_parameter< bool >::type named(namedSEXP);
+    rcpp_result_gen = Rcpp::wrap(nlmixr2saveParFixedDf(obj, named));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_nlmixr2save_nlmixr2saveParFixedDf", (DL_FUNC) &_nlmixr2save_nlmixr2saveParFixedDf, 1},
+    {"_nlmixr2save_nlmixr2saveParFixedDf", (DL_FUNC) &_nlmixr2save_nlmixr2saveParFixedDf, 2},
     {NULL, NULL, 0}
 };
 

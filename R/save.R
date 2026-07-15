@@ -238,6 +238,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   .files <- c(list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
                          full.names=TRUE))
   .files <- gsub("^[.]/", "", .files)
+  # nlmixr2est <= 6.0 stores parFixedDf with named "Estimate"/"SE" columns;
+  # the $parFixed refactor (nlmixr2est#645) stores them unnamed.  Record
+  # which structure this fit uses so the restore script rebuilds it exactly.
+  .parFixedDfNamed <- TRUE
+  if (exists("parFixedDf", envir=fit$env)) {
+    .pfd <- get("parFixedDf", envir=fit$env)
+    if (is.data.frame(.pfd) && !is.null(.pfd$Estimate)) {
+      .parFixedDfNamed <- !is.null(names(.pfd$Estimate))
+    }
+  }
   .r <- do.call(`c`,
           lapply(.files,
                  function(f) {
@@ -266,7 +276,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                        ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1)\n")
                        if (val == "parFixedDf") {
                          ret <- paste0(ret,
-                                       "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`)\n")
+                                       "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`, named=",
+                                       deparse1(.parFixedDfNamed), ")\n")
                        } else if (val == "iniDf0") {
                          ret <- paste0(ret,
                                        "env$iniDf0$ntheta <- as.integer(env$iniDf0$ntheta)\n",

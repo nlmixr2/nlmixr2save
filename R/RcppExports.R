@@ -4,19 +4,32 @@
 #' Fix nlmixr2 save output
 #'
 #' This function modifies the output of nlmixr2's save function to ensure that
-#' the "Estimate" and "SE" fields are numeric vectors with appropriate names,
-#' rather than data frames. This is necessary for compatibility with other
-#' functions that expect these fields to be numeric vectors.
+#' the numeric columns of the `parFixedDf` data frame have the types that
+#' nlmixr2 outputs after a CSV round-trip (all-`NA` columns are read back as
+#' logical vectors, so they are coerced back to numeric here).
+#'
+#' Depending on the version of nlmixr2est that created the fit, the
+#' "Estimate" and "SE" columns are either named numeric vectors (names
+#' matching the row names; nlmixr2est <= 6.0) or plain unnamed numeric
+#' vectors (the `$parFixed` refactor in newer nlmixr2est).  The `named`
+#' argument selects which structure is restored; `nlmixr2save::saveFit()`
+#' records the correct value in the generated restore script based on the
+#' fit being saved.
 #'
 #' @param obj A list object returned by nlmixr2's save function.
 #'
-#' @return A modified data.frame object with "Estimate" and "SE" as named numeric vectors
+#' @param named Logical; when `TRUE` (default, matching fits from older
+#'   nlmixr2est) the "Estimate" and "SE" columns are named using the row
+#'   names; when `FALSE` they are left as unnamed numeric vectors.
+#'
+#' @return A modified data.frame object with numeric columns restored to
+#'   the structure of the original fit
 #'
 #' @keywords internal
 #'
 #' @export
 #'
-nlmixr2saveParFixedDf <- function(obj) {
-    .Call(`_nlmixr2save_nlmixr2saveParFixedDf`, obj)
+nlmixr2saveParFixedDf <- function(obj, named = TRUE) {
+    .Call(`_nlmixr2save_nlmixr2saveParFixedDf`, obj, named)
 }
 
