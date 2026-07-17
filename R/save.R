@@ -18,6 +18,70 @@
   cli::cli_alert_info(gettext(text), ..., .envir = .envir)
 }
 
+#' `:=` cache location and behavior options
+#'
+#' The `:=` operator saves and reloads a fit/simulation to disk.  Three
+#' `options()` control where and how it caches, mirroring
+#' `getOption("nlmixr2save.quiet")`:
+#'
+#' - `nlmixr2save.dir` (default `"."`): the directory the cache files live in.
+#' - `nlmixr2save.prefix` (default `""`): a string prepended to the assigned
+#'   variable name to form the cache file base, e.g. a prefix of
+#'   `"modelPiping-"` and `fit := nlmixr2(...)` caches to
+#'   `modelPiping-fit.zip`.
+#' - `nlmixr2save.check` (default `TRUE`): when `TRUE`, `:=` verifies that the
+#'   cached fit matches the current model/data/arguments (the historical
+#'   behavior) and refits when it does not.  When `FALSE`, `:=` simply loads the
+#'   cache file if it exists and otherwise runs and saves it -- the cache is
+#'   trusted and only regenerated when it is missing (see
+#'   [nlmixr2saveInvalidate()]).  This keeps a committed cache stable across
+#'   nlmixr2/rxode2 versions.
+#'
+#' @return the option value (`""`/`"."`/`TRUE` when unset)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveDir <- function() {
+  .d <- getOption("nlmixr2save.dir", ".")
+  if (!checkmate::testString(.d)) "." else .d
+}
+.nlmixr2savePrefix <- function() {
+  .p <- getOption("nlmixr2save.prefix", "")
+  if (!checkmate::testString(.p, na.ok=FALSE)) "" else .p
+}
+.nlmixr2saveCheck <- function() {
+  isTRUE(getOption("nlmixr2save.check", TRUE))
+}
+
+#' Base cache file name (prefix + variable name), without extension
+#' @param x variable name being assigned by `:=`
+#' @return `paste0(prefix, x)`
+#' @noRd
+.nlmixr2saveBase <- function(x) {
+  paste0(.nlmixr2savePrefix(), x)
+}
+
+#' Evaluate `code` with the working directory set to the cache directory
+#'
+#' `saveFit()`/`loadFit()` write and read component files by plain (relative)
+#' name, so running them inside the cache directory keeps the file argument a
+#' plain `<prefix><name>` and avoids embedding a subdirectory in it.  A no-op
+#' when the cache directory is `"."`.
+#' @param code expression to evaluate in the cache directory
+#' @return the value of `code`
+#' @noRd
+.nlmixr2saveWithDir <- function(code) {
+  .dir <- .nlmixr2saveDir()
+  if (identical(.dir, ".") || identical(.dir, "")) {
+    return(force(code))
+  }
+  if (!dir.exists(.dir)) {
+    dir.create(.dir, recursive=TRUE, showWarnings=FALSE)
+  }
+  .owd <- setwd(.dir)
+  on.exit(setwd(.owd), add=TRUE)
+  force(code)
+}
+
 #' Save a fitted model item to a file
 #'
 #' This is a generic function to save a fitted model item to a file.
@@ -305,7 +369,11 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                    NULL # nocov
                  }))
   .r <- paste0(.r, collapse="\n")
-  writeLines(paste0(file, " <- function() {\n",
+  # the loader script assigns to a variable named after `file`; a
+  # nlmixr2save.prefix can make that a non-syntactic name (e.g. "modelPiping-fit"),
+  # so quote it with backticks.
+  .fq <- paste0("`", file, "`")
+  writeLines(paste0(.fq, " <- function() {\n",
                     "source('", paste0(file,"-env.R"), "', local=TRUE)\n",
                     ".class <- env$`..class..`\n",
                     ".id.level <- env$`..id.level..`\n",
@@ -344,7 +412,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "  return(ret)\n",
                     "}\n",
                     "}\n",
-                    file, " <- ", file, "()\n"),
+                    .fq, " <- ", .fq, "()\n"),
              con = paste0(file,".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
@@ -490,6 +558,150 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   .saveFitEnv$random
 }
 
+#' Load a `:=` cache entry if the file exists (no hash check)
+#'
+#' Used when `getOption("nlmixr2save.check")` is `FALSE`.  Looks, inside the
+#' cache directory, for `<base>.zip` (a saved fit) then `<base>.rds` (a saved
+#' simulation/other value) and returns the stored object, restoring the random
+#' seed when the rds carries one.  Returns the sentinel `.saveFitEnv` (an
+#' environment that can never be a legitimate value) when neither exists.
+#' @param base cache file base name (`<prefix><name>`, no extension)
+#' @return the cached object, or `.saveFitEnv` when absent
+#' @noRd
+#' @author Matthew L. Fidler
+
+#' Save/load a fit `.zip` under its bare name, with the prefix on the outer file
+#'
+#' A fit `.zip` is a self-contained bundle whose internal component and loader
+#' names are the fit's variable name, so it must be written and read under that
+#' bare name to stay a normal, interchangeable fit archive.  The
+#' `nlmixr2save.prefix` therefore applies only to the *outer* file: `saveFit()`
+#' writes `<x>.zip` (bare internals) and it is then renamed to `<prefix><x>.zip`;
+#' loading renames it back to `<x>.zip`, `loadFit()`s it, and restores the
+#' prefixed name.  Both assume the working directory is already the cache
+#' directory (the callers wrap them in [.nlmixr2saveWithDir()] or set it).
+#' @param value fit to save; `x` the bare variable/fit name
+#' @return the fit (load), or `value` invisibly (save)
+#' @noRd
+.saveFitZipPlain <- function(value, x) {
+  .base <- .nlmixr2saveBase(x)
+  saveFit(value, x, zip=TRUE)
+  if (!identical(x, .base)) {
+    if (file.exists(paste0(.base, ".zip"))) unlink(paste0(.base, ".zip"))
+    file.rename(paste0(x, ".zip"), paste0(.base, ".zip"))
+  }
+  invisible(value)
+}
+#' @rdname dot-saveFitZipPlain
+#' @noRd
+.loadFitZipPlain <- function(x) {
+  .base <- .nlmixr2saveBase(x)
+  if (!identical(x, .base)) {
+    file.rename(paste0(.base, ".zip"), paste0(x, ".zip"))
+    on.exit(if (file.exists(paste0(x, ".zip")))
+              file.rename(paste0(x, ".zip"), paste0(.base, ".zip")),
+            add=TRUE)
+  }
+  loadFit(x)
+}
+
+.nlmixr2saveLoadIfExists <- function(x) {
+  .nlmixr2saveWithDir({
+    .base <- .nlmixr2saveBase(x)
+    .zip <- paste0(.base, ".zip")
+    .rds <- paste0(.base, ".rds")
+    if (file.exists(.zip)) {
+      .minfo(paste0("loading fit from ", .zip))
+      return(.loadFitZipPlain(x))
+    } else if (file.exists(.rds)) {
+      .rdsInfo <- readRDS(.rds)
+      if (is.list(.rdsInfo) && "ret" %in% names(.rdsInfo)) {
+        if (isTRUE(.rdsInfo$random) && !is.null(.rdsInfo$seed)) {
+          rxode2::.rxSetSeed(.rdsInfo$seed)
+          .minfo("restoring random seed to state after run")
+        }
+        .minfo(paste0("loading from ", .rds))
+        return(.rdsInfo$ret)
+      }
+      # a bare object saved directly
+      .minfo(paste0("loading from ", .rds))
+      return(.rdsInfo)
+    }
+    .saveFitEnv
+  })
+}
+
+#' Save a `:=` value to disk by its result type (no hash check)
+#'
+#' A `nlmixr2` fit is saved as a portable `.zip` under its bare name, renamed to
+#' `<prefix><name>.zip` (see [.saveFitZipPlain()]); a value produced by a
+#' random/simulation function (`.saveFitEnv$random`, e.g. `rxSolve`/`vpcSim`) is
+#' saved as a seeded `<prefix><name>.rds`; anything else is saved as a plain
+#' `<prefix><name>.rds`.
+#' @param value the forced result value
+#' @param x the bare variable/fit name being assigned
+#' @param sha1 content hash to record in the rds wrapper (may be `NULL`)
+#' @return `value`, invisibly
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveByType <- function(value, x, sha1 = NULL) {
+  .nlmixr2saveWithDir({
+    .base <- .nlmixr2saveBase(x)
+    if (inherits(value, "nlmixr2FitData")) {
+      if (!is.null(sha1) && is.environment(attr(class(value), ".foceiEnv"))) {
+        assign("nlmixr2save", sha1, attr(class(value), ".foceiEnv"))
+      }
+      .saveFitZipPlain(value, x)
+    } else if (inherits(value, "nlmixr2FitCore")) {
+      if (!is.null(sha1) && is.environment(value)) assign("nlmixr2save", sha1, envir=value)
+      .saveFitZipPlain(value, x)
+    } else if (isTRUE(.saveFitEnv$isRandom) ||
+                 .saveFitEnv$fun %in% .saveFitEnv$random) {
+      .new <- rxode2::.rxGetSeed()
+      saveRDS(list(ret=value, sha1=sha1,
+                   random=!identical(.saveFitEnv$old, .new),
+                   old=.saveFitEnv$old, seed=.new),
+              paste0(.base, ".rds"))
+    } else {
+      saveRDS(list(ret=value, sha1=sha1), paste0(.base, ".rds"))
+    }
+  })
+  invisible(value)
+}
+
+#' Delete every `:=` cache entry under the active prefix and directory
+#'
+#' Removes the cache files (`.zip`, `.rds`), the fit loader scripts (`.R`) and
+#' fit component files (`-*.csv`, `-*.rds`, `-*.R`) whose names begin with the
+#' current `getOption("nlmixr2save.prefix")` in the current
+#' `getOption("nlmixr2save.dir")`.  Use it to force `:=` to re-run cached
+#' fits/simulations on the next render when `nlmixr2save.check` is `FALSE`.
+#'
+#' @return invisibly, the character vector of files removed
+#' @export
+#' @author Matthew L. Fidler
+#' @examples
+#' \dontrun{
+#'   options(nlmixr2save.dir = "cache", nlmixr2save.prefix = "modelPiping-")
+#'   nlmixr2saveInvalidate() # clears cache/modelPiping-* entries
+#' }
+nlmixr2saveInvalidate <- function() {
+  .dir <- .nlmixr2saveDir()
+  .prefix <- .nlmixr2savePrefix()
+  if (!dir.exists(.dir)) return(invisible(character(0)))
+  .all <- list.files(.dir)
+  # a literal prefix match (the prefix may contain regex metacharacters); an
+  # empty prefix matches everything in the directory
+  .keep <- if (nzchar(.prefix)) startsWith(.all, .prefix) else rep(TRUE, length(.all))
+  .files <- file.path(.dir, .all[.keep])
+  if (length(.files)) {
+    .minfo(paste0("invalidating ", length(.files), " cache file(s) matching '",
+                  .prefix, "*' in ", .dir))
+    unlink(.files)
+  }
+  invisible(.files)
+}
+
 #' This assignment operator is meant to assign or load a nlmixr2 fit
 #' (and other objects)
 #'
@@ -587,9 +799,29 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   .saveFitEnv$isRandom <- FALSE
   .saveFitEnv$restore <- FALSE
   .subs <- substitute(value)
+  .saveFitEnv$fun <- if (is.call(.subs)) gsub(".*::", "", deparse1(.subs[[1]])) else ""
+  if (!.nlmixr2saveCheck()) {
+    # Trusted-cache mode: load the file if it exists (no model/data/version
+    # hash check), otherwise run and save it by result type.  The cache is only
+    # regenerated when it is missing (see nlmixr2saveInvalidate()).
+    .x <- as.character(substitute(x))
+    .hit <- .nlmixr2saveLoadIfExists(.x)
+    if (!identical(.hit, .saveFitEnv)) {
+      assign(.x, .hit, envir=.assignParent())
+      .saveFitEnv$restore <- TRUE
+      return(invisible(.hit))
+    }
+    if (.saveFitEnv$fun %in% .saveFitEnv$random) {
+      # capture the seed before running so a re-run restores it on load
+      .saveFitEnv$old <- rxode2::.rxGetSeed()
+    }
+    .val <- force(value)
+    .nlmixr2saveByType(.val, .x)
+    assign(.x, .val, envir=.assignParent())
+    return(invisible(.val))
+  }
   if (is.call(.subs)) {
-    .cls <- gsub(".*::", "", deparse1(.subs[[1]]))
-    .saveFitEnv$fun <- .cls
+    .cls <- .saveFitEnv$fun
     if (.cls %in% c("nlmixr2", "nlmixr")) {
       .est <- .subs
       .est[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
@@ -602,10 +834,13 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
         .saveFitEnv$isRandom <- TRUE
         # If this was a fit object, it is expired so remove it
         .x <- as.character(substitute(x))
-        if (file.exists(paste0(.x, ".zip"))) {
-          .minfo(paste0("removing expired fit file ", .x, ".zip"))
-          unlink(paste0(.x, ".zip"))
-        }
+        .nlmixr2saveWithDir({
+          .expZip <- paste0(.nlmixr2saveBase(.x), ".zip")
+          if (file.exists(.expZip)) {
+            .minfo(paste0("removing expired fit file ", .expZip))
+            unlink(.expZip)
+          }
+        })
         return(UseMethod(":=", .subs))
       }
       .x <- as.character(substitute(x))
@@ -619,8 +854,9 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #' @export
 `:=.nlmixr2FitCore` <- function(x, value) {
   # This will be evaluated
-  saveFit(value, as.character(substitute(x)), zip=TRUE)
-  assign(as.character(substitute(x)), value, envir=.assignParent())
+  .x <- as.character(substitute(x))
+  .nlmixr2saveWithDir(.saveFitZipPlain(value, .x))
+  assign(.x, value, envir=.assignParent())
 }
 
 #' @export
@@ -784,15 +1020,22 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 `:=.assign_nlmixr2` <- function(x, value) {
   # First see if the zip or rds file exists
   .x <- as.character(substitute(x))
-  .zip <- paste0(.x, ".zip")
-  .rds <- paste0(.x, ".rds")
+  .base <- .nlmixr2saveBase(.x)
+  .dir <- .nlmixr2saveDir()
+  if (!identical(.dir, ".") && !identical(.dir, "")) {
+    if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE, showWarnings=FALSE)
+    .owd <- setwd(.dir)
+    on.exit(setwd(.owd), add=TRUE)
+  }
+  .zip <- paste0(.base, ".zip")
+  .rds <- paste0(.base, ".rds")
   .sha1 <- substitute(value)
   .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
   .prop <- eval(.sha1, envir=.assignParent())
   .est <- .prop$est
   .sha1 <- .prop$sha
   if (file.exists(.zip)) {
-    .fit <- loadFit(.x)
+    .fit <- .loadFitZipPlain(.x)
     if (inherits(.fit, "nlmixr2FitData") &&
           is.environment(attr(class(.fit), ".foceiEnv")) &&
           exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
@@ -880,16 +1123,16 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   if (inherits(.fit, "nlmixr2FitData")) {
     assign("nlmixr2save", .sha1, attr(class(.fit), ".foceiEnv"))
     assign("nlmixr2saveOrig", .prop$shaOrig, attr(class(.fit), ".foceiEnv"))
-    saveFit(.fit, as.character(substitute(x)), zip=TRUE)
+    .saveFitZipPlain(.fit, .x)
   } else if (inherits(.fit, "nlmixr2FitCore")) {
     assign("nlmixr2save", .sha1, envir=.fit)
     assign("nlmixr2saveOrig", .prop$shaOrig, envir=.fit)
-    saveFit(.fit, as.character(substitute(x)), zip=TRUE)
+    .saveFitZipPlain(.fit, .x)
   } else {
-    .minfo(paste0("fit is not a nlmixr2 fit, saving to ", .x, ".rds"))
-    return(.saveRds(.fit, .sha1, .x))
+    .minfo(paste0("fit is not a nlmixr2 fit, saving to ", .base, ".rds"))
+    return(.saveRds(.fit, .sha1, .x, .base))
   }
-  assign(as.character(substitute(x)), value, envir=.assignParent())
+  assign(.x, value, envir=.assignParent())
   invisible(.fit)
 }
 
@@ -906,14 +1149,14 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #'   environment.
 #' @noRd
 #' @author Matthew L. Fidler
-.saveSimRds <- function(value, sha1, x) {
+.saveSimRds <- function(value, sha1, x, base=x) {
   # The seed is saved so it will restore the state as if the command
   # had been run, which is important for reproducibility if the
   # command changes the random seed state.
   .new <- rxode2::.rxGetSeed()
   .rdsInfo <- list(ret=value, sha1=sha1, random=!identical(.saveFitEnv$old, .new),
                    old=.saveFitEnv$old, seed=.new)
-  saveRDS(.rdsInfo, paste0(x, ".rds"))
+  saveRDS(.rdsInfo, paste0(base, ".rds"))
   assign(x, value, envir=.assignParent())
   invisible(value)
 }
@@ -922,27 +1165,36 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #' @param value forced value
 #' @param sha1 sha1 hash of the arguments
 #' @param x name of the object to assign to and save
+#' @param base file base name to save to (default `x`); lets the on-disk name
+#'   carry a `nlmixr2save.prefix` while the assignment keeps the bare name.
 #' @return the value that was assigned to the object, invisibly. It
 #'   also has the side effect of assigning the value to the parent
 #'   environment.
 #' @noRd
 #' @author Matthew L. Fidler
-.saveRds <- function(value, sha1, x) {
+.saveRds <- function(value, sha1, x, base=x) {
   .rdsInfo <- list(ret=value, sha1=sha1)
-  saveRDS(.rdsInfo, paste0(x, ".rds"))
+  saveRDS(.rdsInfo, paste0(base, ".rds"))
   assign(x, value, envir=.assignParent())
   invisible(value)
 }
 
 #' @export
 `:=.assign_default` <- function(x, value){
+  .x <- as.character(substitute(x))
+  .base <- .nlmixr2saveBase(.x)
+  .dir <- .nlmixr2saveDir()
+  if (!identical(.dir, ".") && !identical(.dir, "")) {
+    if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE, showWarnings=FALSE)
+    .owd <- setwd(.dir)
+    on.exit(setwd(.owd), add=TRUE)
+  }
   if (checkmate::testCharacter(.saveFitEnv$fun,
                                any.missing=FALSE,
                                min.chars=1L) &&
         (.saveFitEnv$isRandom || .saveFitEnv$fun %in% .saveFitEnv$random)) {
     .saveFitEnv$old <- rxode2::.rxGetSeed()
-    .x <- as.character(substitute(x))
-    .rds <- paste0(.x, ".rds")
+    .rds <- paste0(.base, ".rds")
     .sha1 <- substitute(value)
     .sha1[[1]] <- quote(`list`)
     .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
@@ -989,10 +1241,9 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
     # Get random seed before evaluating value, so that if the value
     # changes the seed will be different and thus the sha1 needs to change
     .value <- force(value)
-    .saveSimRds(.value, .sha1, .x)
+    .saveSimRds(.value, .sha1, .x, .base)
   } else {
-    .x <- as.character(substitute(x))
-    .rds <- paste0(.x, ".rds")
+    .rds <- paste0(.base, ".rds")
     .sha1 <- substitute(value)
     .sha1[[1]] <- quote(`list`)
     .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
@@ -1019,7 +1270,7 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
     # Get random seed before evaluating value, so that if the value
     # changes the seed will be different and thus the sha1 needs to change
     .value <- force(value)
-    .saveRds(.value, .sha1, .x)
+    .saveRds(.value, .sha1, .x, .base)
   }
 }
 
