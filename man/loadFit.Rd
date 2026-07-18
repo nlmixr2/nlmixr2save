@@ -4,10 +4,13 @@
 \alias{loadFit}
 \title{Load a fitted model object from a file}
 \usage{
-loadFit(file)
+loadFit(file, checkVersion = TRUE)
 }
 \arguments{
 \item{file}{the base name of the files to load the fit from.}
+
+\item{checkVersion}{when \code{TRUE} (default), warn if the fit was produced with
+a different nlmixr2est version/sha than the one currently installed.}
 }
 \value{
 the fitted model object

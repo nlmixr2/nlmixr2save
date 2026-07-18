@@ -52,6 +52,151 @@
   isTRUE(getOption("nlmixr2save.check", TRUE))
 }
 
+#' nlmixr2est version/sha of the currently installed package
+#'
+#' Records the version and, when installed from a remote (e.g. GitHub via
+#' `remotes`/`pak`), the commit sha so a saved fit knows exactly which
+#' nlmixr2est produced it.
+#' @return list with `version` and `sha` (both `NA_character_` when nlmixr2est
+#'   is not installed / not a remote build)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2estMeta <- function() {
+  if (!requireNamespace("nlmixr2est", quietly=TRUE)) {
+    return(list(version=NA_character_, sha=NA_character_))
+  }
+  .d <- utils::packageDescription("nlmixr2est")
+  .sha <- .d$RemoteSha
+  if (is.null(.sha) || !nzchar(.sha)) .sha <- .d$GithubSHA1
+  if (is.null(.sha) || !nzchar(.sha)) .sha <- NA_character_
+  list(version=as.character(utils::packageVersion("nlmixr2est")),
+       sha=.sha)
+}
+
+#' Metadata stored alongside a saved fit
+#'
+#' Deterministic (no timestamps) so a committed cache stays byte-stable.
+#' @return list of the nlmixr2est version/sha plus rxode2/nlmixr2save versions
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveMeta <- function() {
+  list(nlmixr2est=.nlmixr2estMeta(),
+       rxode2=as.character(utils::packageVersion("rxode2")),
+       nlmixr2save=as.character(utils::packageVersion("nlmixr2save")))
+}
+
+#' Human-readable nlmixr2est version label from stored metadata
+#' @param meta metadata list (or `NULL`)
+#' @return a string like `"6.2.0"` or `"6.2.0 (abcdef1234)"`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2estMetaLabel <- function(meta) {
+  if (is.null(meta) || is.null(meta$nlmixr2est) ||
+        is.null(meta$nlmixr2est$version) || is.na(meta$nlmixr2est$version)) {
+    return("(unknown)")
+  }
+  .v <- meta$nlmixr2est$version
+  .s <- meta$nlmixr2est$sha
+  if (!is.null(.s) && !is.na(.s) && nzchar(.s)) {
+    paste0(.v, " (", substr(.s, 1, 10), ")")
+  } else {
+    .v
+  }
+}
+
+#' Does the stored nlmixr2est version/sha differ from what is installed now?
+#'
+#' Returns `FALSE` (no complaint) when there is nothing to compare: no stored
+#' metadata (fit saved by an older nlmixr2save), or nlmixr2est not installed.
+#' @param stored metadata recorded when the fit was saved (or `NULL`)
+#' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2estMetaDiffers <- function(stored, current=.nlmixr2saveMeta()) {
+  if (is.null(stored) || is.null(stored$nlmixr2est)) return(FALSE)
+  .s <- stored$nlmixr2est
+  .c <- current$nlmixr2est
+  if (is.null(.s$version) || is.na(.s$version) ||
+        is.null(.c$version) || is.na(.c$version)) {
+    return(FALSE)
+  }
+  if (!identical(.s$version, .c$version)) return(TRUE)
+  # same version string but a different remote sha still means a different build
+  if (!is.null(.s$sha) && !is.na(.s$sha) && nzchar(.s$sha) &&
+        !is.null(.c$sha) && !is.na(.c$sha) && nzchar(.c$sha)) {
+    return(!identical(.s$sha, .c$sha))
+  }
+  FALSE
+}
+
+#' Extract the stored save metadata from a loaded fit
+#' @param fit a loaded `nlmixr2FitData`/`nlmixr2FitCore`
+#' @return the metadata list, or `NULL` when absent
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveGetMeta <- function(fit) {
+  .env <- if (is.environment(attr(class(fit), ".foceiEnv"))) {
+    attr(class(fit), ".foceiEnv")
+  } else if (is.environment(fit)) {
+    fit
+  } else {
+    NULL
+  }
+  if (is.null(.env) || !exists(".nlmixr2saveMeta", envir=.env, inherits=FALSE)) {
+    return(NULL)
+  }
+  get(".nlmixr2saveMeta", envir=.env)
+}
+
+#' Decide what to do when a cached fit's nlmixr2est version differs from now
+#'
+#' When the versions match (or there is nothing to compare) nothing happens and
+#' `FALSE` is returned so the caller uses the cached fit.  When they differ:
+#' interactively the user is asked whether to rerun the fit with the currently
+#' installed nlmixr2est (`TRUE` -> caller should refit); non-interactively the
+#' cached fit is kept and a warning is emitted.
+#' @param fit the loaded cached fit
+#' @return `TRUE` if the caller should rerun the fit, otherwise `FALSE`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveVersionRerun <- function(fit) {
+  .stored <- .nlmixr2saveGetMeta(fit)
+  if (!.nlmixr2estMetaDiffers(.stored)) return(FALSE)
+  .old <- .nlmixr2estMetaLabel(.stored)
+  .new <- .nlmixr2estMetaLabel(.nlmixr2saveMeta())
+  if (interactive()) {
+    .ans <- utils::menu(c("Reload the cached fit as-is",
+                          "Rerun the fit with the installed nlmixr2est"),
+                        title=paste0("The cached fit was run with nlmixr2est ",
+                                     .old, " but nlmixr2est ", .new,
+                                     " is installed."))
+    return(.ans == 2L)
+  }
+  warning("the cached fit was run with nlmixr2est ", .old,
+          " but nlmixr2est ", .new, " is installed; loading the cached fit",
+          call.=FALSE)
+  FALSE
+}
+
+#' Warn (non-interactively) when a loaded fit's nlmixr2est version differs
+#'
+#' Used by [loadFit()], which cannot rerun the fit (it has no original call), so
+#' it only informs the user of the version skew.
+#' @param fit the loaded fit
+#' @return `fit`, invisibly
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveWarnVersion <- function(fit) {
+  .stored <- .nlmixr2saveGetMeta(fit)
+  if (.nlmixr2estMetaDiffers(.stored)) {
+    warning("this fit was run with nlmixr2est ", .nlmixr2estMetaLabel(.stored),
+            " but nlmixr2est ", .nlmixr2estMetaLabel(.nlmixr2saveMeta()),
+            " is installed", call.=FALSE)
+  }
+  invisible(fit)
+}
+
 #' Base cache file name (prefix + variable name), without extension
 #' @param x variable name being assigned by `:=`
 #' @return `paste0(prefix, x)`
@@ -258,6 +403,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
   for (.i in .item) {
+    # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
+    if (.i == ".nlmixr2saveMeta") next
     .minfo(paste0("saving fit item: ", .i))
     .obj <- get(.i, envir=fit$env)
     if (is.raw(.obj)) {
@@ -292,10 +439,19 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
       }
     }
   }
+  # nlmixr2est version/sha the fit was produced under; preserve it across a
+  # load -> save round-trip (it records the run version, not the save version),
+  # otherwise stamp the currently installed nlmixr2est.
+  .meta <- if (exists(".nlmixr2saveMeta", envir=fit$env, inherits=FALSE)) {
+    get(".nlmixr2saveMeta", envir=fit$env)
+  } else {
+    .nlmixr2saveMeta()
+  }
   .cls <- as.character(class(fit))
   attr(.cls, ".foceiEnv") <- NULL
   .str <- c(.str, paste0("..class.. = ", paste(deparse(.cls), collapse="\n")),
-            paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")))
+            paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")),
+            paste0(".nlmixr2saveMeta = ", paste(deparse(.meta), collapse="\n")))
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
   writeLines(.str, con = paste0(file,"-env.R"))
@@ -448,10 +604,13 @@ saveFit.default <- function(fit, file, zip=TRUE) {
 #'
 #' @param file the base name of the files to load the fit from.
 #'
+#' @param checkVersion when `TRUE` (default), warn if the fit was produced with
+#'   a different nlmixr2est version/sha than the one currently installed.
+#'
 #' @return the fitted model object
 #'
 #' @export
-loadFit <- function(file) {
+loadFit <- function(file, checkVersion=TRUE) {
 
   .file <- as.character(substitute(file))
   .tmp <- try(force(file), silent=TRUE)
@@ -471,6 +630,9 @@ loadFit <- function(file) {
     .minfo(paste0("loading fit from ", .r))
     source(.r, local=TRUE)
     ret <- get(file)
+    if (isTRUE(checkVersion)) {
+      .nlmixr2saveWarnVersion(ret)
+    }
     if (.didUnzip) {
       .files <- list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
                            full.names=TRUE)
@@ -602,7 +764,8 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
               file.rename(paste0(x, ".zip"), paste0(.base, ".zip")),
             add=TRUE)
   }
-  loadFit(x)
+  # the `:=` caller performs its own version check/rerun handling
+  loadFit(x, checkVersion=FALSE)
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {
@@ -1036,10 +1199,22 @@ nlmixr2saveInvalidate <- function() {
   .sha1 <- .prop$sha
   if (file.exists(.zip)) {
     .fit <- .loadFitZipPlain(.x)
-    if (inherits(.fit, "nlmixr2FitData") &&
-          is.environment(attr(class(.fit), ".foceiEnv")) &&
-          exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
-          get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .sha1) {
+    .isData <- inherits(.fit, "nlmixr2FitData") &&
+      is.environment(attr(class(.fit), ".foceiEnv")) &&
+      exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
+      get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .sha1
+    .isCore <- !inherits(.fit, "nlmixr2FitData") &&
+      inherits(.fit, "nlmixr2FitCore") &&
+      is.environment(.fit) &&
+      exists("nlmixr2save", .fit) &&
+      get("nlmixr2save", .fit) == .sha1
+    if ((.isData || .isCore) && .nlmixr2saveVersionRerun(.fit)) {
+      # the cache matches but was run with a different nlmixr2est and the user
+      # asked to rerun it with the installed version
+      .minfo(paste0("rerunning fit in ", .zip, " with the installed nlmixr2est"))
+      unlink(.zip)
+      .fit <- NULL
+    } else if (.isData) {
       .env <- attr(class(.fit), ".foceiEnv")
       if (!exists("nlmixr2saveOrig", envir=.env) ||
             get("nlmixr2saveOrig", envir=.env) != .prop$shaOrig) {
@@ -1050,11 +1225,7 @@ nlmixr2saveInvalidate <- function() {
              envir=.assignParent())
       .saveFitEnv$restore <- TRUE
       return(invisible(.fit))
-    } else if (!inherits(.fit, "nlmixr2FitData") &&
-                 inherits(.fit, "nlmixr2FitCore") &&
-                 is.environment(.fit) &&
-                 exists("nlmixr2save", .fit) &&
-                 get("nlmixr2save", .fit) == .sha1) {
+    } else if (.isCore) {
       if (!exists("nlmixr2saveOrig", envir=.fit) ||
             get("nlmixr2saveOrig", envir=.fit) != .prop$shaOrig) {
         assign("origData", .prop$dataOrig, envir=.fit)
@@ -1064,10 +1235,11 @@ nlmixr2saveInvalidate <- function() {
              envir=.assignParent())
       .saveFitEnv$restore <- TRUE
       return(invisible(.fit))
+    } else {
+      .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
+      unlink(.zip)
+      .fit <- NULL
     }
-    .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
-    unlink(.zip)
-    .fit <- NULL
   } else if (file.exists(.rds)) {
     .rdsInfo <- readRDS(.rds)
     if (is.list(.rdsInfo) &&

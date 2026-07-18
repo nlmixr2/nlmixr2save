@@ -1,5 +1,19 @@
 # nlmixr2save (development version)
 
+* Saved fits now record the `nlmixr2est` version they were produced with
+  (including the commit sha when nlmixr2est was installed from a remote such as
+  GitHub).  When a fit is later loaded and the installed `nlmixr2est` differs:
+    - `loadFit()` warns that the fit was run with a different `nlmixr2est`
+      version (controllable with the new `checkVersion` argument).
+    - the `:=` caching operator, in an interactive session, asks whether to
+      rerun the fit with the currently installed `nlmixr2est`; non-interactively
+      it loads the cached fit and warns.  (Trusted-cache mode,
+      `nlmixr2save.check = FALSE`, is left untouched so committed caches stay
+      stable across versions.)
+
+  Fits saved by older `nlmixr2save` versions (which carry no version metadata)
+  continue to load without any warning.
+
 * The `:=` caching operator gains three `options()` (mirroring
   `nlmixr2save.quiet`):
     - `nlmixr2save.prefix` (default `""`): prepended to the assigned variable
