@@ -95,6 +95,25 @@ options(nlmixr2save.checkVersion = FALSE)
 options(nlmixr2save.checkVersion = TRUE)
 ```
 
+### Always load, never rerun
+
+If you would rather *always* load the cached fit -- never be interactively asked
+to rerun, and never warned -- set the option to `FALSE`.  With
+`nlmixr2save.checkVersion = FALSE`, an interactive `:=` behaves exactly like a
+non-interactive one used to, except quietly: it loads the cached fit and moves
+on, no matter which `nlmixr2est` or `rxode2` version is installed.
+
+```{r, eval = FALSE}
+options(nlmixr2save.checkVersion = FALSE)
+
+# loads the cached fit.zip as-is, with no prompt and no warning
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+```
+
+This is the setting to reach for when you have deliberately committed a cache
+and want it to load unconditionally -- for example in a rendered report or in
+CI, or simply because you prefer to decide when to rerun yourself.
+
 `loadFit()` also takes a per-call `checkVersion` argument, which defaults to the
 option, so you can override it for a single load without changing the global
 setting:
