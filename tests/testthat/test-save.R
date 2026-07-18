@@ -98,6 +98,18 @@ test_that("version-mismatch warning/rerun decision on a stub fit", {
   }
 })
 
+test_that("nlmixr2save.checkVersion option gates the check", {
+  expect_true(.nlmixr2saveCheckVersion())
+  withr::with_options(list(nlmixr2save.checkVersion = FALSE), {
+    expect_false(.nlmixr2saveCheckVersion())
+    # loadFit's checkVersion argument defaults to the option
+    expect_false(eval(formals(loadFit)$checkVersion))
+  })
+  withr::with_options(list(nlmixr2save.checkVersion = TRUE), {
+    expect_true(.nlmixr2saveCheckVersion())
+  })
+})
+
 if (requireNamespace("withr", quietly = TRUE)) {
 
   test_that("saveFitRandom marks registered functions as random", {

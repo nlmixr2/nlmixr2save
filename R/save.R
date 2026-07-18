@@ -51,6 +51,16 @@
 .nlmixr2saveCheck <- function() {
   isTRUE(getOption("nlmixr2save.check", TRUE))
 }
+#' Whether to check the nlmixr2est/rxode2 version when a fit is loaded
+#'
+#' Controlled by `getOption("nlmixr2save.checkVersion", TRUE)`.  When `FALSE`,
+#' `loadFit()` and `:=` load cached fits without comparing package versions.
+#' @return boolean (default `TRUE`)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveCheckVersion <- function() {
+  isTRUE(getOption("nlmixr2save.checkVersion", TRUE))
+}
 
 #' Packages whose version/sha is tracked in a saved fit
 #'
@@ -654,13 +664,14 @@ saveFit.default <- function(fit, file, zip=TRUE) {
 #'
 #' @param file the base name of the files to load the fit from.
 #'
-#' @param checkVersion when `TRUE` (default), warn if the fit was produced with
-#'   a different nlmixr2est version/sha than the one currently installed.
+#' @param checkVersion when `TRUE`, warn if the fit was produced with a
+#'   different nlmixr2est/rxode2 version (or remote sha) than the one currently
+#'   installed.  Defaults to `getOption("nlmixr2save.checkVersion", TRUE)`.
 #'
 #' @return the fitted model object
 #'
 #' @export
-loadFit <- function(file, checkVersion=TRUE) {
+loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
 
   .file <- as.character(substitute(file))
   .tmp <- try(force(file), silent=TRUE)
@@ -1258,9 +1269,10 @@ nlmixr2saveInvalidate <- function() {
       is.environment(.fit) &&
       exists("nlmixr2save", .fit) &&
       get("nlmixr2save", .fit) == .sha1
-    if ((.isData || .isCore) && .nlmixr2saveVersionRerun(.fit)) {
-      # the cache matches but was run with a different nlmixr2est and the user
-      # asked to rerun it with the installed version
+    if ((.isData || .isCore) && .nlmixr2saveCheckVersion() &&
+          .nlmixr2saveVersionRerun(.fit)) {
+      # the cache matches but was run with different package versions and the
+      # user asked to rerun it with the installed versions
       .minfo(paste0("rerunning fit in ", .zip, " with the installed nlmixr2est"))
       unlink(.zip)
       .fit <- NULL

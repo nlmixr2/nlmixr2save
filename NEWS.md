@@ -13,7 +13,10 @@
       stable across versions.)
 
   Fits saved by older `nlmixr2save` versions (which carry no version metadata)
-  continue to load without any warning.
+  continue to load without any warning.  The whole check can be turned off with
+  `options(nlmixr2save.checkVersion = FALSE)` (or per call via
+  `loadFit(..., checkVersion = FALSE)`); it is `TRUE` by default.  See
+  `vignette("version-tracking")`.
 
 * The saved-fit loader now recognizes the `"Analytic Gradient"`
   `parHistData$type` level emitted by newer `nlmixr2est`, so that factor
