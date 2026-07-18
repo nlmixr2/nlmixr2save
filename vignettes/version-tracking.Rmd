@@ -129,16 +129,41 @@ deliberately ships a committed cache and does not want version warnings:
 options(nlmixr2save.checkVersion = FALSE)
 ```
 
-### Relationship to trusted-cache mode
+### Loading without checking the model/data hash
 
-If you already run with `options(nlmixr2save.check = FALSE)` (trusted-cache
-mode, described in `vignette("uses")`), `:=` loads a committed cache without any
-model/data/version comparison at all.  Trusted-cache mode is intended to keep a
-committed cache stable across package versions, so it never prompts or warns
-about versions -- it is a superset of `nlmixr2save.checkVersion = FALSE` for the
-`:=` path.  The `nlmixr2save.checkVersion` option is what you want when you are
-using ordinary (checked) caching or `loadFit()` and simply want to control the
-version comparison on its own.
+By default, `:=` verifies a cached fit against an `md5`/hash of the current
+model, data, and arguments, and refits when they differ.  That check is separate
+from the version check described above, and it has its own option,
+`nlmixr2save.check`:
+
+```{r, eval = FALSE}
+# Load the cache file if it exists, WITHOUT checking the model/data/argument
+# md5 -- the cache is trusted and only regenerated when it is missing
+options(nlmixr2save.check = FALSE)
+
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+```
+
+With `nlmixr2save.check = FALSE` (trusted-cache mode, described in
+`vignette("uses")`), `:=` simply loads a committed cache whenever the file
+exists, ignoring any `md5` differences in the model, data, or arguments -- and,
+because it does no comparison at all, it also never prompts or warns about
+package versions.  In other words it subsumes `nlmixr2save.checkVersion = FALSE`
+on the `:=` path.  To force a rerun in this mode, delete the cache with
+`nlmixr2saveInvalidate()` (or remove the file).
+
+Use the two options together to pick exactly what is (and is not) checked:
+
+| `nlmixr2save.check` | `nlmixr2save.checkVersion` | behavior of `:=` on a cache hit |
+|:---|:---|:---|
+| `TRUE` (default) | `TRUE` (default) | refit if the model/data/args `md5` changed; otherwise warn/prompt if the package version changed |
+| `TRUE` | `FALSE` | refit if the `md5` changed; ignore package versions |
+| `FALSE` | (ignored) | always load the cache file if it exists; check nothing |
+
+The `nlmixr2save.checkVersion` option is the one to reach for when you are using
+ordinary (checked) caching or `loadFit()` and only want to control the version
+comparison; `nlmixr2save.check` is the one that also turns off the model/data
+`md5` check.
 
 ## Backward compatibility
 
