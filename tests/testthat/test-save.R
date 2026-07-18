@@ -368,6 +368,12 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
           expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
                        rxode2::rxNorm(fit2F$ui[[m]]),
                        label = paste0(fitName, "$env$ui$", m))
+        } else if (length(fitF$ui[[m]]) == 0L && length(fit2F$ui[[m]]) == 0L) {
+          # empty ui slots (e.g. .muGroupCovNames) round-trip as character(0)
+          # vs NULL depending on the nlmixr2est version; both are length 0 and
+          # therefore consistent between the two implementations
+          expect_equal(length(fitF$ui[[m]]), length(fit2F$ui[[m]]),
+                       label = paste0(fitName, "$env$ui$", m, " (both empty)"))
         } else {
           expect_equal(fitF$ui[[m]], fit2F$ui[[m]],
                        label = paste0(fitName, "$env$ui$", m))

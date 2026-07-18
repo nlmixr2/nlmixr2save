@@ -18,9 +18,11 @@
   `loadFit(..., checkVersion = FALSE)`); it is `TRUE` by default.  See
   `vignette("version-tracking")`.
 
-* The saved-fit loader now recognizes the `"Analytic Gradient"`
-  `parHistData$type` level emitted by newer `nlmixr2est`, so that factor
-  round-trips without dropping the level.
+* The `parHistData$type` factor levels are now recorded from the fit at save
+  time and restored on load, so the factor round-trips correctly regardless of
+  which `nlmixr2est` version produced it (the level set has grown over versions,
+  e.g. `"Analytic Gradient"`).  A hardcoded fallback covers fits saved before
+  this was recorded.
 
 * The `:=` caching operator gains three `options()` (mirroring
   `nlmixr2save.quiet`):

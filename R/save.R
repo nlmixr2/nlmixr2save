@@ -507,10 +507,23 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   } else {
     .nlmixr2saveMeta()
   }
+  # Capture the parHistData$type factor levels from the fit itself, so the
+  # restored factor matches whatever nlmixr2est produced it (the level set has
+  # grown over nlmixr2est versions, e.g. "Analytic Gradient").  A hardcoded
+  # fallback in the loader still covers fits saved before this was recorded.
+  .parHistTypeLevel <- NULL
+  if (exists("parHistData", envir=fit$env, inherits=FALSE)) {
+    .phd <- get("parHistData", envir=fit$env)
+    if (is.data.frame(.phd) && is.factor(.phd$type)) {
+      .parHistTypeLevel <- levels(.phd$type)
+    }
+  }
   .cls <- as.character(class(fit))
   attr(.cls, ".foceiEnv") <- NULL
   .str <- c(.str, paste0("..class.. = ", paste(deparse(.cls), collapse="\n")),
             paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")),
+            paste0("..parHistType.level.. = ",
+                   paste(deparse(.parHistTypeLevel), collapse="\n")),
             paste0(".nlmixr2saveMeta = ", paste(deparse(.meta), collapse="\n")))
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
@@ -593,8 +606,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "source('", paste0(file,"-env.R"), "', local=TRUE)\n",
                     ".class <- env$`..class..`\n",
                     ".id.level <- env$`..id.level..`\n",
+                    ".parHistType.level <- env$`..parHistType.level..`\n",
                     "rm('..class..', envir=env)\n",
                     "rm('..id.level..', envir=env)\n",
+                    "if (exists('..parHistType.level..', env)) rm('..parHistType.level..', envir=env)\n",
                     .r,
                     "env$model <- rxode2::model(env$ui)\n",
                     "if (!is.null(.id.level)) {\n",
@@ -606,7 +621,11 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "  }\n",
                     "}\n",
                     "if (!is.null(env$parHistData)) {\n",
-                    "  env$parHistData$type <- factor(env$parHistData$type, levels=c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\"))\n",
+                    # use the levels recorded from the fit; fall back to the
+                    # known level set for fits saved before they were recorded
+                    "  .phLevels <- .parHistType.level\n",
+                    "  if (is.null(.phLevels)) .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    "  env$parHistData$type <- factor(env$parHistData$type, levels=.phLevels)\n",
                     "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
                     "}\n",
                     "if (exists('saemControl', env) && is.numeric(env$saemControl$mcmc$niter[1])) {\n",
