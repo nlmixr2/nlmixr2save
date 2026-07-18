@@ -2,6 +2,34 @@
 
 ## nlmixr2save (development version)
 
+- The `:=` caching operator gains three
+  [`options()`](https://rdrr.io/r/base/options.html) (mirroring
+  `nlmixr2save.quiet`):
+
+  - `nlmixr2save.prefix` (default `""`): prepended to the assigned
+    variable name to form the cache file, e.g. with
+    `options(nlmixr2save.prefix = "modelPiping-")`,
+    `fit := nlmixr2(...)` caches to `modelPiping-fit.zip`.
+  - `nlmixr2save.dir` (default `"."`): the directory the cache files
+    live in.
+  - `nlmixr2save.check` (default `TRUE`): when `TRUE`, `:=` keeps
+    verifying the cache against the current model/data/arguments
+    (historical behavior); when `FALSE`, `:=` simply loads the cache
+    file if it exists (a fit as `.zip`, a simulation/other value as
+    `.rds`) and otherwise runs and saves it – the cache is trusted and
+    regenerated only when missing. This keeps a committed cache stable
+    across nlmixr2/rxode2 versions.
+
+- New
+  [`nlmixr2saveInvalidate()`](../reference/nlmixr2saveInvalidate.md):
+  deletes every `:=` cache entry under the active
+  `nlmixr2save.prefix`/`nlmixr2save.dir`, so cached fits/simulations are
+  re-run on the next render when `nlmixr2save.check` is `FALSE`.
+
+- The saved-fit loader script now quotes its variable name, so a
+  `nlmixr2save.prefix` containing non-syntactic characters (e.g. `-`)
+  round-trips correctly.
+
 - Support both `$parFixedDf` structures produced by nlmixr2est: the
   current one (named “Estimate”/“SE” columns) and the upcoming
   `$parFixed` refactor (nlmixr2est#645, unnamed columns). The structure

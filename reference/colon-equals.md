@@ -147,6 +147,8 @@ Matthew L. Fidler
 #> covType="analytic": a linCmt() model is out of analytic-covariance scope; using the finite-difference covariance instead
 #> → Calculating residuals/tables
 #> ✔ done
+#> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullS
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -279,6 +281,7 @@ Matthew L. Fidler
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
+#> covMethod="sa" could not be computed; using the linearized FIM
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -293,8 +296,8 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8848
-#> → compress phiM in nlmixr2 object, save 443520
+#> → compress parHistData in nlmixr2 object, save 8592
+#> → compress phiM in nlmixr2 object, save 446912
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: .saemFullCov

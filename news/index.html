@@ -33,7 +33,18 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="nlmixr2save-development-version">nlmixr2save (development version)<a class="anchor" aria-label="anchor" href="#nlmixr2save-development-version"></a></h2>
-<ul><li><p>Support both <code>$parFixedDf</code> structures produced by nlmixr2est: the current one (named “Estimate”/“SE” columns) and the upcoming <code>$parFixed</code> refactor (nlmixr2est#645, unnamed columns). The structure of the fit is detected when it is saved and recorded in the restore script, so fits round-trip exactly with either version (<code><a href="../reference/nlmixr2saveParFixedDf.html">nlmixr2saveParFixedDf()</a></code> gained a <code>named</code> argument; existing saved zip files continue to load unchanged).</p></li>
+<ul><li>
+<p>The <code>:=</code> caching operator gains three <code><a href="https://rdrr.io/r/base/options.html" class="external-link">options()</a></code> (mirroring <code>nlmixr2save.quiet</code>):</p>
+<ul><li>
+<code>nlmixr2save.prefix</code> (default <code>""</code>): prepended to the assigned variable name to form the cache file, e.g. with <code>options(nlmixr2save.prefix = "modelPiping-")</code>, <code>fit := nlmixr2(...)</code> caches to <code>modelPiping-fit.zip</code>.</li>
+<li>
+<code>nlmixr2save.dir</code> (default <code>"."</code>): the directory the cache files live in.</li>
+<li>
+<code>nlmixr2save.check</code> (default <code>TRUE</code>): when <code>TRUE</code>, <code>:=</code> keeps verifying the cache against the current model/data/arguments (historical behavior); when <code>FALSE</code>, <code>:=</code> simply loads the cache file if it exists (a fit as <code>.zip</code>, a simulation/other value as <code>.rds</code>) and otherwise runs and saves it – the cache is trusted and regenerated only when missing. This keeps a committed cache stable across nlmixr2/rxode2 versions.</li>
+</ul></li>
+<li><p>New <code><a href="../reference/nlmixr2saveInvalidate.html">nlmixr2saveInvalidate()</a></code>: deletes every <code>:=</code> cache entry under the active <code>nlmixr2save.prefix</code>/<code>nlmixr2save.dir</code>, so cached fits/simulations are re-run on the next render when <code>nlmixr2save.check</code> is <code>FALSE</code>.</p></li>
+<li><p>The saved-fit loader script now quotes its variable name, so a <code>nlmixr2save.prefix</code> containing non-syntactic characters (e.g. <code>-</code>) round-trips correctly.</p></li>
+<li><p>Support both <code>$parFixedDf</code> structures produced by nlmixr2est: the current one (named “Estimate”/“SE” columns) and the upcoming <code>$parFixed</code> refactor (nlmixr2est#645, unnamed columns). The structure of the fit is detected when it is saved and recorded in the restore script, so fits round-trip exactly with either version (<code><a href="../reference/nlmixr2saveParFixedDf.html">nlmixr2saveParFixedDf()</a></code> gained a <code>named</code> argument; existing saved zip files continue to load unchanged).</p></li>
 <li><p>Additional all-<code>NA</code> numeric columns of <code>$parFixedDf</code> (for example “CI Lower”/“CI Upper” when there is no covariance step) are now coerced back to numeric when a saved fit is loaded, instead of being left as logical columns from the CSV round-trip.</p></li>
 </ul></div>
     <div class="section level2">

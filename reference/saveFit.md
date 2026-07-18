@@ -86,6 +86,8 @@ Matthew L. Fidler
 #> covType="analytic": a linCmt() model is out of analytic-covariance scope; using the finite-difference covariance instead
 #> → Calculating residuals/tables
 #> ✔ done
+#> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullS
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -175,29 +177,39 @@ Matthew L. Fidler
 #> ── nlmixr² FOCEi (outer: nlminb) ──
 #> 
 #>           OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8036 373.4033 393.5829      -179.7017        82.27002        11.65923
+#> FOCEi 116.8036 373.4033 393.5829      -179.7017        2769.174        89.85949
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>              setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.09052349 0.8228684  0.3752936      0.021       0.012  0.04    0.001
+#>             setup  optimize covariance preprocess postprocess table compress
+#> elapsed 0.1103937 0.8527122  0.4966763      0.019       0.013 0.062        0
 #>             other
-#> elapsed 0.1353146
+#> elapsed 0.1152178
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
 #>          Est.      SE  %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka    0.4655  0.1954 41.97    1.593 (1.086, 2.336)    70.52      1.893<
-#> tcl     1.012 0.07555 7.464    2.752 (2.373, 3.191)    26.75      3.873<
-#> tv      3.460 0.04289 1.240    31.81 (29.24, 34.60)    13.90      10.31<
+#> tka    0.4655  0.1954 41.97    1.593 (1.086, 2.336)    70.52      1.893 
+#> tcl     1.012 0.07555 7.464    2.752 (2.373, 3.191)    26.75      3.873 
+#> tv      3.460 0.04289 1.240    31.81 (29.24, 34.60)    13.90      10.31 
 #> add.sd 0.6947 0.09264 13.34 0.6947 (0.5131, 0.8763)                     
 #>  
 #>   Covariance Type ($covMethod): r,s
 #>   Some strong fixed parameter correlations exist ($cor) :
-#>        cor:tcl,tka     cor:tv,tka cor:add.sd,tka     cor:tv,tcl cor:add.sd,tcl 
-#>         0.160           0.429        -0.0528           0.754         -0.204   
-#>  cor:add.sd,tv 
-#>        -0.343  
+#>                 cor:tcl,tka              cor:tv,tka          cor:add.sd,tka 
+#>                  0.188                    0.399                 -0.0760   
+#>       cor:om.eta.ka,tka       cor:om.eta.cl,tka        cor:om.eta.v,tka 
+#>                  0.581                  -0.139                   -0.290   
+#>              cor:tv,tcl          cor:add.sd,tcl       cor:om.eta.ka,tcl 
+#>                  0.802                  -0.214                    0.122   
+#>       cor:om.eta.cl,tcl        cor:om.eta.v,tcl           cor:add.sd,tv 
+#>                 -0.484                   0.346                  -0.352  
+#>        cor:om.eta.ka,tv        cor:om.eta.cl,tv         cor:om.eta.v,tv 
+#>                  0.113                  -0.0476                   0.0838   
+#>    cor:om.eta.ka,add.sd    cor:om.eta.cl,add.sd     cor:om.eta.v,add.sd 
+#>                 -0.457                  -0.107                   -0.334  
+#> cor:om.eta.cl,om.eta.ka  cor:om.eta.v,om.eta.ka  cor:om.eta.v,om.eta.cl 
+#>                 -0.198                   0.0577                  -0.0659   
 #>  
 #> 
 #>   No correlations in between subject variability (BSV) matrix

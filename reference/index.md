@@ -11,6 +11,10 @@
 
 - [`loadFit()`](loadFit.md) : Load a fitted model object from a file
 
+- [`nlmixr2saveInvalidate()`](nlmixr2saveInvalidate.md) :
+
+  Delete every `:=` cache entry under the active prefix and directory
+
 - [`nlmixrDataSimplify()`](nlmixrDataSimplify.md) : Standardize and
   simplify data for nlmixr2 estimation
 
