@@ -34,7 +34,11 @@ script, so it travels inside the portable `.zip` and survives a load -> save
 round-trip (it always records the version that *ran* the fit, not the version
 that happened to re-save it).
 
-Nothing about your model or data is stored here -- only the package versions.
+This *version metadata* is only the package versions -- it does not itself
+contain your model or data.  The saved fit as a whole is a different matter: it
+does store the model and the data it was fit to (for example in `$origData`,
+which is written into the `.zip`); see `vignette("uses")` for what a saved fit
+includes.
 
 ## What happens on load
 
