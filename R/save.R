@@ -52,82 +52,137 @@
   isTRUE(getOption("nlmixr2save.check", TRUE))
 }
 
-#' nlmixr2est version/sha of the currently installed package
+#' Packages whose version/sha is tracked in a saved fit
+#'
+#' A drift in any of these between save and load can change the fit, so it is
+#' worth telling the user about: nlmixr2est estimates the model and rxode2
+#' compiles/solves it.
+#' @noRd
+.nlmixr2savePkgs <- c("nlmixr2est", "rxode2")
+
+#' Version/sha of an installed package
 #'
 #' Records the version and, when installed from a remote (e.g. GitHub via
-#' `remotes`/`pak`), the commit sha so a saved fit knows exactly which
-#' nlmixr2est produced it.
-#' @return list with `version` and `sha` (both `NA_character_` when nlmixr2est
+#' `remotes`/`pak`), the commit sha so a saved fit knows exactly which build
+#' produced it.
+#' @param pkg package name
+#' @return list with `version` and `sha` (both `NA_character_` when the package
 #'   is not installed / not a remote build)
 #' @noRd
 #' @author Matthew L. Fidler
-.nlmixr2estMeta <- function() {
-  if (!requireNamespace("nlmixr2est", quietly=TRUE)) {
+.nlmixr2savePkgVer <- function(pkg) {
+  if (!requireNamespace(pkg, quietly=TRUE)) {
     return(list(version=NA_character_, sha=NA_character_))
   }
-  .d <- utils::packageDescription("nlmixr2est")
+  .d <- utils::packageDescription(pkg)
   .sha <- .d$RemoteSha
   if (is.null(.sha) || !nzchar(.sha)) .sha <- .d$GithubSHA1
   if (is.null(.sha) || !nzchar(.sha)) .sha <- NA_character_
-  list(version=as.character(utils::packageVersion("nlmixr2est")),
+  list(version=as.character(utils::packageVersion(pkg)),
        sha=.sha)
 }
 
 #' Metadata stored alongside a saved fit
 #'
 #' Deterministic (no timestamps) so a committed cache stays byte-stable.
-#' @return list of the nlmixr2est version/sha plus rxode2/nlmixr2save versions
+#' @return named list of the tracked packages' version/sha, plus the
+#'   nlmixr2save version
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveMeta <- function() {
-  list(nlmixr2est=.nlmixr2estMeta(),
-       rxode2=as.character(utils::packageVersion("rxode2")),
-       nlmixr2save=as.character(utils::packageVersion("nlmixr2save")))
+  .ret <- stats::setNames(lapply(.nlmixr2savePkgs, .nlmixr2savePkgVer),
+                          .nlmixr2savePkgs)
+  .ret$nlmixr2save <- as.character(utils::packageVersion("nlmixr2save"))
+  .ret
 }
 
-#' Human-readable nlmixr2est version label from stored metadata
-#' @param meta metadata list (or `NULL`)
-#' @return a string like `"6.2.0"` or `"6.2.0 (abcdef1234)"`
+#' Normalize a stored per-package entry to a `list(version, sha)`
+#'
+#' Tolerates a bare version string (an earlier metadata shape) as well as a
+#' missing entry.
+#' @param x stored entry (list, character, or `NULL`)
+#' @return `list(version, sha)`
 #' @noRd
 #' @author Matthew L. Fidler
-.nlmixr2estMetaLabel <- function(meta) {
-  if (is.null(meta) || is.null(meta$nlmixr2est) ||
-        is.null(meta$nlmixr2est$version) || is.na(meta$nlmixr2est$version)) {
-    return("(unknown)")
-  }
-  .v <- meta$nlmixr2est$version
-  .s <- meta$nlmixr2est$sha
-  if (!is.null(.s) && !is.na(.s) && nzchar(.s)) {
-    paste0(.v, " (", substr(.s, 1, 10), ")")
+.nlmixr2saveNormVer <- function(x) {
+  if (is.null(x)) return(list(version=NA_character_, sha=NA_character_))
+  if (is.character(x)) return(list(version=x[1], sha=NA_character_))
+  list(version=if (is.null(x$version)) NA_character_ else x$version,
+       sha=if (is.null(x$sha)) NA_character_ else x$sha)
+}
+
+#' Human-readable version label for one tracked package
+#' @param meta metadata list (or `NULL`)
+#' @param pkg package name
+#' @return a string like `"6.2.0"`, `"6.2.0 (abcdef1234)"`, or `"(unknown)"`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2savePkgLabel <- function(meta, pkg) {
+  .m <- .nlmixr2saveNormVer(if (is.null(meta)) NULL else meta[[pkg]])
+  if (is.na(.m$version)) return("(unknown)")
+  if (!is.na(.m$sha) && nzchar(.m$sha)) {
+    paste0(.m$version, " (", substr(.m$sha, 1, 10), ")")
   } else {
-    .v
+    .m$version
   }
 }
 
-#' Does the stored nlmixr2est version/sha differ from what is installed now?
+#' Does one tracked package's stored version/sha differ from what is installed?
+#' @param stored,current normalized `list(version, sha)` entries
+#' @return boolean; `FALSE` when either side is unknown (nothing to compare)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2savePkgDiffers <- function(stored, current) {
+  .s <- .nlmixr2saveNormVer(stored)
+  .c <- .nlmixr2saveNormVer(current)
+  if (is.na(.s$version) || is.na(.c$version)) return(FALSE)
+  if (!identical(.s$version, .c$version)) return(TRUE)
+  # same version string but a different remote sha still means a different build
+  if (!is.na(.s$sha) && nzchar(.s$sha) && !is.na(.c$sha) && nzchar(.c$sha)) {
+    return(!identical(.s$sha, .c$sha))
+  }
+  FALSE
+}
+
+#' Tracked packages whose version/sha changed between save and now
+#' @param stored metadata recorded when the fit was saved (or `NULL`)
+#' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
+#' @return character vector of package names (empty when nothing to report)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveChanged <- function(stored, current=.nlmixr2saveMeta()) {
+  if (is.null(stored)) return(character(0))
+  .nlmixr2savePkgs[vapply(.nlmixr2savePkgs, function(p) {
+    .nlmixr2savePkgDiffers(stored[[p]], current[[p]])
+  }, logical(1))]
+}
+
+#' Does any tracked package differ between the stored metadata and now?
 #'
 #' Returns `FALSE` (no complaint) when there is nothing to compare: no stored
-#' metadata (fit saved by an older nlmixr2save), or nlmixr2est not installed.
+#' metadata (fit saved by an older nlmixr2save), or the packages are not
+#' installed.
 #' @param stored metadata recorded when the fit was saved (or `NULL`)
 #' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
 #' @return boolean
 #' @noRd
 #' @author Matthew L. Fidler
-.nlmixr2estMetaDiffers <- function(stored, current=.nlmixr2saveMeta()) {
-  if (is.null(stored) || is.null(stored$nlmixr2est)) return(FALSE)
-  .s <- stored$nlmixr2est
-  .c <- current$nlmixr2est
-  if (is.null(.s$version) || is.na(.s$version) ||
-        is.null(.c$version) || is.na(.c$version)) {
-    return(FALSE)
-  }
-  if (!identical(.s$version, .c$version)) return(TRUE)
-  # same version string but a different remote sha still means a different build
-  if (!is.null(.s$sha) && !is.na(.s$sha) && nzchar(.s$sha) &&
-        !is.null(.c$sha) && !is.na(.c$sha) && nzchar(.c$sha)) {
-    return(!identical(.s$sha, .c$sha))
-  }
-  FALSE
+.nlmixr2saveMetaDiffers <- function(stored, current=.nlmixr2saveMeta()) {
+  length(.nlmixr2saveChanged(stored, current)) > 0L
+}
+
+#' Describe the tracked packages that changed, e.g.
+#' `"nlmixr2est 6.2.0 (installed 9.9.9)"`
+#' @param stored,current metadata lists
+#' @return a single string (may be empty when nothing changed)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveVersionMsg <- function(stored, current=.nlmixr2saveMeta()) {
+  .changed <- .nlmixr2saveChanged(stored, current)
+  paste(vapply(.changed, function(p) {
+    paste0(p, " ", .nlmixr2savePkgLabel(stored, p),
+           " (installed ", .nlmixr2savePkgLabel(current, p), ")")
+  }, character(1)), collapse="; ")
 }
 
 #' Extract the stored save metadata from a loaded fit
@@ -149,50 +204,45 @@
   get(".nlmixr2saveMeta", envir=.env)
 }
 
-#' Decide what to do when a cached fit's nlmixr2est version differs from now
+#' Decide what to do when a cached fit's tracked-package versions differ from now
 #'
 #' When the versions match (or there is nothing to compare) nothing happens and
-#' `FALSE` is returned so the caller uses the cached fit.  When they differ:
-#' interactively the user is asked whether to rerun the fit with the currently
-#' installed nlmixr2est (`TRUE` -> caller should refit); non-interactively the
-#' cached fit is kept and a warning is emitted.
+#' `FALSE` is returned so the caller uses the cached fit.  When nlmixr2est or
+#' rxode2 differs: interactively the user is asked whether to rerun the fit with
+#' the currently installed packages (`TRUE` -> caller should refit);
+#' non-interactively the cached fit is kept and a warning is emitted.
 #' @param fit the loaded cached fit
 #' @return `TRUE` if the caller should rerun the fit, otherwise `FALSE`
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveVersionRerun <- function(fit) {
   .stored <- .nlmixr2saveGetMeta(fit)
-  if (!.nlmixr2estMetaDiffers(.stored)) return(FALSE)
-  .old <- .nlmixr2estMetaLabel(.stored)
-  .new <- .nlmixr2estMetaLabel(.nlmixr2saveMeta())
+  if (!.nlmixr2saveMetaDiffers(.stored)) return(FALSE)
+  .msg <- .nlmixr2saveVersionMsg(.stored)
   if (interactive()) {
     .ans <- utils::menu(c("Reload the cached fit as-is",
-                          "Rerun the fit with the installed nlmixr2est"),
-                        title=paste0("The cached fit was run with nlmixr2est ",
-                                     .old, " but nlmixr2est ", .new,
-                                     " is installed."))
+                          "Rerun the fit with the installed packages"),
+                        title=paste0("The cached fit was run with ", .msg, "."))
     return(.ans == 2L)
   }
-  warning("the cached fit was run with nlmixr2est ", .old,
-          " but nlmixr2est ", .new, " is installed; loading the cached fit",
+  warning("the cached fit was run with ", .msg, "; loading the cached fit",
           call.=FALSE)
   FALSE
 }
 
-#' Warn (non-interactively) when a loaded fit's nlmixr2est version differs
+#' Warn (non-interactively) when a loaded fit's tracked-package versions differ
 #'
 #' Used by [loadFit()], which cannot rerun the fit (it has no original call), so
-#' it only informs the user of the version skew.
+#' it only informs the user of the version skew (nlmixr2est and/or rxode2).
 #' @param fit the loaded fit
 #' @return `fit`, invisibly
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveWarnVersion <- function(fit) {
   .stored <- .nlmixr2saveGetMeta(fit)
-  if (.nlmixr2estMetaDiffers(.stored)) {
-    warning("this fit was run with nlmixr2est ", .nlmixr2estMetaLabel(.stored),
-            " but nlmixr2est ", .nlmixr2estMetaLabel(.nlmixr2saveMeta()),
-            " is installed", call.=FALSE)
+  if (.nlmixr2saveMetaDiffers(.stored)) {
+    warning("this fit was run with ", .nlmixr2saveVersionMsg(.stored),
+            call.=FALSE)
   }
   invisible(fit)
 }
@@ -546,7 +596,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "  }\n",
                     "}\n",
                     "if (!is.null(env$parHistData)) {\n",
-                    "  env$parHistData$type <- factor(env$parHistData$type, levels=c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\"))\n",
+                    "  env$parHistData$type <- factor(env$parHistData$type, levels=c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\"))\n",
                     "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
                     "}\n",
                     "if (exists('saemControl', env) && is.numeric(env$saemControl$mcmc$niter[1])) {\n",

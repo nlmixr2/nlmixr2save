@@ -1,18 +1,23 @@
 # nlmixr2save (development version)
 
-* Saved fits now record the `nlmixr2est` version they were produced with
-  (including the commit sha when nlmixr2est was installed from a remote such as
-  GitHub).  When a fit is later loaded and the installed `nlmixr2est` differs:
-    - `loadFit()` warns that the fit was run with a different `nlmixr2est`
-      version (controllable with the new `checkVersion` argument).
+* Saved fits now record the `nlmixr2est` **and** `rxode2` versions they were
+  produced with (including each package's commit sha when it was installed from
+  a remote such as GitHub).  When a fit is later loaded and the installed
+  `nlmixr2est` or `rxode2` differs:
+    - `loadFit()` warns that the fit was run with a different package version
+      (controllable with the new `checkVersion` argument).
     - the `:=` caching operator, in an interactive session, asks whether to
-      rerun the fit with the currently installed `nlmixr2est`; non-interactively
-      it loads the cached fit and warns.  (Trusted-cache mode,
+      rerun the fit with the currently installed packages; non-interactively it
+      loads the cached fit and warns.  (Trusted-cache mode,
       `nlmixr2save.check = FALSE`, is left untouched so committed caches stay
       stable across versions.)
 
   Fits saved by older `nlmixr2save` versions (which carry no version metadata)
   continue to load without any warning.
+
+* The saved-fit loader now recognizes the `"Analytic Gradient"`
+  `parHistData$type` level emitted by newer `nlmixr2est`, so that factor
+  round-trips without dropping the level.
 
 * The `:=` caching operator gains three `options()` (mirroring
   `nlmixr2save.quiet`):

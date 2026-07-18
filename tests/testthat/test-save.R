@@ -30,36 +30,54 @@ test_that("saveFitRandom adds and removes registered random functions", {
   expect_false("barRandom" %in% .random)
 })
 
-test_that("nlmixr2est version metadata helpers", {
+test_that("tracked-package version metadata helpers", {
   .cur <- .nlmixr2saveMeta()
   expect_true(is.list(.cur))
   expect_true(all(c("nlmixr2est", "rxode2", "nlmixr2save") %in% names(.cur)))
   expect_true(all(c("version", "sha") %in% names(.cur$nlmixr2est)))
+  expect_true(all(c("version", "sha") %in% names(.cur$rxode2)))
   # metadata must deparse/reparse (it is embedded as text in the loader script)
   expect_equal(eval(parse(text = paste(deparse(.cur), collapse = "\n"))), .cur)
 
-  .same <- list(nlmixr2est = list(version = "1.2.3", sha = NA_character_))
-  .diff <- list(nlmixr2est = list(version = "9.9.9", sha = NA_character_))
-  expect_false(.nlmixr2estMetaDiffers(.same, .same))
-  expect_true(.nlmixr2estMetaDiffers(.same, .diff))
-  # nothing to compare -> no complaint (older saves, or nlmixr2est absent)
-  expect_false(.nlmixr2estMetaDiffers(NULL, .same))
-  expect_false(.nlmixr2estMetaDiffers(list(nlmixr2est = list(version = NA_character_)), .diff))
+  .same <- list(nlmixr2est = list(version = "1.2.3", sha = NA_character_),
+                rxode2 = list(version = "5.0.0", sha = NA_character_))
+  .estDiff <- list(nlmixr2est = list(version = "9.9.9", sha = NA_character_),
+                   rxode2 = list(version = "5.0.0", sha = NA_character_))
+  .rxDiff <- list(nlmixr2est = list(version = "1.2.3", sha = NA_character_),
+                  rxode2 = list(version = "6.0.0", sha = NA_character_))
+  expect_false(.nlmixr2saveMetaDiffers(.same, .same))
+  # a difference in EITHER tracked package is flagged
+  expect_true(.nlmixr2saveMetaDiffers(.same, .estDiff))
+  expect_true(.nlmixr2saveMetaDiffers(.same, .rxDiff))
+  expect_equal(.nlmixr2saveChanged(.same, .estDiff), "nlmixr2est")
+  expect_equal(.nlmixr2saveChanged(.same, .rxDiff), "rxode2")
+  # nothing to compare -> no complaint (older saves, or package absent)
+  expect_false(.nlmixr2saveMetaDiffers(NULL, .same))
+  expect_false(.nlmixr2saveMetaDiffers(
+    list(nlmixr2est = list(version = NA_character_)), .estDiff))
   # same version, different remote sha still counts as different
-  .s1 <- list(nlmixr2est = list(version = "1.2.3", sha = "aaaaaaaaaaaa"))
-  .s2 <- list(nlmixr2est = list(version = "1.2.3", sha = "bbbbbbbbbbbb"))
-  expect_true(.nlmixr2estMetaDiffers(.s1, .s2))
+  .s1 <- list(rxode2 = list(version = "5.0.0", sha = "aaaaaaaaaaaa"))
+  .s2 <- list(rxode2 = list(version = "5.0.0", sha = "bbbbbbbbbbbb"))
+  expect_true(.nlmixr2saveMetaDiffers(.s1, .s2))
 
-  expect_equal(.nlmixr2estMetaLabel(.same), "1.2.3")
-  expect_equal(.nlmixr2estMetaLabel(.s1), "1.2.3 (aaaaaaaaaa)")
-  expect_equal(.nlmixr2estMetaLabel(NULL), "(unknown)")
+  expect_equal(.nlmixr2savePkgLabel(.same, "nlmixr2est"), "1.2.3")
+  expect_equal(.nlmixr2savePkgLabel(.s1, "rxode2"), "5.0.0 (aaaaaaaaaa)")
+  expect_equal(.nlmixr2savePkgLabel(NULL, "rxode2"), "(unknown)")
+  # a bare version string (older metadata shape) is tolerated
+  expect_equal(.nlmixr2savePkgLabel(list(rxode2 = "5.0.0"), "rxode2"), "5.0.0")
+
+  expect_match(.nlmixr2saveVersionMsg(.same, .estDiff),
+               "nlmixr2est 1.2.3 \\(installed 9.9.9\\)")
+  expect_match(.nlmixr2saveVersionMsg(.same, .rxDiff),
+               "rxode2 5.0.0 \\(installed 6.0.0\\)")
 })
 
 test_that("version-mismatch warning/rerun decision on a stub fit", {
   .env <- new.env(parent = emptyenv())
   assign(".nlmixr2saveMeta",
          list(nlmixr2est = list(version = "0.0.0-old", sha = NA_character_),
-              rxode2 = "1", nlmixr2save = "1"),
+              rxode2 = list(version = "0.0.0-old", sha = NA_character_),
+              nlmixr2save = "1"),
          envir = .env)
   class(.env) <- c("nlmixr2FitCore", "environment")
   expect_equal(.nlmixr2saveGetMeta(.env)$nlmixr2est$version, "0.0.0-old")
@@ -70,7 +88,7 @@ test_that("version-mismatch warning/rerun decision on a stub fit", {
   expect_null(.nlmixr2saveGetMeta(.noMeta))
   expect_warning(.nlmixr2saveWarnVersion(.noMeta), NA)
 
-  # stub whose stored version differs from the installed nlmixr2est: the
+  # stub whose stored versions differ from the installed packages: the
   # non-interactive branch warns and does not request a rerun
   skip_if_not_installed("nlmixr2est")
   expect_warning(.nlmixr2saveWarnVersion(.env),
