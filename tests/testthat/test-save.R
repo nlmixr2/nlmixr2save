@@ -554,6 +554,63 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)
 
+      test_that("saveFit(data=FALSE) omits the original data", {
+        suppressMessages(saveFit(fitF, "fitFnd", data=FALSE))
+        expect_true(file.exists("fitFnd.zip"))
+        .nd <- suppressMessages(loadFit("fitFnd", checkVersion=FALSE))
+        expect_null(.nd$origData)
+        # still a full FitData with its prediction columns
+        expect_true(inherits(.nd, "nlmixr2FitData"))
+        expect_true("IPRED" %in% names(.nd))
+        # the nlmixr2save.data option drives the same behavior
+        withr::with_options(list(nlmixr2save.data = FALSE),
+                            suppressMessages(saveFit(fitF, "fitFndOpt")))
+        .ndo <- suppressMessages(loadFit("fitFndOpt", checkVersion=FALSE))
+        expect_null(.ndo$origData)
+      })
+
+      test_that("nlmixr2saveShare writes shareable zips and leaves the fit alone", {
+        .clsBefore <- class(fitF)
+        .rowsBefore <- nrow(fitF$origData)
+
+        # from a live object -> fitF-noData.zip
+        .p1 <- suppressMessages(nlmixr2saveShare(fitF))
+        expect_true(file.exists("fitF-noData.zip"))
+        .s1 <- suppressMessages(loadFit("fitF-noData", checkVersion=FALSE))
+        expect_null(.s1$origData)
+        expect_true(inherits(.s1, "nlmixr2FitData"))
+
+        # noFit=TRUE -> only fitF-noData-noFit.zip, loads as a core
+        .p2 <- suppressMessages(nlmixr2saveShare(fitF, noFit = TRUE))
+        expect_true(file.exists("fitF-noData-noFit.zip"))
+        .s2 <- suppressMessages(loadFit("fitF-noData-noFit", checkVersion=FALSE))
+        expect_true(inherits(.s2, "nlmixr2FitCore"))
+        expect_false(inherits(.s2, "nlmixr2FitData"))
+        expect_false(inherits(.s2, "data.frame"))
+        expect_null(.s2$origData)
+        # eta/parameter-history tables and estimates are kept
+        expect_false(is.null(.s2$etaObf))
+        expect_false(is.null(.s2$parHistData))
+        expect_false(is.null(.s2$parFixed))
+
+        # reading from an existing zip base name also works
+        .p3 <- suppressMessages(nlmixr2saveShare("fitF"))
+        expect_true(file.exists("fitF-noData.zip"))
+
+        # the original fit object is unchanged (env is shared by reference)
+        expect_identical(class(fitF), .clsBefore)
+        expect_true(is.environment(attr(class(fitF), ".foceiEnv")))
+        expect_identical(nrow(fitF$origData), .rowsBefore)
+      })
+
+      test_that("nlmixr2saveShare honors nlmixr2save.dir / prefix", {
+        withr::with_options(list(nlmixr2save.dir = "shareCache",
+                                 nlmixr2save.prefix = "sh-"), {
+          .p <- suppressMessages(nlmixr2saveShare(fitF))
+          expect_true(file.exists(file.path("shareCache", "sh-fitF-noData.zip")))
+        })
+      })
+
       fit2IF <- loadFit("fitIF")
       fitEquals(fitIF, fit2IF)
 

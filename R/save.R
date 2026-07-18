@@ -61,6 +61,16 @@
 .nlmixr2saveCheckVersion <- function() {
   isTRUE(getOption("nlmixr2save.checkVersion", TRUE))
 }
+#' Whether to store the original dataset when a fit is saved
+#'
+#' Controlled by `getOption("nlmixr2save.data", TRUE)`.  When `FALSE`,
+#' `saveFit()` omits `origData` from the zip (see [nlmixr2saveShare()]).
+#' @return boolean (default `TRUE`)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveData <- function() {
+  isTRUE(getOption("nlmixr2save.data", TRUE))
+}
 
 #' Packages whose version/sha is tracked in a saved fit
 #'
@@ -410,6 +420,10 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' @param fit the fitted model object
 #' @param file the base name of the files to save the fit to.
 #' @param zip Boolean indicating if the files should be zipped.
+#' @param data Boolean indicating whether the original dataset (`origData`) is
+#'   stored in the saved fit.  When `FALSE` it is omitted, producing a fit that
+#'   can be shared without the subject-level data (see [nlmixr2saveShare()]).
+#'   Defaults to `getOption("nlmixr2save.data", TRUE)`.
 #' @return nothing, called for side effects
 #' @export
 #' @author Matthew L. Fidler
@@ -450,13 +464,13 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #'     })
 #'   }
 #' }
-saveFit <- function(fit, file, zip=TRUE) {
+saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   UseMethod("saveFit")
 }
 
 #' @rdname saveFit
 #' @export
-saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
+saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
@@ -465,6 +479,13 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
   for (.i in .item) {
     # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
     if (.i == ".nlmixr2saveMeta") next
+    # when data=FALSE the original dataset is left out of the zip entirely
+    if (!isTRUE(data) && .i == "origData") next
+    # `model` is always regenerated from `ui` by the loader
+    # (env$model <- rxode2::model(env$ui)); saving it is redundant and, for a
+    # reloaded fit (where it is a `call`), triggers a spurious "could not
+    # determine how to save" warning.
+    if (.i == "model") next
     .minfo(paste0("saving fit item: ", .i))
     .obj <- get(.i, envir=fit$env)
     if (is.raw(.obj)) {
@@ -664,17 +685,17 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
 
 #' @rdname saveFit
 #' @export
-saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE) {
+saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
-  saveFit.nlmixr2FitCore(fit, file, zip=TRUE)
+  saveFit.nlmixr2FitCore(fit, file, zip=TRUE, data=data)
 }
 
 #' @rdname saveFit
 #' @export
-saveFit.default <- function(fit, file, zip=TRUE) {
+saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   stop("saveFit not implemented for object of class ", paste(class(fit), collapse=", "), call.=FALSE)
 }
 
@@ -822,12 +843,13 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #' loading renames it back to `<x>.zip`, `loadFit()`s it, and restores the
 #' prefixed name.  Both assume the working directory is already the cache
 #' directory (the callers wrap them in [.nlmixr2saveWithDir()] or set it).
-#' @param value fit to save; `x` the bare variable/fit name
+#' @param value fit to save; `x` the bare variable/fit name; `data` whether the
+#'   original dataset is stored (passed through to [saveFit()])
 #' @return the fit (load), or `value` invisibly (save)
 #' @noRd
-.saveFitZipPlain <- function(value, x) {
+.saveFitZipPlain <- function(value, x, data=.nlmixr2saveData()) {
   .base <- .nlmixr2saveBase(x)
-  saveFit(value, x, zip=TRUE)
+  saveFit(value, x, zip=TRUE, data=data)
   if (!identical(x, .base)) {
     if (file.exists(paste0(.base, ".zip"))) unlink(paste0(.base, ".zip"))
     file.rename(paste0(x, ".zip"), paste0(.base, ".zip"))
@@ -871,6 +893,133 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
       return(.rdsInfo)
     }
     .saveFitEnv
+  })
+}
+
+#' Represent a `nlmixr2FitData` as its core fit for saving, without mutating it
+#'
+#' A `nlmixr2FitData` is a data.frame whose core fit environment is carried in
+#' `attr(class(fit), ".foceiEnv")`.  To save the fit *without* the returned
+#' prediction/residual table, we save that core environment (reclassed to the
+#' non-data `nlmixr2FitCore` class) instead of the data.frame -- `saveFit()` then
+#' dispatches to `saveFit.nlmixr2FitCore`, which never writes the `.csv` table.
+#'
+#' The core environment is shared by reference with the original `fit`, so its
+#' class is set only for the duration of `code` (which does the saving) and then
+#' restored, leaving the original object untouched.
+#'
+#' @param fit a `nlmixr2FitData` (or an already-core fit)
+#' @param saver a one-argument function called with the core fit object; it must
+#'   perform the save while it runs (the reclass is reverted once it returns)
+#' @return the value of `saver`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveAsCore <- function(fit, saver) {
+  if (!inherits(fit, "nlmixr2FitData")) {
+    # already a core fit (e.g. a calcTables=FALSE fit); nothing to strip
+    return(saver(fit))
+  }
+  .core <- attr(class(fit), ".foceiEnv")
+  if (!is.environment(.core)) {
+    stop("cannot find the core fit environment to strip the output tables",
+         call.=FALSE)
+  }
+  # core class = the fit's class minus the data.frame-ness (the FitData marker
+  # and the data.frame/tibble classes), leaving the fit-core classes so the
+  # environment is no longer treated as a data frame
+  .coreClass <- setdiff(class(fit),
+                        c("nlmixr2FitData", "tbl_df", "tbl", "data.frame"))
+  .origClass <- class(.core)
+  on.exit(class(.core) <- .origClass, add=TRUE)
+  class(.core) <- .coreClass
+  saver(.core)
+}
+
+#' Save a shareable copy of a fit without the original data
+#'
+#' Writes a portable `.zip` copy of a saved fit that omits the original dataset
+#' (the subject-level data), so a fitted model can be shared without its data.
+#' The input may be a live fit object or the base name of an existing saved fit
+#' `.zip`; either way the original is left unchanged and new sibling zips are
+#' written.  Names are resolved through `getOption("nlmixr2save.dir")` and
+#' `getOption("nlmixr2save.prefix")` (as for the `:=` cache).
+#'
+#' - `nlmixr2saveShare("fit")` writes `fit-noData.zip` -- the full fit
+#'   (predictions and tables intact) with the original data removed.
+#' - `nlmixr2saveShare("fit", noFit=TRUE)` writes `fit-noData-noFit.zip` -- the
+#'   core fit only (model, parameter estimates, objective, `omega`, `etaObf`,
+#'   `parHistData`), with both the original data and the returned
+#'   prediction/residual table removed.
+#'
+#' @param x a fitted model object, or the base name (no extension) of a saved
+#'   fit `.zip` to read.
+#' @param noFit Boolean; when `TRUE`, also strip the output tables (the returned
+#'   prediction/residual data.frame), writing `<file>-noData-noFit.zip` instead
+#'   of `<file>-noData.zip`.
+#' @param file optional output base name; defaults to the name of `x`.
+#' @return the path of the written `.zip`, invisibly.
+#' @export
+#' @seealso [saveFit()], [loadFit()]
+#' @author Matthew L. Fidler
+#' @examples
+#' \donttest{
+#'   if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
+#'     library(nlmixr2est)
+#'     library(nlmixr2data)
+#'     withr::with_tempdir({
+#'       one.cmt <- function() {
+#'         ini({
+#'           tka <- 0.45; tcl <- log(c(0, 2.7, 100)); tv <- 3.45
+#'           eta.ka ~ 0.6; eta.cl ~ 0.3; eta.v ~ 0.1
+#'           add.sd <- 0.7
+#'         })
+#'         model({
+#'           ka <- exp(tka + eta.ka); cl <- exp(tcl + eta.cl); v <- exp(tv + eta.v)
+#'           linCmt() ~ add(add.sd)
+#'         })
+#'       }
+#'       fit <- nlmixr2(one.cmt, theo_sd, est="focei")
+#'       saveFit(fit)                       # fit.zip (with data)
+#'       nlmixr2saveShare("fit")            # fit-noData.zip
+#'       nlmixr2saveShare("fit", noFit=TRUE) # fit-noData-noFit.zip
+#'     })
+#'   }
+#' }
+nlmixr2saveShare <- function(x, noFit=FALSE, file=NULL) {
+  if (!checkmate::testLogical(noFit, any.missing=FALSE, len=1L)) {
+    stop("`noFit` must be a single logical value", call.=FALSE)
+  }
+  .name <- if (!is.null(file)) file else as.character(substitute(x))
+  if (!checkmate::testString(.name, min.chars=1L)) {
+    stop("cannot determine an output name; pass `file=`", call.=FALSE)
+  }
+  .val <- try(force(x), silent=TRUE)
+  .isFit <- !inherits(.val, "try-error") &&
+    (inherits(.val, "nlmixr2FitData") || inherits(.val, "nlmixr2FitCore"))
+  .nlmixr2saveWithDir({
+    if (.isFit) {
+      .fit <- .val
+    } else {
+      # treat `x`/`file` as the base name of a saved fit zip
+      .readBase <- if (!is.null(file)) file else .name
+      if (!file.exists(paste0(.nlmixr2saveBase(.readBase), ".zip"))) {
+        stop("cannot find saved fit '", .nlmixr2saveBase(.readBase), ".zip'",
+             call.=FALSE)
+      }
+      .fit <- .loadFitZipPlain(.readBase)
+    }
+    if (isTRUE(noFit)) {
+      .out <- paste0(.name, "-noData-noFit")
+      .minfo(paste0("writing shareable fit (no data, no output tables) to ",
+                    .nlmixr2saveBase(.out), ".zip"))
+      .nlmixr2saveAsCore(.fit, function(.core) .saveFitZipPlain(.core, .out, data=FALSE))
+    } else {
+      .out <- paste0(.name, "-noData")
+      .minfo(paste0("writing shareable fit (no data) to ",
+                    .nlmixr2saveBase(.out), ".zip"))
+      .saveFitZipPlain(.fit, .out, data=FALSE)
+    }
+    invisible(paste0(.nlmixr2saveBase(.out), ".zip"))
   })
 }
 

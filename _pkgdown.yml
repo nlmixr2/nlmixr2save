@@ -7,3 +7,4 @@ articles:
       - uses
       - register-simulation-functions
       - version-tracking
+      - sharing-fits

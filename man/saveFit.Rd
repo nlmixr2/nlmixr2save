@@ -7,13 +7,13 @@
 \alias{saveFit.default}
 \title{Save a fitted model object to a series of files}
 \usage{
-saveFit(fit, file, zip = TRUE)
+saveFit(fit, file, zip = TRUE, data = .nlmixr2saveData())
 
-\method{saveFit}{nlmixr2FitCore}(fit, file, zip = TRUE)
+\method{saveFit}{nlmixr2FitCore}(fit, file, zip = TRUE, data = .nlmixr2saveData())
 
-\method{saveFit}{nlmixr2FitData}(fit, file, zip = TRUE)
+\method{saveFit}{nlmixr2FitData}(fit, file, zip = TRUE, data = .nlmixr2saveData())
 
-\method{saveFit}{default}(fit, file, zip = TRUE)
+\method{saveFit}{default}(fit, file, zip = TRUE, data = .nlmixr2saveData())
 }
 \arguments{
 \item{fit}{the fitted model object}
@@ -21,6 +21,11 @@ saveFit(fit, file, zip = TRUE)
 \item{file}{the base name of the files to save the fit to.}
 
 \item{zip}{Boolean indicating if the files should be zipped.}
+
+\item{data}{Boolean indicating whether the original dataset (\code{origData}) is
+stored in the saved fit.  When \code{FALSE} it is omitted, producing a fit that
+can be shared without the subject-level data (see \code{\link[=nlmixr2saveShare]{nlmixr2saveShare()}}).
+Defaults to \code{getOption("nlmixr2save.data", TRUE)}.}
 }
 \value{
 nothing, called for side effects
