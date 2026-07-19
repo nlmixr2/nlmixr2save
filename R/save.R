@@ -51,6 +51,221 @@
 .nlmixr2saveCheck <- function() {
   isTRUE(getOption("nlmixr2save.check", TRUE))
 }
+#' Whether to check the nlmixr2est/rxode2 version when a fit is loaded
+#'
+#' Controlled by `getOption("nlmixr2save.checkVersion", TRUE)`.  When `FALSE`,
+#' `loadFit()` and `:=` load cached fits without comparing package versions.
+#' @return boolean (default `TRUE`)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveCheckVersion <- function() {
+  isTRUE(getOption("nlmixr2save.checkVersion", TRUE))
+}
+#' Whether to store the original dataset when a fit is saved
+#'
+#' Controlled by `getOption("nlmixr2save.data", TRUE)`.  When `FALSE`,
+#' `saveFit()` omits `origData` from the zip (see [nlmixr2saveShare()]).
+#' @return boolean (default `TRUE`)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveData <- function() {
+  isTRUE(getOption("nlmixr2save.data", TRUE))
+}
+
+#' Packages whose version/sha is tracked in a saved fit
+#'
+#' A drift in any of these between save and load can change the fit, so it is
+#' worth telling the user about: nlmixr2est estimates the model and rxode2
+#' compiles/solves it.
+#' @noRd
+.nlmixr2savePkgs <- c("nlmixr2est", "rxode2")
+
+#' Version/sha of an installed package
+#'
+#' Records the version and, when installed from a remote (e.g. GitHub via
+#' `remotes`/`pak`), the commit sha so a saved fit knows exactly which build
+#' produced it.
+#' @param pkg package name
+#' @return list with `version` and `sha` (both `NA_character_` when the package
+#'   is not installed / not a remote build)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2savePkgVer <- function(pkg) {
+  if (!requireNamespace(pkg, quietly=TRUE)) {
+    return(list(version=NA_character_, sha=NA_character_))
+  }
+  .d <- utils::packageDescription(pkg)
+  .sha <- .d$RemoteSha
+  if (is.null(.sha) || !nzchar(.sha)) .sha <- .d$GithubSHA1
+  if (is.null(.sha) || !nzchar(.sha)) .sha <- NA_character_
+  list(version=as.character(utils::packageVersion(pkg)),
+       sha=.sha)
+}
+
+#' Metadata stored alongside a saved fit
+#'
+#' Deterministic (no timestamps) so a committed cache stays byte-stable.
+#' @return named list of the tracked packages' version/sha, plus the
+#'   nlmixr2save version
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveMeta <- function() {
+  .ret <- stats::setNames(lapply(.nlmixr2savePkgs, .nlmixr2savePkgVer),
+                          .nlmixr2savePkgs)
+  .ret$nlmixr2save <- as.character(utils::packageVersion("nlmixr2save"))
+  .ret
+}
+
+#' Normalize a stored per-package entry to a `list(version, sha)`
+#'
+#' Tolerates a bare version string (an earlier metadata shape) as well as a
+#' missing entry.
+#' @param x stored entry (list, character, or `NULL`)
+#' @return `list(version, sha)`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveNormVer <- function(x) {
+  if (is.null(x)) return(list(version=NA_character_, sha=NA_character_))
+  if (is.character(x)) return(list(version=x[1], sha=NA_character_))
+  list(version=if (is.null(x$version)) NA_character_ else x$version,
+       sha=if (is.null(x$sha)) NA_character_ else x$sha)
+}
+
+#' Human-readable version label for one tracked package
+#' @param meta metadata list (or `NULL`)
+#' @param pkg package name
+#' @return a string like `"6.2.0"`, `"6.2.0 (abcdef1234)"`, or `"(unknown)"`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2savePkgLabel <- function(meta, pkg) {
+  .m <- .nlmixr2saveNormVer(if (is.null(meta)) NULL else meta[[pkg]])
+  if (is.na(.m$version)) return("(unknown)")
+  if (!is.na(.m$sha) && nzchar(.m$sha)) {
+    paste0(.m$version, " (", substr(.m$sha, 1, 10), ")")
+  } else {
+    .m$version
+  }
+}
+
+#' Does one tracked package's stored version/sha differ from what is installed?
+#' @param stored,current normalized `list(version, sha)` entries
+#' @return boolean; `FALSE` when either side is unknown (nothing to compare)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2savePkgDiffers <- function(stored, current) {
+  .s <- .nlmixr2saveNormVer(stored)
+  .c <- .nlmixr2saveNormVer(current)
+  if (is.na(.s$version) || is.na(.c$version)) return(FALSE)
+  if (!identical(.s$version, .c$version)) return(TRUE)
+  # same version string but a different remote sha still means a different build
+  if (!is.na(.s$sha) && nzchar(.s$sha) && !is.na(.c$sha) && nzchar(.c$sha)) {
+    return(!identical(.s$sha, .c$sha))
+  }
+  FALSE
+}
+
+#' Tracked packages whose version/sha changed between save and now
+#' @param stored metadata recorded when the fit was saved (or `NULL`)
+#' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
+#' @return character vector of package names (empty when nothing to report)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveChanged <- function(stored, current=.nlmixr2saveMeta()) {
+  if (is.null(stored)) return(character(0))
+  .nlmixr2savePkgs[vapply(.nlmixr2savePkgs, function(p) {
+    .nlmixr2savePkgDiffers(stored[[p]], current[[p]])
+  }, logical(1))]
+}
+
+#' Does any tracked package differ between the stored metadata and now?
+#'
+#' Returns `FALSE` (no complaint) when there is nothing to compare: no stored
+#' metadata (fit saved by an older nlmixr2save), or the packages are not
+#' installed.
+#' @param stored metadata recorded when the fit was saved (or `NULL`)
+#' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveMetaDiffers <- function(stored, current=.nlmixr2saveMeta()) {
+  length(.nlmixr2saveChanged(stored, current)) > 0L
+}
+
+#' Describe the tracked packages that changed, e.g.
+#' `"nlmixr2est 6.2.0 (installed 9.9.9)"`
+#' @param stored,current metadata lists
+#' @return a single string (may be empty when nothing changed)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveVersionMsg <- function(stored, current=.nlmixr2saveMeta()) {
+  .changed <- .nlmixr2saveChanged(stored, current)
+  paste(vapply(.changed, function(p) {
+    paste0(p, " ", .nlmixr2savePkgLabel(stored, p),
+           " (installed ", .nlmixr2savePkgLabel(current, p), ")")
+  }, character(1)), collapse="; ")
+}
+
+#' Extract the stored save metadata from a loaded fit
+#' @param fit a loaded `nlmixr2FitData`/`nlmixr2FitCore`
+#' @return the metadata list, or `NULL` when absent
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveGetMeta <- function(fit) {
+  .env <- if (is.environment(attr(class(fit), ".foceiEnv"))) {
+    attr(class(fit), ".foceiEnv")
+  } else if (is.environment(fit)) {
+    fit
+  } else {
+    NULL
+  }
+  if (is.null(.env) || !exists(".nlmixr2saveMeta", envir=.env, inherits=FALSE)) {
+    return(NULL)
+  }
+  get(".nlmixr2saveMeta", envir=.env)
+}
+
+#' Decide what to do when a cached fit's tracked-package versions differ from now
+#'
+#' When the versions match (or there is nothing to compare) nothing happens and
+#' `FALSE` is returned so the caller uses the cached fit.  When nlmixr2est or
+#' rxode2 differs: interactively the user is asked whether to rerun the fit with
+#' the currently installed packages (`TRUE` -> caller should refit);
+#' non-interactively the cached fit is kept and a warning is emitted.
+#' @param fit the loaded cached fit
+#' @return `TRUE` if the caller should rerun the fit, otherwise `FALSE`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveVersionRerun <- function(fit) {
+  .stored <- .nlmixr2saveGetMeta(fit)
+  if (!.nlmixr2saveMetaDiffers(.stored)) return(FALSE)
+  .msg <- .nlmixr2saveVersionMsg(.stored)
+  if (interactive()) {
+    .ans <- utils::menu(c("Reload the cached fit as-is",
+                          "Rerun the fit with the installed packages"),
+                        title=paste0("The cached fit was run with ", .msg, "."))
+    return(.ans == 2L)
+  }
+  warning("the cached fit was run with ", .msg, "; loading the cached fit",
+          call.=FALSE)
+  FALSE
+}
+
+#' Warn (non-interactively) when a loaded fit's tracked-package versions differ
+#'
+#' Used by [loadFit()], which cannot rerun the fit (it has no original call), so
+#' it only informs the user of the version skew (nlmixr2est and/or rxode2).
+#' @param fit the loaded fit
+#' @return `fit`, invisibly
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveWarnVersion <- function(fit) {
+  .stored <- .nlmixr2saveGetMeta(fit)
+  if (.nlmixr2saveMetaDiffers(.stored)) {
+    warning("this fit was run with ", .nlmixr2saveVersionMsg(.stored),
+            call.=FALSE)
+  }
+  invisible(fit)
+}
 
 #' Base cache file name (prefix + variable name), without extension
 #' @param x variable name being assigned by `:=`
@@ -205,6 +420,10 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' @param fit the fitted model object
 #' @param file the base name of the files to save the fit to.
 #' @param zip Boolean indicating if the files should be zipped.
+#' @param data Boolean indicating whether the original dataset (`origData`) is
+#'   stored in the saved fit.  When `FALSE` it is omitted, producing a fit that
+#'   can be shared without the subject-level data (see [nlmixr2saveShare()]).
+#'   Defaults to `getOption("nlmixr2save.data", TRUE)`.
 #' @return nothing, called for side effects
 #' @export
 #' @author Matthew L. Fidler
@@ -245,19 +464,28 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #'     })
 #'   }
 #' }
-saveFit <- function(fit, file, zip=TRUE) {
+saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   UseMethod("saveFit")
 }
 
 #' @rdname saveFit
 #' @export
-saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
+saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
   for (.i in .item) {
+    # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
+    if (.i == ".nlmixr2saveMeta") next
+    # when data=FALSE the original dataset is left out of the zip entirely
+    if (!isTRUE(data) && .i == "origData") next
+    # `model` is always regenerated from `ui` by the loader
+    # (env$model <- rxode2::model(env$ui)); saving it is redundant and, for a
+    # reloaded fit (where it is a `call`), triggers a spurious "could not
+    # determine how to save" warning.
+    if (.i == "model") next
     .minfo(paste0("saving fit item: ", .i))
     .obj <- get(.i, envir=fit$env)
     if (is.raw(.obj)) {
@@ -292,10 +520,33 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
       }
     }
   }
+  # Version/sha metadata the fit was produced under (nlmixr2est and rxode2, plus
+  # the nlmixr2save version); preserve it across a load -> save round-trip (it
+  # records the run version, not the save version), otherwise stamp the
+  # currently installed packages.
+  .meta <- if (exists(".nlmixr2saveMeta", envir=fit$env, inherits=FALSE)) {
+    get(".nlmixr2saveMeta", envir=fit$env)
+  } else {
+    .nlmixr2saveMeta()
+  }
+  # Capture the parHistData$type factor levels from the fit itself, so the
+  # restored factor matches whatever nlmixr2est produced it (the level set has
+  # grown over nlmixr2est versions, e.g. "Analytic Gradient").  A hardcoded
+  # fallback in the loader still covers fits saved before this was recorded.
+  .parHistTypeLevel <- NULL
+  if (exists("parHistData", envir=fit$env, inherits=FALSE)) {
+    .phd <- get("parHistData", envir=fit$env)
+    if (is.data.frame(.phd) && is.factor(.phd$type)) {
+      .parHistTypeLevel <- levels(.phd$type)
+    }
+  }
   .cls <- as.character(class(fit))
   attr(.cls, ".foceiEnv") <- NULL
   .str <- c(.str, paste0("..class.. = ", paste(deparse(.cls), collapse="\n")),
-            paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")))
+            paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")),
+            paste0("..parHistType.level.. = ",
+                   paste(deparse(.parHistTypeLevel), collapse="\n")),
+            paste0(".nlmixr2saveMeta = ", paste(deparse(.meta), collapse="\n")))
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
   writeLines(.str, con = paste0(file,"-env.R"))
@@ -377,8 +628,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "source('", paste0(file,"-env.R"), "', local=TRUE)\n",
                     ".class <- env$`..class..`\n",
                     ".id.level <- env$`..id.level..`\n",
+                    ".parHistType.level <- env$`..parHistType.level..`\n",
                     "rm('..class..', envir=env)\n",
                     "rm('..id.level..', envir=env)\n",
+                    "if (exists('..parHistType.level..', env)) rm('..parHistType.level..', envir=env)\n",
                     .r,
                     "env$model <- rxode2::model(env$ui)\n",
                     "if (!is.null(.id.level)) {\n",
@@ -390,7 +643,11 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
                     "  }\n",
                     "}\n",
                     "if (!is.null(env$parHistData)) {\n",
-                    "  env$parHistData$type <- factor(env$parHistData$type, levels=c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\"))\n",
+                    # use the levels recorded from the fit; fall back to the
+                    # known level set for fits saved before they were recorded
+                    "  .phLevels <- .parHistType.level\n",
+                    "  if (is.null(.phLevels)) .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    "  env$parHistData$type <- factor(env$parHistData$type, levels=.phLevels)\n",
                     "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
                     "}\n",
                     "if (exists('saemControl', env) && is.numeric(env$saemControl$mcmc$niter[1])) {\n",
@@ -429,17 +686,17 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE) {
 
 #' @rdname saveFit
 #' @export
-saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE) {
+saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
-  saveFit.nlmixr2FitCore(fit, file, zip=TRUE)
+  saveFit.nlmixr2FitCore(fit, file, zip=TRUE, data=data)
 }
 
 #' @rdname saveFit
 #' @export
-saveFit.default <- function(fit, file, zip=TRUE) {
+saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   stop("saveFit not implemented for object of class ", paste(class(fit), collapse=", "), call.=FALSE)
 }
 
@@ -448,10 +705,14 @@ saveFit.default <- function(fit, file, zip=TRUE) {
 #'
 #' @param file the base name of the files to load the fit from.
 #'
+#' @param checkVersion when `TRUE`, warn if the fit was produced with a
+#'   different nlmixr2est/rxode2 version (or remote sha) than the one currently
+#'   installed.  Defaults to `getOption("nlmixr2save.checkVersion", TRUE)`.
+#'
 #' @return the fitted model object
 #'
 #' @export
-loadFit <- function(file) {
+loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
 
   .file <- as.character(substitute(file))
   .tmp <- try(force(file), silent=TRUE)
@@ -471,6 +732,9 @@ loadFit <- function(file) {
     .minfo(paste0("loading fit from ", .r))
     source(.r, local=TRUE)
     ret <- get(file)
+    if (isTRUE(checkVersion)) {
+      .nlmixr2saveWarnVersion(ret)
+    }
     if (.didUnzip) {
       .files <- list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
                            full.names=TRUE)
@@ -580,12 +844,13 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #' loading renames it back to `<x>.zip`, `loadFit()`s it, and restores the
 #' prefixed name.  Both assume the working directory is already the cache
 #' directory (the callers wrap them in [.nlmixr2saveWithDir()] or set it).
-#' @param value fit to save; `x` the bare variable/fit name
+#' @param value fit to save; `x` the bare variable/fit name; `data` whether the
+#'   original dataset is stored (passed through to [saveFit()])
 #' @return the fit (load), or `value` invisibly (save)
 #' @noRd
-.saveFitZipPlain <- function(value, x) {
+.saveFitZipPlain <- function(value, x, data=.nlmixr2saveData()) {
   .base <- .nlmixr2saveBase(x)
-  saveFit(value, x, zip=TRUE)
+  saveFit(value, x, zip=TRUE, data=data)
   if (!identical(x, .base)) {
     if (file.exists(paste0(.base, ".zip"))) unlink(paste0(.base, ".zip"))
     file.rename(paste0(x, ".zip"), paste0(.base, ".zip"))
@@ -602,7 +867,8 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
               file.rename(paste0(x, ".zip"), paste0(.base, ".zip")),
             add=TRUE)
   }
-  loadFit(x)
+  # the `:=` caller performs its own version check/rerun handling
+  loadFit(x, checkVersion=FALSE)
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {
@@ -628,6 +894,143 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
       return(.rdsInfo)
     }
     .saveFitEnv
+  })
+}
+
+#' Represent a `nlmixr2FitData` as its core fit for saving, without mutating it
+#'
+#' A `nlmixr2FitData` is a data.frame whose core fit environment is carried in
+#' `attr(class(fit), ".foceiEnv")`.  To save the fit *without* the returned
+#' prediction/residual table, we save that core environment (reclassed to the
+#' non-data `nlmixr2FitCore` class) instead of the data.frame -- `saveFit()` then
+#' dispatches to `saveFit.nlmixr2FitCore`, which never writes the `.csv` table.
+#'
+#' The core environment is shared by reference with the original `fit`, so its
+#' class is set only for the duration of `code` (which does the saving) and then
+#' restored, leaving the original object untouched.
+#'
+#' @param fit a `nlmixr2FitData` (or an already-core fit)
+#' @param saver a one-argument function called with the core fit object; it must
+#'   perform the save while it runs (the reclass is reverted once it returns)
+#' @return the value of `saver`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveAsCore <- function(fit, saver) {
+  if (!inherits(fit, "nlmixr2FitData")) {
+    # already a core fit (e.g. a calcTables=FALSE fit); nothing to strip
+    return(saver(fit))
+  }
+  .core <- attr(class(fit), ".foceiEnv")
+  if (!is.environment(.core)) {
+    stop("cannot find the core fit environment to strip the output tables",
+         call.=FALSE)
+  }
+  # core class = the fit's class minus the data.frame-ness (the FitData marker
+  # and the data.frame/tibble classes), leaving the fit-core classes so the
+  # environment is no longer treated as a data frame
+  .coreClass <- setdiff(class(fit),
+                        c("nlmixr2FitData", "tbl_df", "tbl", "data.frame"))
+  .origClass <- class(.core)
+  on.exit(class(.core) <- .origClass, add=TRUE)
+  class(.core) <- .coreClass
+  saver(.core)
+}
+
+#' Save a shareable copy of a fit without the original data
+#'
+#' Writes a portable `.zip` copy of a saved fit that omits the original dataset
+#' (the subject-level data), so a fitted model can be shared without its data.
+#' The input may be a live fit object or the base name of an existing saved fit
+#' `.zip`; either way the original is left unchanged and new sibling zips are
+#' written.  Names are resolved through `getOption("nlmixr2save.dir")` and
+#' `getOption("nlmixr2save.prefix")` (as for the `:=` cache).
+#'
+#' - `nlmixr2saveShare("fit")` writes `fit-noData.zip` -- the full fit
+#'   (predictions and tables intact) with the original data removed.
+#' - `nlmixr2saveShare("fit", noFit=TRUE)` writes `fit-noData-noFit.zip` -- the
+#'   core fit only (model, parameter estimates, objective, `omega`, `etaObf`,
+#'   `parHistData`), with both the original data and the returned
+#'   prediction/residual table removed.
+#'
+#' @param x a fitted model object, or the base name (no extension) of a saved
+#'   fit `.zip` to read.
+#' @param noFit Boolean; when `TRUE`, also strip the output tables (the returned
+#'   prediction/residual data.frame), writing `<file>-noData-noFit.zip` instead
+#'   of `<file>-noData.zip`.
+#' @param file optional output base name; defaults to the name of `x`.
+#' @return the path of the written `.zip`, invisibly.
+#' @export
+#' @seealso [saveFit()], [loadFit()]
+#' @author Matthew L. Fidler
+#' @examples
+#' \donttest{
+#'   if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
+#'     library(nlmixr2est)
+#'     library(nlmixr2data)
+#'     withr::with_tempdir({
+#'       one.cmt <- function() {
+#'         ini({
+#'           tka <- 0.45; tcl <- log(c(0, 2.7, 100)); tv <- 3.45
+#'           eta.ka ~ 0.6; eta.cl ~ 0.3; eta.v ~ 0.1
+#'           add.sd <- 0.7
+#'         })
+#'         model({
+#'           ka <- exp(tka + eta.ka); cl <- exp(tcl + eta.cl); v <- exp(tv + eta.v)
+#'           linCmt() ~ add(add.sd)
+#'         })
+#'       }
+#'       fit <- nlmixr2(one.cmt, theo_sd, est="focei")
+#'       saveFit(fit)                       # fit.zip (with data)
+#'       nlmixr2saveShare("fit")            # fit-noData.zip
+#'       nlmixr2saveShare("fit", noFit=TRUE) # fit-noData-noFit.zip
+#'     })
+#'   }
+#' }
+nlmixr2saveShare <- function(x, noFit=FALSE, file=NULL) {
+  if (!checkmate::testLogical(noFit, any.missing=FALSE, len=1L)) {
+    stop("`noFit` must be a single logical value", call.=FALSE)
+  }
+  # Normalize `x` like `loadFit()`: if forcing `x` yields a single string, use
+  # that value as the base name; otherwise use the deparsed variable name (for a
+  # fit object passed by name).  Explicit `file=` always wins.
+  .sym <- as.character(substitute(x))
+  .val <- try(force(x), silent=TRUE)
+  .name <- if (!is.null(file)) {
+    file
+  } else if (!inherits(.val, "try-error") && is.character(.val) && length(.val) == 1L) {
+    .val
+  } else {
+    .sym
+  }
+  if (!checkmate::testString(.name, min.chars=1L)) {
+    stop("cannot determine an output name; pass `file=`", call.=FALSE)
+  }
+  .isFit <- !inherits(.val, "try-error") &&
+    (inherits(.val, "nlmixr2FitData") || inherits(.val, "nlmixr2FitCore"))
+  .nlmixr2saveWithDir({
+    if (.isFit) {
+      .fit <- .val
+    } else {
+      # treat `x`/`file` as the base name of a saved fit zip
+      .readBase <- if (!is.null(file)) file else .name
+      if (!file.exists(paste0(.nlmixr2saveBase(.readBase), ".zip"))) {
+        stop("cannot find saved fit '", .nlmixr2saveBase(.readBase), ".zip'",
+             call.=FALSE)
+      }
+      .fit <- .loadFitZipPlain(.readBase)
+    }
+    if (isTRUE(noFit)) {
+      .out <- paste0(.name, "-noData-noFit")
+      .minfo(paste0("writing shareable fit (no data, no output tables) to ",
+                    .nlmixr2saveBase(.out), ".zip"))
+      .nlmixr2saveAsCore(.fit, function(.core) .saveFitZipPlain(.core, .out, data=FALSE))
+    } else {
+      .out <- paste0(.name, "-noData")
+      .minfo(paste0("writing shareable fit (no data) to ",
+                    .nlmixr2saveBase(.out), ".zip"))
+      .saveFitZipPlain(.fit, .out, data=FALSE)
+    }
+    invisible(paste0(.nlmixr2saveBase(.out), ".zip"))
   })
 }
 
@@ -1036,13 +1439,26 @@ nlmixr2saveInvalidate <- function() {
   .sha1 <- .prop$sha
   if (file.exists(.zip)) {
     .fit <- .loadFitZipPlain(.x)
-    if (inherits(.fit, "nlmixr2FitData") &&
-          is.environment(attr(class(.fit), ".foceiEnv")) &&
-          exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
-          get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .sha1) {
+    .isData <- inherits(.fit, "nlmixr2FitData") &&
+      is.environment(attr(class(.fit), ".foceiEnv")) &&
+      exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv"), inherits=FALSE) &&
+      get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv"), inherits=FALSE) == .sha1
+    .isCore <- !inherits(.fit, "nlmixr2FitData") &&
+      inherits(.fit, "nlmixr2FitCore") &&
+      is.environment(.fit) &&
+      exists("nlmixr2save", envir=.fit, inherits=FALSE) &&
+      get("nlmixr2save", envir=.fit, inherits=FALSE) == .sha1
+    if ((.isData || .isCore) && .nlmixr2saveCheckVersion() &&
+          .nlmixr2saveVersionRerun(.fit)) {
+      # the cache matches but was run with different package versions and the
+      # user asked to rerun it with the installed versions
+      .minfo(paste0("rerunning fit in ", .zip, " with the installed nlmixr2est"))
+      unlink(.zip)
+      .fit <- NULL
+    } else if (.isData) {
       .env <- attr(class(.fit), ".foceiEnv")
-      if (!exists("nlmixr2saveOrig", envir=.env) ||
-            get("nlmixr2saveOrig", envir=.env) != .prop$shaOrig) {
+      if (!exists("nlmixr2saveOrig", envir=.env, inherits=FALSE) ||
+            get("nlmixr2saveOrig", envir=.env, inherits=FALSE) != .prop$shaOrig) {
         assign("origData", .prop$dataOrig, envir=.env)
         assign("nlmixr2saveOrig", .prop$shaOrig, envir=.env)
       }
@@ -1050,13 +1466,9 @@ nlmixr2saveInvalidate <- function() {
              envir=.assignParent())
       .saveFitEnv$restore <- TRUE
       return(invisible(.fit))
-    } else if (!inherits(.fit, "nlmixr2FitData") &&
-                 inherits(.fit, "nlmixr2FitCore") &&
-                 is.environment(.fit) &&
-                 exists("nlmixr2save", .fit) &&
-                 get("nlmixr2save", .fit) == .sha1) {
-      if (!exists("nlmixr2saveOrig", envir=.fit) ||
-            get("nlmixr2saveOrig", envir=.fit) != .prop$shaOrig) {
+    } else if (.isCore) {
+      if (!exists("nlmixr2saveOrig", envir=.fit, inherits=FALSE) ||
+            get("nlmixr2saveOrig", envir=.fit, inherits=FALSE) != .prop$shaOrig) {
         assign("origData", .prop$dataOrig, envir=.fit)
         assign("nlmixr2saveOrig", .prop$shaOrig, envir=.fit)
       }
@@ -1064,10 +1476,11 @@ nlmixr2saveInvalidate <- function() {
              envir=.assignParent())
       .saveFitEnv$restore <- TRUE
       return(invisible(.fit))
+    } else {
+      .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
+      unlink(.zip)
+      .fit <- NULL
     }
-    .minfo(paste0("fit in ", .zip, " does not match current fit; removing and refitting"))
-    unlink(.zip)
-    .fit <- NULL
   } else if (file.exists(.rds)) {
     .rdsInfo <- readRDS(.rds)
     if (is.list(.rdsInfo) &&

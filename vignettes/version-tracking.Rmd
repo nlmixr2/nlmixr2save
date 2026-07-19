@@ -1,0 +1,176 @@
+---
+title: "Tracking the nlmixr2est and rxode2 versions of a saved fit"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tracking the nlmixr2est and rxode2 versions of a saved fit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+A saved `nlmixr2` fit is the result of two packages working together:
+`nlmixr2est` estimates the model, and `rxode2` compiles and solves it.  A change
+in either package can, in principle, change the fit.  Because a saved fit is
+meant to be reloaded later -- possibly months later, on a different machine, with
+newer packages installed -- `nlmixr2save` records which versions produced it and
+tells you when they no longer match.
+
+This behavior is easy to miss, because when the versions *do* match (the common
+case) nothing is printed at all.
+
+## What is recorded
+
+When you `saveFit()` a fit (or cache one with `:=`), `nlmixr2save` stores a small
+piece of metadata alongside it: the `nlmixr2est` and `rxode2` **versions**, and,
+when either package was installed from a remote such as GitHub (via `remotes` or
+`pak`), its **commit sha**.  The metadata is embedded in the saved fit's loader
+script, so it travels inside the portable `.zip` and survives a load -> save
+round-trip (it always records the version that *ran* the fit, not the version
+that happened to re-save it).
+
+This *version metadata* is only the package versions -- it does not itself
+contain your model or data.  The saved fit as a whole is a different matter: it
+does store the model and the data it was fit to (for example in `$origData`,
+which is written into the `.zip`); see `vignette("uses")` for what a saved fit
+includes.
+
+## What happens on load
+
+### `loadFit()`
+
+When you load a fit and the installed `nlmixr2est` or `rxode2` differs from the
+version that produced it, `loadFit()` warns:
+
+```{r, eval = FALSE}
+fit2 <- loadFit("fit")
+#> Warning: this fit was run with nlmixr2est 6.2.0 (installed 6.3.0)
+```
+
+The fit still loads normally -- the warning is only there to explain why a
+reloaded fit might not be bit-for-bit identical to one you would get by
+re-running today.  `loadFit()` cannot re-run the fit itself, because a saved fit
+does not carry the original `nlmixr2()` call.
+
+### The `:=` caching operator
+
+The `:=` operator *does* have the original call, so it can offer to re-run.  When
+a cached fit was produced by a different package version:
+
+- In an **interactive** session, you are asked what to do:
+
+  ```{r, eval = FALSE}
+  fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+  #> The cached fit was run with nlmixr2est 6.2.0 (installed 6.3.0).
+  #>
+  #> 1: Reload the cached fit as-is
+  #> 2: Rerun the fit with the installed packages
+  ```
+
+  Choosing **2** re-runs the fit with the currently installed packages and
+  refreshes the cache; choosing **1** keeps the cached fit.
+
+- In a **non-interactive** session (scripts, `R CMD build`, CI, rendering a
+  document), there is no one to ask, so `:=` loads the cached fit and warns:
+
+  ```
+  #> Warning: the cached fit was run with nlmixr2est 6.2.0 (installed 6.3.0);
+  #> loading the cached fit
+  ```
+
+If both packages changed, the message names both, e.g.
+`nlmixr2est 6.2.0 (installed 6.3.0); rxode2 5.1.3 (installed 6.0.0)`.
+
+## Turning the check on or off
+
+The version check is controlled by a single option, `nlmixr2save.checkVersion`,
+which defaults to `TRUE`:
+
+```{r, eval = FALSE}
+# Silence version-mismatch warnings and skip the interactive rerun prompt
+options(nlmixr2save.checkVersion = FALSE)
+
+# Turn the check back on (the default)
+options(nlmixr2save.checkVersion = TRUE)
+```
+
+### Always load, never rerun
+
+If you would rather *always* load the cached fit -- never be interactively asked
+to rerun, and never warned -- set the option to `FALSE`.  With
+`nlmixr2save.checkVersion = FALSE`, an interactive `:=` behaves exactly like a
+non-interactive one used to, except quietly: it loads the cached fit and moves
+on, no matter which `nlmixr2est` or `rxode2` version is installed.
+
+```{r, eval = FALSE}
+options(nlmixr2save.checkVersion = FALSE)
+
+# loads the cached fit.zip as-is, with no prompt and no warning
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+```
+
+This is the setting to reach for when you have deliberately committed a cache
+and want it to load unconditionally -- for example in a rendered report or in
+CI, or simply because you prefer to decide when to rerun yourself.
+
+`loadFit()` also takes a per-call `checkVersion` argument, which defaults to the
+option, so you can override it for a single load without changing the global
+setting:
+
+```{r, eval = FALSE}
+fit2 <- loadFit("fit", checkVersion = FALSE) # load this one quietly
+```
+
+A common place to set the option is at the top of a script or vignette that
+deliberately ships a committed cache and does not want version warnings:
+
+```{r, eval = FALSE}
+options(nlmixr2save.checkVersion = FALSE)
+```
+
+### Loading without checking the model/data hash
+
+By default, `:=` verifies a cached fit against an `md5`/hash of the current
+model, data, and arguments, and refits when they differ.  That check is separate
+from the version check described above, and it has its own option,
+`nlmixr2save.check`:
+
+```{r, eval = FALSE}
+# Load the cache file if it exists, WITHOUT checking the model/data/argument
+# md5 -- the cache is trusted and only regenerated when it is missing
+options(nlmixr2save.check = FALSE)
+
+fit := nlmixr2(one.cmt, theo_sd, est = "focei")
+```
+
+With `nlmixr2save.check = FALSE` (trusted-cache mode, described in
+`vignette("uses")`), `:=` simply loads a committed cache whenever the file
+exists, ignoring any `md5` differences in the model, data, or arguments -- and,
+because it does no comparison at all, it also never prompts or warns about
+package versions.  In other words it subsumes `nlmixr2save.checkVersion = FALSE`
+on the `:=` path.  To force a rerun in this mode, delete the cache with
+`nlmixr2saveInvalidate()` (or remove the file).
+
+Use the two options together to pick exactly what is (and is not) checked:
+
+| `nlmixr2save.check` | `nlmixr2save.checkVersion` | behavior of `:=` on a cache hit |
+|:---|:---|:---|
+| `TRUE` (default) | `TRUE` (default) | refit if the model/data/args `md5` changed; otherwise warn/prompt if the package version changed |
+| `TRUE` | `FALSE` | refit if the `md5` changed; ignore package versions |
+| `FALSE` | (ignored) | always load the cache file if it exists; check nothing |
+
+The `nlmixr2save.checkVersion` option is the one to reach for when you are using
+ordinary (checked) caching or `loadFit()` and only want to control the version
+comparison; `nlmixr2save.check` is the one that also turns off the model/data
+`md5` check.
+
+## Backward compatibility
+
+Fits saved by versions of `nlmixr2save` that predate this feature carry no
+version metadata.  Loading them is completely silent: with nothing to compare
+against, `nlmixr2save` never warns and never prompts.

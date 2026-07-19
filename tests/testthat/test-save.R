@@ -30,6 +30,87 @@ test_that("saveFitRandom adds and removes registered random functions", {
   expect_false("barRandom" %in% .random)
 })
 
+test_that("tracked-package version metadata helpers", {
+  .cur <- .nlmixr2saveMeta()
+  expect_true(is.list(.cur))
+  expect_true(all(c("nlmixr2est", "rxode2", "nlmixr2save") %in% names(.cur)))
+  expect_true(all(c("version", "sha") %in% names(.cur$nlmixr2est)))
+  expect_true(all(c("version", "sha") %in% names(.cur$rxode2)))
+  # metadata must deparse/reparse (it is embedded as text in the loader script)
+  expect_equal(eval(parse(text = paste(deparse(.cur), collapse = "\n"))), .cur)
+
+  .same <- list(nlmixr2est = list(version = "1.2.3", sha = NA_character_),
+                rxode2 = list(version = "5.0.0", sha = NA_character_))
+  .estDiff <- list(nlmixr2est = list(version = "9.9.9", sha = NA_character_),
+                   rxode2 = list(version = "5.0.0", sha = NA_character_))
+  .rxDiff <- list(nlmixr2est = list(version = "1.2.3", sha = NA_character_),
+                  rxode2 = list(version = "6.0.0", sha = NA_character_))
+  expect_false(.nlmixr2saveMetaDiffers(.same, .same))
+  # a difference in EITHER tracked package is flagged
+  expect_true(.nlmixr2saveMetaDiffers(.same, .estDiff))
+  expect_true(.nlmixr2saveMetaDiffers(.same, .rxDiff))
+  expect_equal(.nlmixr2saveChanged(.same, .estDiff), "nlmixr2est")
+  expect_equal(.nlmixr2saveChanged(.same, .rxDiff), "rxode2")
+  # nothing to compare -> no complaint (older saves, or package absent)
+  expect_false(.nlmixr2saveMetaDiffers(NULL, .same))
+  expect_false(.nlmixr2saveMetaDiffers(
+    list(nlmixr2est = list(version = NA_character_)), .estDiff))
+  # same version, different remote sha still counts as different
+  .s1 <- list(rxode2 = list(version = "5.0.0", sha = "aaaaaaaaaaaa"))
+  .s2 <- list(rxode2 = list(version = "5.0.0", sha = "bbbbbbbbbbbb"))
+  expect_true(.nlmixr2saveMetaDiffers(.s1, .s2))
+
+  expect_equal(.nlmixr2savePkgLabel(.same, "nlmixr2est"), "1.2.3")
+  expect_equal(.nlmixr2savePkgLabel(.s1, "rxode2"), "5.0.0 (aaaaaaaaaa)")
+  expect_equal(.nlmixr2savePkgLabel(NULL, "rxode2"), "(unknown)")
+  # a bare version string (older metadata shape) is tolerated
+  expect_equal(.nlmixr2savePkgLabel(list(rxode2 = "5.0.0"), "rxode2"), "5.0.0")
+
+  expect_match(.nlmixr2saveVersionMsg(.same, .estDiff),
+               "nlmixr2est 1.2.3 \\(installed 9.9.9\\)")
+  expect_match(.nlmixr2saveVersionMsg(.same, .rxDiff),
+               "rxode2 5.0.0 \\(installed 6.0.0\\)")
+})
+
+test_that("version-mismatch warning/rerun decision on a stub fit", {
+  .env <- new.env(parent = emptyenv())
+  assign(".nlmixr2saveMeta",
+         list(nlmixr2est = list(version = "0.0.0-old", sha = NA_character_),
+              rxode2 = list(version = "0.0.0-old", sha = NA_character_),
+              nlmixr2save = "1"),
+         envir = .env)
+  class(.env) <- c("nlmixr2FitCore", "environment")
+  expect_equal(.nlmixr2saveGetMeta(.env)$nlmixr2est$version, "0.0.0-old")
+
+  # a fit with no stored metadata -> nothing to compare, no warning
+  .noMeta <- new.env(parent = emptyenv())
+  class(.noMeta) <- c("nlmixr2FitCore", "environment")
+  expect_null(.nlmixr2saveGetMeta(.noMeta))
+  expect_warning(.nlmixr2saveWarnVersion(.noMeta), NA)
+
+  # stub whose stored versions differ from the installed packages: the
+  # non-interactive branch warns and does not request a rerun
+  skip_if_not_installed("nlmixr2est")
+  expect_warning(.nlmixr2saveWarnVersion(.env),
+                 "run with nlmixr2est 0.0.0-old")
+  if (!interactive()) {
+    expect_false(suppressWarnings(.nlmixr2saveVersionRerun(.env)))
+  }
+})
+
+test_that("nlmixr2save.checkVersion option gates the check", {
+  skip_if_not_installed("withr")
+  expect_true(.nlmixr2saveCheckVersion())
+  withr::with_options(list(nlmixr2save.checkVersion = FALSE), {
+    expect_false(.nlmixr2saveCheckVersion())
+    # loadFit's checkVersion argument defaults to the option
+    expect_false(eval(formals(loadFit)$checkVersion))
+  })
+  withr::with_options(list(nlmixr2save.checkVersion = TRUE), {
+    expect_true(.nlmixr2saveCheckVersion())
+  })
+})
+
 if (requireNamespace("withr", quietly = TRUE)) {
 
   test_that("saveFitRandom marks registered functions as random", {
@@ -288,6 +369,12 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
           expect_equal(rxode2::rxNorm(fitF$ui[[m]]),
                        rxode2::rxNorm(fit2F$ui[[m]]),
                        label = paste0(fitName, "$env$ui$", m))
+        } else if (length(fitF$ui[[m]]) == 0L && length(fit2F$ui[[m]]) == 0L) {
+          # empty ui slots (e.g. .muGroupCovNames) round-trip as character(0)
+          # vs NULL depending on the nlmixr2est version; both are length 0 and
+          # therefore consistent between the two implementations
+          expect_equal(length(fitF$ui[[m]]), length(fit2F$ui[[m]]),
+                       label = paste0(fitName, "$env$ui$", m, " (both empty)"))
         } else {
           expect_equal(fitF$ui[[m]], fit2F$ui[[m]],
                        label = paste0(fitName, "$env$ui$", m))
@@ -467,6 +554,63 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
 
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)
+
+      test_that("saveFit(data=FALSE) omits the original data", {
+        suppressMessages(saveFit(fitF, "fitFnd", data=FALSE))
+        expect_true(file.exists("fitFnd.zip"))
+        .nd <- suppressMessages(loadFit("fitFnd", checkVersion=FALSE))
+        expect_null(.nd$origData)
+        # still a full FitData with its prediction columns
+        expect_true(inherits(.nd, "nlmixr2FitData"))
+        expect_true("IPRED" %in% names(.nd))
+        # the nlmixr2save.data option drives the same behavior
+        withr::with_options(list(nlmixr2save.data = FALSE),
+                            suppressMessages(saveFit(fitF, "fitFndOpt")))
+        .ndo <- suppressMessages(loadFit("fitFndOpt", checkVersion=FALSE))
+        expect_null(.ndo$origData)
+      })
+
+      test_that("nlmixr2saveShare writes shareable zips and leaves the fit alone", {
+        .clsBefore <- class(fitF)
+        .rowsBefore <- nrow(fitF$origData)
+
+        # from a live object -> fitF-noData.zip
+        .p1 <- suppressMessages(nlmixr2saveShare(fitF))
+        expect_true(file.exists("fitF-noData.zip"))
+        .s1 <- suppressMessages(loadFit("fitF-noData", checkVersion=FALSE))
+        expect_null(.s1$origData)
+        expect_true(inherits(.s1, "nlmixr2FitData"))
+
+        # noFit=TRUE -> only fitF-noData-noFit.zip, loads as a core
+        .p2 <- suppressMessages(nlmixr2saveShare(fitF, noFit = TRUE))
+        expect_true(file.exists("fitF-noData-noFit.zip"))
+        .s2 <- suppressMessages(loadFit("fitF-noData-noFit", checkVersion=FALSE))
+        expect_true(inherits(.s2, "nlmixr2FitCore"))
+        expect_false(inherits(.s2, "nlmixr2FitData"))
+        expect_false(inherits(.s2, "data.frame"))
+        expect_null(.s2$origData)
+        # eta/parameter-history tables and estimates are kept
+        expect_false(is.null(.s2$etaObf))
+        expect_false(is.null(.s2$parHistData))
+        expect_false(is.null(.s2$parFixed))
+
+        # reading from an existing zip base name also works
+        .p3 <- suppressMessages(nlmixr2saveShare("fitF"))
+        expect_true(file.exists("fitF-noData.zip"))
+
+        # the original fit object is unchanged (env is shared by reference)
+        expect_identical(class(fitF), .clsBefore)
+        expect_true(is.environment(attr(class(fitF), ".foceiEnv")))
+        expect_identical(nrow(fitF$origData), .rowsBefore)
+      })
+
+      test_that("nlmixr2saveShare honors nlmixr2save.dir / prefix", {
+        withr::with_options(list(nlmixr2save.dir = "shareCache",
+                                 nlmixr2save.prefix = "sh-"), {
+          .p <- suppressMessages(nlmixr2saveShare(fitF))
+          expect_true(file.exists(file.path("shareCache", "sh-fitF-noData.zip")))
+        })
+      })
 
       fit2IF <- loadFit("fitIF")
       fitEquals(fitIF, fit2IF)

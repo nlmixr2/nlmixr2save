@@ -1,5 +1,48 @@
 # nlmixr2save (development version)
 
+* You can now export a fit **without the original data** so a fitted model can
+  be shared when the subject-level data cannot:
+    - `saveFit(fit, data = FALSE)` (or `options(nlmixr2save.data = FALSE)`)
+      writes a fit whose `origData` is omitted from the zip.
+    - New `nlmixr2saveShare()` strips an existing saved fit (a live object or a
+      `.zip` base name; honors `nlmixr2save.dir`/`nlmixr2save.prefix`) into a
+      shareable sibling zip: `fit-noData.zip` (data removed) or, with
+      `noFit = TRUE`, `fit-noData-noFit.zip` (data and the returned
+      prediction/residual table removed, keeping the model, estimates, eta table
+      and parameter history).  The original fit is left unchanged.
+
+  See `vignette("sharing-fits")`, which also documents the side effects (e.g.
+  VPC, residual re-derivation, and re-fitting need the original data).
+
+* `saveFit()` no longer stores the redundant `model` element (the loader always
+  rebuilds it from `ui`).  This removes a spurious "could not determine how to
+  save object of class call for item model" warning when re-saving a
+  previously loaded fit (including via `nlmixr2saveShare()`).
+
+* Saved fits now record the `nlmixr2est` **and** `rxode2` versions they were
+  produced with (including each package's commit sha when it was installed from
+  a remote such as GitHub).  When a fit is later loaded and the installed
+  `nlmixr2est` or `rxode2` differs:
+    - `loadFit()` warns that the fit was run with a different package version
+      (controllable with the new `checkVersion` argument).
+    - the `:=` caching operator, in an interactive session, asks whether to
+      rerun the fit with the currently installed packages; non-interactively it
+      loads the cached fit and warns.  (Trusted-cache mode,
+      `nlmixr2save.check = FALSE`, is left untouched so committed caches stay
+      stable across versions.)
+
+  Fits saved by older `nlmixr2save` versions (which carry no version metadata)
+  continue to load without any warning.  The whole check can be turned off with
+  `options(nlmixr2save.checkVersion = FALSE)` (or per call via
+  `loadFit(..., checkVersion = FALSE)`); it is `TRUE` by default.  See
+  `vignette("version-tracking")`.
+
+* The `parHistData$type` factor levels are now recorded from the fit at save
+  time and restored on load, so the factor round-trips correctly regardless of
+  which `nlmixr2est` version produced it (the level set has grown over versions,
+  e.g. `"Analytic Gradient"`).  A hardcoded fallback covers fits saved before
+  this was recorded.
+
 * The `:=` caching operator gains three `options()` (mirroring
   `nlmixr2save.quiet`):
     - `nlmixr2save.prefix` (default `""`): prepended to the assigned variable
