@@ -38,7 +38,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">loadFit</span><span class="op">(</span><span class="va">file</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">loadFit</span><span class="op">(</span><span class="va">file</span>, checkVersion <span class="op">=</span> <span class="fu">.nlmixr2saveCheckVersion</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -47,6 +47,12 @@
 
 <dl><dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
 <dd><p>the base name of the files to load the fit from.</p></dd>
+
+
+<dt id="arg-checkversion">checkVersion<a class="anchor" aria-label="anchor" href="#arg-checkversion"></a></dt>
+<dd><p>when <code>TRUE</code>, warn if the fit was produced with a
+different nlmixr2est/rxode2 version (or remote sha) than the one currently
+installed.  Defaults to <code>getOption("nlmixr2save.checkVersion", TRUE)</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

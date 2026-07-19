@@ -4,7 +4,9 @@
 <url><loc>/LICENSE.html</loc></url>
 <url><loc>/articles/index.html</loc></url>
 <url><loc>/articles/register-simulation-functions.html</loc></url>
+<url><loc>/articles/sharing-fits.html</loc></url>
 <url><loc>/articles/uses.html</loc></url>
+<url><loc>/articles/version-tracking.html</loc></url>
 <url><loc>/authors.html</loc></url>
 <url><loc>/index.html</loc></url>
 <url><loc>/news/index.html</loc></url>
@@ -16,6 +18,7 @@
 <url><loc>/reference/loadFit.html</loc></url>
 <url><loc>/reference/nlmixr2saveInvalidate.html</loc></url>
 <url><loc>/reference/nlmixr2saveParFixedDf.html</loc></url>
+<url><loc>/reference/nlmixr2saveShare.html</loc></url>
 <url><loc>/reference/nlmixrDataSimplify.html</loc></url>
 <url><loc>/reference/saveFit.html</loc></url>
 <url><loc>/reference/saveFitItem.html</loc></url>

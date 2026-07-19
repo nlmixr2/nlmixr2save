@@ -15,6 +15,9 @@
 
   Delete every `:=` cache entry under the active prefix and directory
 
+- [`nlmixr2saveShare()`](nlmixr2saveShare.md) : Save a shareable copy of
+  a fit without the original data
+
 - [`nlmixrDataSimplify()`](nlmixrDataSimplify.md) : Standardize and
   simplify data for nlmixr2 estimation
 

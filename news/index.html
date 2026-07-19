@@ -34,6 +34,22 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="nlmixr2save-development-version">nlmixr2save (development version)<a class="anchor" aria-label="anchor" href="#nlmixr2save-development-version"></a></h2>
 <ul><li>
+<p>You can now export a fit <strong>without the original data</strong> so a fitted model can be shared when the subject-level data cannot:</p>
+<ul><li>
+<code>saveFit(fit, data = FALSE)</code> (or <code>options(nlmixr2save.data = FALSE)</code>) writes a fit whose <code>origData</code> is omitted from the zip.</li>
+<li>New <code><a href="../reference/nlmixr2saveShare.html">nlmixr2saveShare()</a></code> strips an existing saved fit (a live object or a <code>.zip</code> base name; honors <code>nlmixr2save.dir</code>/<code>nlmixr2save.prefix</code>) into a shareable sibling zip: <code>fit-noData.zip</code> (data removed) or, with <code>noFit = TRUE</code>, <code>fit-noData-noFit.zip</code> (data and the returned prediction/residual table removed, keeping the model, estimates, eta table and parameter history). The original fit is left unchanged.</li>
+</ul><p>See <code><a href="../articles/sharing-fits.html">vignette("sharing-fits")</a></code>, which also documents the side effects (e.g. VPC, residual re-derivation, and re-fitting need the original data).</p>
+</li>
+<li><p><code><a href="../reference/saveFit.html">saveFit()</a></code> no longer stores the redundant <code>model</code> element (the loader always rebuilds it from <code>ui</code>). This removes a spurious “could not determine how to save object of class call for item model” warning when re-saving a previously loaded fit (including via <code><a href="../reference/nlmixr2saveShare.html">nlmixr2saveShare()</a></code>).</p></li>
+<li>
+<p>Saved fits now record the <code>nlmixr2est</code> <strong>and</strong> <code>rxode2</code> versions they were produced with (including each package’s commit sha when it was installed from a remote such as GitHub). When a fit is later loaded and the installed <code>nlmixr2est</code> or <code>rxode2</code> differs:</p>
+<ul><li>
+<code><a href="../reference/loadFit.html">loadFit()</a></code> warns that the fit was run with a different package version (controllable with the new <code>checkVersion</code> argument).</li>
+<li>the <code>:=</code> caching operator, in an interactive session, asks whether to rerun the fit with the currently installed packages; non-interactively it loads the cached fit and warns. (Trusted-cache mode, <code>nlmixr2save.check = FALSE</code>, is left untouched so committed caches stay stable across versions.)</li>
+</ul><p>Fits saved by older <code>nlmixr2save</code> versions (which carry no version metadata) continue to load without any warning. The whole check can be turned off with <code>options(nlmixr2save.checkVersion = FALSE)</code> (or per call via <code>loadFit(..., checkVersion = FALSE)</code>); it is <code>TRUE</code> by default. See <code><a href="../articles/version-tracking.html">vignette("version-tracking")</a></code>.</p>
+</li>
+<li><p>The <code>parHistData$type</code> factor levels are now recorded from the fit at save time and restored on load, so the factor round-trips correctly regardless of which <code>nlmixr2est</code> version produced it (the level set has grown over versions, e.g. <code>"Analytic Gradient"</code>). A hardcoded fallback covers fits saved before this was recorded.</p></li>
+<li>
 <p>The <code>:=</code> caching operator gains three <code><a href="https://rdrr.io/r/base/options.html" class="external-link">options()</a></code> (mirroring <code>nlmixr2save.quiet</code>):</p>
 <ul><li>
 <code>nlmixr2save.prefix</code> (default <code>""</code>): prepended to the assigned variable name to form the cache file, e.g. with <code>options(nlmixr2save.prefix = "modelPiping-")</code>, <code>fit := nlmixr2(...)</code> caches to <code>modelPiping-fit.zip</code>.</li>
