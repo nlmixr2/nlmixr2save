@@ -520,9 +520,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
       }
     }
   }
-  # nlmixr2est version/sha the fit was produced under; preserve it across a
-  # load -> save round-trip (it records the run version, not the save version),
-  # otherwise stamp the currently installed nlmixr2est.
+  # Version/sha metadata the fit was produced under (nlmixr2est and rxode2, plus
+  # the nlmixr2save version); preserve it across a load -> save round-trip (it
+  # records the run version, not the save version), otherwise stamp the
+  # currently installed packages.
   .meta <- if (exists(".nlmixr2saveMeta", envir=fit$env, inherits=FALSE)) {
     get(".nlmixr2saveMeta", envir=fit$env)
   } else {
@@ -989,11 +990,21 @@ nlmixr2saveShare <- function(x, noFit=FALSE, file=NULL) {
   if (!checkmate::testLogical(noFit, any.missing=FALSE, len=1L)) {
     stop("`noFit` must be a single logical value", call.=FALSE)
   }
-  .name <- if (!is.null(file)) file else as.character(substitute(x))
+  # Normalize `x` like `loadFit()`: if forcing `x` yields a single string, use
+  # that value as the base name; otherwise use the deparsed variable name (for a
+  # fit object passed by name).  Explicit `file=` always wins.
+  .sym <- as.character(substitute(x))
+  .val <- try(force(x), silent=TRUE)
+  .name <- if (!is.null(file)) {
+    file
+  } else if (!inherits(.val, "try-error") && is.character(.val) && length(.val) == 1L) {
+    .val
+  } else {
+    .sym
+  }
   if (!checkmate::testString(.name, min.chars=1L)) {
     stop("cannot determine an output name; pass `file=`", call.=FALSE)
   }
-  .val <- try(force(x), silent=TRUE)
   .isFit <- !inherits(.val, "try-error") &&
     (inherits(.val, "nlmixr2FitData") || inherits(.val, "nlmixr2FitCore"))
   .nlmixr2saveWithDir({
@@ -1430,13 +1441,13 @@ nlmixr2saveInvalidate <- function() {
     .fit <- .loadFitZipPlain(.x)
     .isData <- inherits(.fit, "nlmixr2FitData") &&
       is.environment(attr(class(.fit), ".foceiEnv")) &&
-      exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) &&
-      get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv")) == .sha1
+      exists("nlmixr2save", envir=attr(class(.fit), ".foceiEnv"), inherits=FALSE) &&
+      get("nlmixr2save", envir=attr(class(.fit), ".foceiEnv"), inherits=FALSE) == .sha1
     .isCore <- !inherits(.fit, "nlmixr2FitData") &&
       inherits(.fit, "nlmixr2FitCore") &&
       is.environment(.fit) &&
-      exists("nlmixr2save", .fit) &&
-      get("nlmixr2save", .fit) == .sha1
+      exists("nlmixr2save", envir=.fit, inherits=FALSE) &&
+      get("nlmixr2save", envir=.fit, inherits=FALSE) == .sha1
     if ((.isData || .isCore) && .nlmixr2saveCheckVersion() &&
           .nlmixr2saveVersionRerun(.fit)) {
       # the cache matches but was run with different package versions and the
@@ -1446,8 +1457,8 @@ nlmixr2saveInvalidate <- function() {
       .fit <- NULL
     } else if (.isData) {
       .env <- attr(class(.fit), ".foceiEnv")
-      if (!exists("nlmixr2saveOrig", envir=.env) ||
-            get("nlmixr2saveOrig", envir=.env) != .prop$shaOrig) {
+      if (!exists("nlmixr2saveOrig", envir=.env, inherits=FALSE) ||
+            get("nlmixr2saveOrig", envir=.env, inherits=FALSE) != .prop$shaOrig) {
         assign("origData", .prop$dataOrig, envir=.env)
         assign("nlmixr2saveOrig", .prop$shaOrig, envir=.env)
       }
@@ -1456,8 +1467,8 @@ nlmixr2saveInvalidate <- function() {
       .saveFitEnv$restore <- TRUE
       return(invisible(.fit))
     } else if (.isCore) {
-      if (!exists("nlmixr2saveOrig", envir=.fit) ||
-            get("nlmixr2saveOrig", envir=.fit) != .prop$shaOrig) {
+      if (!exists("nlmixr2saveOrig", envir=.fit, inherits=FALSE) ||
+            get("nlmixr2saveOrig", envir=.fit, inherits=FALSE) != .prop$shaOrig) {
         assign("origData", .prop$dataOrig, envir=.fit)
         assign("nlmixr2saveOrig", .prop$shaOrig, envir=.fit)
       }
