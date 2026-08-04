@@ -53,6 +53,51 @@ test_that("nlmixrDataSimplify", {
   )
 })
 
+test_that("nlmixrDataSimplify keeps the covariates est='vae' searches for", {
+  skip_if_not(
+    is.function(try(getExportedValue("nlmixr2est", "vaeCovariates"), silent = TRUE)),
+    "this 'nlmixr2est' does not export vaeCovariates()"
+  )
+  # APGR is not in the model, but est="vae" can select it out of the data, so it
+  # has to survive the simplification
+  expect_equal(
+    names(nlmixrDataSimplify(
+      data = nlmixr2data::pheno_sd,
+      object = modelSimple,
+      est = "vae"
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
+  # ...and only for the methods that search; est="focei" takes its covariates
+  # from the model
+  expect_equal(
+    names(nlmixrDataSimplify(
+      data = nlmixr2data::pheno_sd,
+      object = modelSimple,
+      est = "focei"
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT")
+  )
+  # covariateSelection=FALSE turns the search off
+  expect_equal(
+    names(nlmixrDataSimplify(
+      data = nlmixr2data::pheno_sd,
+      object = modelSimple,
+      est = "vae",
+      control = list(covariateSelection = FALSE)
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT")
+  )
+  # the columns are kept as they are spelled in the data, not upper cased the
+  # way vaeCovariates() reports them
+  mixedCase <- nlmixr2data::pheno_sd
+  names(mixedCase)[names(mixedCase) == "APGR"] <- "Apgr"
+  expect_equal(
+    names(nlmixrDataSimplify(data = mixedCase, object = modelSimple, est = "vae")),
+    c("id", "time", "amt", "dv", "mdv", "evid", "Apgr", "WT")
+  )
+})
+
 test_that("nlmixrDataSimplify expected errors", {
   badDataLowerCase <- nlmixr2data::pheno_sd
   badDataLowerCase$id <- badDataLowerCase$ID

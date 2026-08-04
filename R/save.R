@@ -1319,7 +1319,8 @@ nlmixr2saveInvalidate <- function() {
     }
   }
   if (!is.null(data) && is.data.frame(data)) {
-    .dataSimplify <- try(nlmixrDataSimplify(data, object, table), silent=TRUE)
+    .dataSimplify <- try(nlmixrDataSimplify(data, object, table, est=est, control=control),
+                         silent=TRUE)
     if (inherits(.dataSimplify, "try-error")) {
       .dataSimplify <- data
     }
