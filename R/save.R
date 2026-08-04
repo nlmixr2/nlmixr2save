@@ -1161,7 +1161,7 @@ nlmixr2saveInvalidate <- function() {
 #'   the `:=` operator.
 #'
 #'
-#' @usage NULL
+#' @usage x := value
 #'
 #' @author Matthew L. Fidler
 #'

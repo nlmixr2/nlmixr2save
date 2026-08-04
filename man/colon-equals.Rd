@@ -4,6 +4,9 @@
 \alias{:=}
 \title{This assignment operator is meant to assign or load a nlmixr2 fit
 (and other objects)}
+\usage{
+x := value
+}
 \arguments{
 \item{x}{the name of the object to assign the value to}
 
