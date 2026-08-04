@@ -33,7 +33,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="nlmixr2save-development-version">nlmixr2save (development version)<a class="anchor" aria-label="anchor" href="#nlmixr2save-development-version"></a></h2>
-<ul><li>
+<ul><li><p><code><a href="../reference/nlmixrDataSimplify.html">nlmixrDataSimplify()</a></code> gained <code>est</code> and <code>control</code> arguments and no longer drops the covariate columns that <code>est="vae"</code> searches for. The VAE covariate search picks its covariates out of the data instead of out of the model, so the candidate columns (as identified by <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html" class="external-link">nlmixr2est::vaeCovariates()</a></code>, matched to the <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vaeControl.html" class="external-link">vaeControl()</a></code> search options) are now kept in the simplified data and included in the hash. When the installed <code>nlmixr2est</code> does not export <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html" class="external-link">vaeCovariates()</a></code> the search is skipped rather than erroring.</p></li>
+<li>
 <p>You can now export a fit <strong>without the original data</strong> so a fitted model can be shared when the subject-level data cannot:</p>
 <ul><li>
 <code>saveFit(fit, data = FALSE)</code> (or <code>options(nlmixr2save.data = FALSE)</code>) writes a fit whose <code>origData</code> is omitted from the zip.</li>

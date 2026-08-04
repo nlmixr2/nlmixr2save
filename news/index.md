@@ -2,6 +2,19 @@
 
 ## nlmixr2save (development version)
 
+- [`nlmixrDataSimplify()`](../reference/nlmixrDataSimplify.md) gained
+  `est` and `control` arguments and no longer drops the covariate
+  columns that `est="vae"` searches for. The VAE covariate search picks
+  its covariates out of the data instead of out of the model, so the
+  candidate columns (as identified by
+  [`nlmixr2est::vaeCovariates()`](https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html),
+  matched to the
+  [`vaeControl()`](https://nlmixr2.github.io/nlmixr2est/reference/vaeControl.html)
+  search options) are now kept in the simplified data and included in
+  the hash. When the installed `nlmixr2est` does not export
+  [`vaeCovariates()`](https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html)
+  the search is skipped rather than erroring.
+
 - You can now export a fit **without the original data** so a fitted
   model can be shared when the subject-level data cannot:
 

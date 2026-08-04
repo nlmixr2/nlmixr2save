@@ -38,7 +38,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">nlmixrDataSimplify</span><span class="op">(</span><span class="va">data</span>, <span class="va">object</span>, table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">nlmixrDataSimplify</span><span class="op">(</span><span class="va">data</span>, <span class="va">object</span>, table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, est <span class="op">=</span> <span class="cn">NULL</span>, control <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -58,6 +58,16 @@
 <dd><p>The output table control object (like
 `tableControl()`)</p></dd>
 
+
+<dt id="arg-est">est<a class="anchor" aria-label="anchor" href="#arg-est"></a></dt>
+<dd><p>estimation method (all methods are shown by
+`nlmixr2AllEst()`). Methods can be added for other tools</p></dd>
+
+
+<dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
+<dd><p>The estimation control object.  These are expected
+to be different for each type of estimation method</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -70,6 +80,10 @@ covariate columns on the right and alphabetically sorted.</p>
 covariates.  Column order is standardized (rxode2 then nlmixr2 then
 alphabetically sorted covariates), and rxode2 and nlmixr2 column names are
 converted to lower case.</p>
+<p>Some estimation methods take their covariates from the data instead of from
+the model; <code>est="vae"</code> searches the data for covariates to select.  For
+those methods the covariate columns the search can pick from are kept as
+well, since dropping them would change the fit.</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>

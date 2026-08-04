@@ -137,7 +137,7 @@ Matthew L. Fidler
 #>  
 #>  
 #> ✔ done
-#> rxode2 5.1.3 using 2 threads (see ?getRxThreads)
+#> rxode2 5.1.6 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
@@ -295,7 +295,7 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8592
+#> → compress parHistData in nlmixr2 object, save 8800
 #> → compress phiM in nlmixr2 object, save 446912
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
