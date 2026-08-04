@@ -1,6 +1,6 @@
 # Changelog
 
-## nlmixr2save (development version)
+## nlmixr2save 0.2.0
 
 - [`nlmixrDataSimplify()`](../reference/nlmixrDataSimplify.md) gained
   `est` and `control` arguments and no longer drops the covariate

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2save</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -20,6 +20,7 @@
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/nlmixr2/nlmixr2save/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -28,11 +29,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-
+      <small>Source: <a href="https://github.com/nlmixr2/nlmixr2save/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="nlmixr2save-development-version">nlmixr2save (development version)<a class="anchor" aria-label="anchor" href="#nlmixr2save-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="nlmixr2save-020">nlmixr2save 0.2.0<a class="anchor" aria-label="anchor" href="#nlmixr2save-020"></a></h2>
 <ul><li><p><code><a href="../reference/nlmixrDataSimplify.html">nlmixrDataSimplify()</a></code> gained <code>est</code> and <code>control</code> arguments and no longer drops the covariate columns that <code>est="vae"</code> searches for. The VAE covariate search picks its covariates out of the data instead of out of the model, so the candidate columns (as identified by <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html" class="external-link">nlmixr2est::vaeCovariates()</a></code>, matched to the <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vaeControl.html" class="external-link">vaeControl()</a></code> search options) are now kept in the simplified data and included in the hash. When the installed <code>nlmixr2est</code> does not export <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html" class="external-link">vaeCovariates()</a></code> the search is skipped rather than erroring.</p></li>
 <li>
 <p>You can now export a fit <strong>without the original data</strong> so a fitted model can be shared when the subject-level data cannot:</p>

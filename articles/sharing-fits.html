@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2save</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +42,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/nlmixr2/nlmixr2save/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -57,7 +58,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Sharing a fit without the original data</h1>
             
       
-
+      <small class="dont-index">Source: <a href="https://github.com/nlmixr2/nlmixr2save/blob/main/vignettes/sharing-fits.Rmd" class="external-link"><code>vignettes/sharing-fits.Rmd</code></a></small>
       <div class="d-none name"><code>sharing-fits.Rmd</code></div>
     </div>
 
@@ -80,7 +81,7 @@ tables</strong> as well.</p>
 <code>data = FALSE</code>, the original dataset is left out of the
 zip:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">nlmixr2save</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2save/" class="external-link">nlmixr2save</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/saveFit.html">saveFit</a></span><span class="op">(</span><span class="va">fit</span>, data <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># writes fit.zip with no origData inside</span></span></code></pre></div>
 <p>To make that the default for a whole script or report, set the

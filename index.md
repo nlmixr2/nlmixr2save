@@ -256,7 +256,7 @@ fit2 := fit # The fit2.zip is created to save the fit
 ```
 
 Here are some annotated examples of the cache assignment operator in
-pratice:
+practice:
 
 ``` r
 

@@ -51,7 +51,9 @@ Matthew L. Fidler
 
 ``` r
 # \donttest{
-  if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
+  if (requireNamespace("nlmixr2est", quietly=TRUE) &&
+        requireNamespace("nlmixr2data", quietly=TRUE) &&
+        requireNamespace("withr")) {
     library(nlmixr2est)
     library(nlmixr2data)
     withr::with_tempdir({
@@ -189,9 +191,9 @@ Matthew L. Fidler
 #> ── Time (sec $time): ──
 #> 
 #>             setup optimize covariance preprocess postprocess table compress
-#> elapsed 0.1158874 0.190973  0.5367221      0.019       0.014 0.044        0
+#> elapsed 0.1105729 0.163263  0.5029025      0.019       0.014 0.041    0.001
 #>             other
-#> elapsed 0.1174174
+#> elapsed 0.1102616
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
