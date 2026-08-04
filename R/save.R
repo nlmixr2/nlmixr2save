@@ -166,7 +166,7 @@
 
 #' Tracked packages whose version/sha changed between save and now
 #' @param stored metadata recorded when the fit was saved (or `NULL`)
-#' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
+#' @param current metadata from `.nlmixr2saveMeta()` (defaults to now)
 #' @return character vector of package names (empty when nothing to report)
 #' @noRd
 #' @author Matthew L. Fidler
@@ -183,7 +183,7 @@
 #' metadata (fit saved by an older nlmixr2save), or the packages are not
 #' installed.
 #' @param stored metadata recorded when the fit was saved (or `NULL`)
-#' @param current metadata from [.nlmixr2saveMeta()] (defaults to now)
+#' @param current metadata from `.nlmixr2saveMeta()` (defaults to now)
 #' @return boolean
 #' @noRd
 #' @author Matthew L. Fidler
@@ -845,7 +845,7 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #' writes `<x>.zip` (bare internals) and it is then renamed to `<prefix><x>.zip`;
 #' loading renames it back to `<x>.zip`, `loadFit()`s it, and restores the
 #' prefixed name.  Both assume the working directory is already the cache
-#' directory (the callers wrap them in [.nlmixr2saveWithDir()] or set it).
+#' directory (the callers wrap them in `.nlmixr2saveWithDir()` or set it).
 #' @param value fit to save; `x` the bare variable/fit name; `data` whether the
 #'   original dataset is stored (passed through to [saveFit()])
 #' @return the fit (load), or `value` invisibly (save)
@@ -1041,7 +1041,7 @@ nlmixr2saveShare <- function(x, noFit=FALSE, file=NULL) {
 #' Save a `:=` value to disk by its result type (no hash check)
 #'
 #' A `nlmixr2` fit is saved as a portable `.zip` under its bare name, renamed to
-#' `<prefix><name>.zip` (see [.saveFitZipPlain()]); a value produced by a
+#' `<prefix><name>.zip` (see `.saveFitZipPlain()`); a value produced by a
 #' random/simulation function (`.saveFitEnv$random`, e.g. `rxSolve`/`vpcSim`) is
 #' saved as a seeded `<prefix><name>.rds`; anything else is saved as a plain
 #' `<prefix><name>.rds`.
