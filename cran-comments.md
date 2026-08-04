@@ -26,9 +26,15 @@ original subject-level data (`saveFit(data = FALSE)` and the new
 was produced with so a stale cached fit can be detected on load.  See NEWS.md
 for the full list.
 
+## Test environments
+
+* local Linux, R 4.6.1
+* GitHub Actions: ubuntu-latest (r-devel, release, oldrel-1),
+  macos-latest (release), windows-latest (release)
+
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes, on local Linux (R 4.6.1).
+0 errors | 0 warnings | 0 notes
 
 ## Released version's check results
 
