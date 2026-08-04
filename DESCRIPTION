@@ -13,6 +13,9 @@ Description: Provides tools to save 'nlmixr2' fitted models in a portable format
     C code from the 'rxode2' package (Wang, Hallow, and James 2015
     <doi:10.1002/psp4.12052>).
 License: MIT + file LICENSE
+URL: https://nlmixr2.github.io/nlmixr2save/,
+    https://github.com/nlmixr2/nlmixr2save/
+BugReports: https://github.com/nlmixr2/nlmixr2save/issues/
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
