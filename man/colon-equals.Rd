@@ -53,7 +53,9 @@ to check the arguments for a cache, so loading from cache is not possible.
 \examples{
 
 \donttest{
- if (requireNamespace("nlmixr2est", quietly=TRUE) && requireNamespace("nlmixr2data", quietly=TRUE) && requireNamespace("withr")) {
+ if (requireNamespace("nlmixr2est", quietly=TRUE) &&
+       requireNamespace("nlmixr2data", quietly=TRUE) &&
+       requireNamespace("withr")) {
    library(nlmixr2est)
   library(nlmixr2data)
   withr::with_tempdir({

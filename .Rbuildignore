@@ -7,3 +7,7 @@
 ^pkgdown$
 ^codecov\.yml$
 ^\.git$
+^cran-comments\.md$
+^CRAN-SUBMISSION$
+^\.Rhistory$
+^\.vexp$

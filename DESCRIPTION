@@ -1,6 +1,6 @@
 Package: nlmixr2save
 Title: Save 'nlmixr2' Fits in a Format Readable Outside 'nlmixr2'
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Matthew", "Fidler", email="matthew.fidler@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-8538-6691"))
