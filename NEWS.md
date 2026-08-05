@@ -1,5 +1,14 @@
 # nlmixr2save 0.2.0
 
+* `loadFit()` (and therefore `:=`) now restores the fit table's `ID` column as a
+  factor.  The table round-trips through a plain `.csv`, so `ID` came back as an
+  integer while a live fit carries a factor; anything joining the fit table to
+  something derived from the fit then hit a type mismatch, since
+  `nlme::augPred()` keeps its `id` a factor.  `ggPMX::pmx_nlmixr()` on a cached
+  fit failed outright with "Incompatible join types: x.ID (factor) and i.ID
+  (integer)".  The repair happens on load, so caches written by earlier versions
+  are fixed too.
+
 * `nlmixrDataSimplify()` gained `est` and `control` arguments and no longer
   drops the covariate columns that `est="vae"` searches for.  The VAE covariate
   search picks its covariates out of the data instead of out of the model, so

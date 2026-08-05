@@ -555,6 +555,19 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)
 
+      test_that("a restored fit keeps ID a factor", {
+        # the fit table round-trips through a plain .csv, so ID comes back as an
+        # integer unless it is put back.  Anything joining the fit table to
+        # something derived from the fit then hits a type mismatch --
+        # nlme::augPred() keeps `id` a factor, and ggPMX::pmx_nlmixr() dies in a
+        # data.table join on it.
+        expect_true(is.factor(fit2F$ID))
+        expect_equal(levels(fit2F$ID), levels(fitF$ID))
+        expect_equal(as.character(fit2F$ID), as.character(fitF$ID))
+        expect_true(is.factor(fit2S$ID))
+        expect_equal(levels(fit2S$ID), levels(fitS$ID))
+      })
+
       test_that("saveFit(data=FALSE) omits the original data", {
         suppressMessages(saveFit(fitF, "fitFnd", data=FALSE))
         expect_true(file.exists("fitFnd.zip"))

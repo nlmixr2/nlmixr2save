@@ -703,6 +703,53 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 }
 
 
+#' Put the `ID` column of a restored fit back to a factor
+#'
+#' The fit table is written as a plain `.csv`, so `read.csv()` brings `ID` back
+#' as an integer (or character) while a real fit carries a factor.  Anything that
+#' joins the fit table against something derived from the fit then hits a type
+#' mismatch -- `nlme::augPred()` keeps `id` a factor, so `ggPMX::pmx_nlmixr()`
+#' dies in a data.table join with "Incompatible join types: x.ID (factor) and
+#' i.ID (integer)".
+#'
+#' Done here rather than in the restore script written by [saveFit()] so that
+#' caches saved by earlier versions are repaired on load too.
+#'
+#' Levels come from `ranef`/`etaObf`, which the restore script has already put
+#' back as factors with the fit's own levels; failing that, from the order the
+#' IDs appear (the order nlmixr2est itself uses).
+#'
+#' @param fit restored object
+#' @return `fit`, with `ID` a factor when it is a fit table that has one
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveRestoreIdFactor <- function(fit) {
+  if (!inherits(fit, "nlmixr2FitData")) return(fit)
+  if (!is.data.frame(fit)) return(fit)
+  if (is.null(fit[["ID"]]) || is.factor(fit[["ID"]])) return(fit)
+  .env <- try(fit$env, silent=TRUE)
+  .levels <- NULL
+  if (is.environment(.env)) {
+    for (.n in c("ranef", "etaObf")) {
+      .df <- try(get(.n, envir=.env, inherits=FALSE), silent=TRUE)
+      if (is.data.frame(.df) && is.factor(.df$ID)) {
+        .levels <- levels(.df$ID)
+        break
+      }
+    }
+  }
+  if (is.null(.levels)) {
+    .levels <- unique(as.character(fit[["ID"]]))
+  }
+  ## `class<-` last: the class attribute of a fit carries the `.foceiEnv`
+  ## attribute that `$` dispatches through, and column assignment must not be
+  ## allowed to drop it.
+  .cls <- class(fit)
+  fit[["ID"]] <- factor(as.character(fit[["ID"]]), levels=.levels)
+  class(fit) <- .cls
+  fit
+}
+
 #' Load a fitted model object from a file
 #'
 #' @param file the base name of the files to load the fit from.
@@ -734,6 +781,7 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
     .minfo(paste0("loading fit from ", .r))
     source(.r, local=TRUE)
     ret <- get(file)
+    ret <- .nlmixr2saveRestoreIdFactor(ret)
     if (isTRUE(checkVersion)) {
       .nlmixr2saveWarnVersion(ret)
     }
