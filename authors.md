@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/nlmixr2/nlmixr2save/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/nlmixr2/nlmixr2save/blob/v0.2.0/DESCRIPTION)
 
 Fidler M (2026). *nlmixr2save: Save 'nlmixr2' Fits in a Format Readable
 Outside 'nlmixr2'*. R package version 0.2.0,

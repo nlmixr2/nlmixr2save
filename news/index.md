@@ -2,6 +2,8 @@
 
 ## nlmixr2save 0.2.0
 
+CRAN release: 2026-08-04
+
 - [`nlmixrDataSimplify()`](../reference/nlmixrDataSimplify.md) gained
   `est` and `control` arguments and no longer drops the covariate
   columns that `est="vae"` searches for. The VAE covariate search picks
