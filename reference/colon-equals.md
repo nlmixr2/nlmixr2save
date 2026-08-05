@@ -4,6 +4,12 @@ By default it is equivalent to the standard assignment operator `<-`,
 but it is a S3 generic so it can have other behaviors for specific
 classes.
 
+## Usage
+
+``` r
+`:=`(x, value)
+```
+
 ## Arguments
 
 - x:
@@ -297,7 +303,7 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8776
+#> → compress parHistData in nlmixr2 object, save 8800
 #> → compress phiM in nlmixr2 object, save 446912
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum

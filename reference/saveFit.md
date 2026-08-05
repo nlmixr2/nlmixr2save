@@ -185,40 +185,40 @@ Matthew L. Fidler
 #> ℹ removing unzipped fit files
 #> ── nlmixr² FOCEi (outer: bobyqa) ──
 #> 
-#>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8037 373.4034 393.583      -179.7017        2718.706        89.79537
+#>           OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
+#> FOCEi 116.8037 373.4035 393.5831      -179.7017         2730.79         89.2609
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>              setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.08937951 0.1551516  0.4510043      0.017       0.016 0.053    0.001
+#>             setup  optimize covariance preprocess postprocess table compress
+#> elapsed 0.1104169 0.1849333  0.5187931      0.018       0.013 0.041    0.001
 #>             other
-#> elapsed 0.1054646
+#> elapsed 0.1118567
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
 #>         Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka    0.464  0.196 42.1       1.59 (1.08, 2.33)     70.5       1.83 
-#> tcl     1.01 0.0748 7.39       2.75 (2.38, 3.19)     26.7       3.73 
-#> tv      3.46 0.0425 1.23       31.8 (29.3, 34.6)     13.9       10.3 
-#> add.sd 0.694 0.0915 13.2    0.694 (0.515, 0.873)                     
+#> tka    0.465  0.198 42.5       1.59 (1.08, 2.34)     70.4       1.80 
+#> tcl     1.01 0.0755 7.45       2.75 (2.37, 3.19)     26.7       3.77 
+#> tv      3.46 0.0429 1.24       31.8 (29.3, 34.6)     13.9       10.4 
+#> add.sd 0.694 0.0924 13.3    0.694 (0.513, 0.875)                     
 #>  
 #>   Covariance Type ($covMethod): r,s
 #>   Some strong fixed parameter correlations exist ($cor) :
 #>                 cor:tcl,tka              cor:tv,tka          cor:add.sd,tka 
-#>                  0.226                    0.409                 -0.0780   
+#>                  0.196                    0.400                 -0.0752   
 #>       cor:om.eta.ka,tka       cor:om.eta.cl,tka        cor:om.eta.v,tka 
-#>                  0.578                  -0.145                   -0.286   
+#>                  0.579                  -0.139                   -0.289   
 #>              cor:tv,tcl          cor:add.sd,tcl       cor:om.eta.ka,tcl 
-#>                  0.809                  -0.215                    0.134   
+#>                  0.805                  -0.219                    0.128   
 #>       cor:om.eta.cl,tcl        cor:om.eta.v,tcl           cor:add.sd,tv 
-#>                 -0.483                   0.338                  -0.352  
+#>                 -0.476                   0.355                  -0.352  
 #>        cor:om.eta.ka,tv        cor:om.eta.cl,tv         cor:om.eta.v,tv 
-#>                  0.111                  -0.0473                   0.0845   
+#>                  0.113                  -0.0451                   0.0892   
 #>    cor:om.eta.ka,add.sd    cor:om.eta.cl,add.sd     cor:om.eta.v,add.sd 
-#>                 -0.457                  -0.109                   -0.331  
+#>                 -0.457                  -0.110                   -0.331  
 #> cor:om.eta.cl,om.eta.ka  cor:om.eta.v,om.eta.ka  cor:om.eta.v,om.eta.cl 
-#>                 -0.197                   0.0561                  -0.0667   
+#>                 -0.198                   0.0573                  -0.0682   
 #>  
 #> 
 #>   No correlations in between subject variability (BSV) matrix
@@ -237,8 +237,8 @@ Matthew L. Fidler
 #>      ID  TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES
 #>   <int> <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>
 #> 1     1  0     0.74  0     0.74   1.07   0     0.74   1.07   0     0.74   1.07 
-#> 2     1  0.25  2.84  3.26 -0.423 -0.225  3.85 -1.01  -1.45   3.22 -0.379 -0.177
-#> 3     1  0.57  6.57  5.83  0.740  0.297  6.78 -0.215 -0.310  5.77  0.796  0.288
+#> 2     1  0.25  2.84  3.26 -0.423 -0.226  3.85 -1.01  -1.45   3.22 -0.379 -0.178
+#> 3     1  0.57  6.57  5.83  0.740  0.297  6.79 -0.215 -0.310  5.77  0.796  0.288
 #> # ℹ 129 more rows
 #> # ℹ 10 more variables: eta.ka <dbl>, eta.cl <dbl>, eta.v <dbl>, depot <dbl>,
 #> #   central <dbl>, ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <int>

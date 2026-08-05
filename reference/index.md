@@ -2,8 +2,8 @@
 
 ## All functions
 
-- [`:=`](colon-equals.md) : This assignment operator is meant to assign
-  or load a nlmixr2 fit (and other objects)
+- [`` `:=`() ``](colon-equals.md) : This assignment operator is meant to
+  assign or load a nlmixr2 fit (and other objects)
 
 - [`.assignRestore()`](dot-assignRestore.md) :
 
