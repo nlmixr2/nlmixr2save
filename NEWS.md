@@ -9,6 +9,16 @@
   (integer)".  The repair happens on load, so caches written by earlier versions
   are fixed too.
 
+* `saveFit()` now records the `parHistData$type` factor levels for fits that
+  store `parHistData` compressed (the nlmixr2est default).  It read the levels
+  straight out of the fit environment, where a compressed fit keeps a raw
+  vector rather than a data frame, so the levels were silently not recorded and
+  `loadFit()` fell back to a hardcoded level list.  nlmixr2est has since added
+  types that list predates ("Analytic Gradient (relaxed)" and friends), and
+  those came back as `NA`.  For caches saved before the levels were recorded,
+  `loadFit()` now appends any unrecognized type to the fallback list instead of
+  dropping it to `NA`.
+
 * `nlmixrDataSimplify()` gained `est` and `control` arguments and no longer
   drops the covariate columns that `est="vae"` searches for.  The VAE covariate
   search picks its covariates out of the data instead of out of the model, so

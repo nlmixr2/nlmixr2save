@@ -631,6 +631,22 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       fit2IS <- loadFit("fitIS")
       fitEquals(fitIS, fit2IS)
 
+      test_that("a compressed fit still records its parHistData type levels", {
+        # nlmixr2est stores parHistData compressed (a raw vector in the env)
+        # unless compress=FALSE, so saveFit() has to decompress before it can
+        # read the type levels off it.  Without that it fell through to the
+        # loader's hardcoded level list, which nlmixr2est has since outgrown
+        # ("Analytic Gradient (relaxed)" and friends), and those levels came
+        # back as NA.
+        expect_true(is.raw(get("parHistData", envir=fitIS$env)))
+        expect_equal(levels(fit2IS$parHistData$type),
+                     levels(fitIS$parHistData$type))
+        expect_false(anyNA(fit2IS$parHistData$type))
+        expect_equal(levels(fit2IF$parHistData$type),
+                     levels(fitIF$parHistData$type))
+        expect_false(anyNA(fit2IF$parHistData$type))
+      })
+
       one.cmt.nlm <- function() {
         ini({
           tka <- 0.45 # Log Ka

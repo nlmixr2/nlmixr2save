@@ -538,6 +538,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .parHistTypeLevel <- NULL
   if (exists("parHistData", envir=fit$env, inherits=FALSE)) {
     .phd <- get("parHistData", envir=fit$env)
+    if (is.raw(.phd)) {
+      # nlmixr2est stores parHistData compressed; `$` decompresses it
+      .phd <- fit$parHistData
+    }
     if (is.data.frame(.phd) && is.factor(.phd$type)) {
       .parHistTypeLevel <- levels(.phd$type)
     }
@@ -648,7 +652,12 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
                     # use the levels recorded from the fit; fall back to the
                     # known level set for fits saved before they were recorded
                     "  .phLevels <- .parHistType.level\n",
-                    "  if (is.null(.phLevels)) .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    "  if (is.null(.phLevels)) {\n",
+                    "    .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    # a fit saved before the levels were recorded can still use a
+                    # type this list predates; append it rather than drop it to NA
+                    "    .phLevels <- c(.phLevels, setdiff(unique(as.character(env$parHistData$type)), .phLevels))\n",
+                    "  }\n",
                     "  env$parHistData$type <- factor(env$parHistData$type, levels=.phLevels)\n",
                     "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
                     "}\n",
