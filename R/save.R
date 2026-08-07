@@ -10,20 +10,27 @@
 
 #' The unzipped files belonging to one saved fit
 #'
-#' Anchored at the start of the base name: unanchored, a cache named `fit`
-#' also matches `myfit-env.R`, and the caller then zips another cache's files
-#' into this one and unlinks them.  That is reachable whenever unzipped files
-#' are left lying around, which `saveFit(zip=FALSE)` does by design.
+#' That is `<file>-*` plus `<file>.csv` and `<file>.R`.
+#'
+#' Matched literally rather than by regexp.  A base name is a variable name or
+#' a `nlmixr2save.prefix`, so it can hold regexp metacharacters -- `my.fit` is
+#' an ordinary R name, and as a pattern its `.` also matches `my_fit`'s files.
+#' The caller zips what it gets back and then unlinks it, so matching one
+#' character too many silently destroys another cache; matching one too few
+#' leaves a cache that cannot be loaded.
 #'
 #' @param file base name of the fit, possibly with a directory
 #' @return the matching paths, relative to the working directory
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveFitFiles <- function(file) {
-  .files <- list.files(dirname(file),
-                       pattern=paste0("^", basename(file), "(-|[.]csv$|[.]R$)"),
-                       full.names=TRUE)
-  gsub("^[.]/", "", .files)
+  .base <- basename(file)
+  .all <- list.files(dirname(file))
+  .keep <- startsWith(.all, .base) &
+    (substring(.all, nchar(.base) + 1L, nchar(.base) + 1L) == "-" |
+       .all == paste0(.base, ".csv") |
+       .all == paste0(.base, ".R"))
+  gsub("^[.]/", "", file.path(dirname(file), .all[.keep]))
 }
 
 .minfo <- function (text, ..., .envir = parent.frame()) {

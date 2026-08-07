@@ -30,7 +30,10 @@
   unanchored pattern, so a cache named `fit` also matched `myfit-env.R` --
   zipping another cache's files into its own archive and then deleting them
   from disk.  This is reachable whenever unzipped files are lying around, which
-  `saveFit(zip=FALSE)` leaves by design.
+  `saveFit(zip=FALSE)` leaves by design.  The names are now matched literally
+  rather than as a regexp, so a base name holding a metacharacter (`my.fit` is
+  an ordinary R name, and as a pattern its `.` also matched `my_fit`) is
+  matched exactly.
 
 * `saveFit(fit, zip=FALSE)` now actually leaves the fit unzipped for a fit table
   (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the

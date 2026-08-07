@@ -597,10 +597,19 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(as.character(.old$ID), as.character(fitS$ID))
 
         # the unrecognized type is appended to the fallback list rather than
-        # dropped to NA
-        expect_true(is.factor(.old$parHistData$type))
+        # dropped to NA.  Source the restore script directly rather than going
+        # through loadFit(): loadFit() also repairs an NA type from the csv,
+        # which would mask a broken script.
+        .se <- new.env()
+        source("fitOld.R", local=.se)
+        .script <- get("fitOld", envir=.se)
+        expect_true(is.factor(.script$parHistData$type))
+        expect_false(anyNA(.script$parHistData$type))
+        expect_true("Future Gradient" %in% levels(.script$parHistData$type))
+        expect_equal(as.character(.script$parHistData$type[1]), "Future Gradient")
+
+        # and the same holds through loadFit()
         expect_false(anyNA(.old$parHistData$type))
-        expect_true("Future Gradient" %in% levels(.old$parHistData$type))
         expect_equal(as.character(.old$parHistData$type[1]), "Future Gradient")
       })
 
