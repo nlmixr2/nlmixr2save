@@ -25,6 +25,13 @@
   `-parHistData.csv` in the cache and appends whatever the script was missing,
   so existing caches are repaired in place.
 
+* Saving or loading a fit no longer disturbs another cache whose base name it
+  is a suffix of.  The list of files belonging to a fit was matched with an
+  unanchored pattern, so a cache named `fit` also matched `myfit-env.R` --
+  zipping another cache's files into its own archive and then deleting them
+  from disk.  This is reachable whenever unzipped files are lying around, which
+  `saveFit(zip=FALSE)` leaves by design.
+
 * `saveFit(fit, zip=FALSE)` now actually leaves the fit unzipped for a fit table
   (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the
   core method with a hardcoded `zip=TRUE`, so the argument was silently ignored

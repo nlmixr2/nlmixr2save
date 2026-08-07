@@ -604,6 +604,27 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(as.character(.old$parHistData$type[1]), "Future Gradient")
       })
 
+      test_that("saving one fit leaves another cache's files alone", {
+        # the file list was matched with an unanchored pattern, so a cache
+        # named "fit" also picked up "myfit-env.R" -- zipping another cache's
+        # files into its own archive and then unlinking them.  Reachable
+        # whenever unzipped files are lying around, which zip=FALSE leaves by
+        # design.
+        suppressMessages(saveFit(fitS, "myClobber", zip=FALSE))
+        .before <- sort(list.files(pattern="^myClobber"))
+        expect_true(length(.before) > 1)
+
+        suppressMessages(saveFit(fitS, "Clobber"))
+        expect_true(file.exists("Clobber.zip"))
+        # the other cache is untouched, and was not swept into the new zip
+        expect_equal(sort(list.files(pattern="^myClobber")), .before)
+        expect_false(any(grepl("^myClobber", zip::zip_list("Clobber.zip")$filename)))
+
+        # and loading does not delete it either
+        expect_error(suppressMessages(loadFit("Clobber", checkVersion=FALSE)), NA)
+        expect_equal(sort(list.files(pattern="^myClobber")), .before)
+      })
+
       test_that("restored ID levels come from ranef, not the row order", {
         # theo_sd's IDs appear in level order, so the two candidate sources
         # agree and the round-trip test above cannot tell them apart.  Reverse

@@ -8,6 +8,24 @@
 .saveFitEnv$fun <- ""
 .saveFitEnv$restore <- FALSE
 
+#' The unzipped files belonging to one saved fit
+#'
+#' Anchored at the start of the base name: unanchored, a cache named `fit`
+#' also matches `myfit-env.R`, and the caller then zips another cache's files
+#' into this one and unlinks them.  That is reachable whenever unzipped files
+#' are left lying around, which `saveFit(zip=FALSE)` does by design.
+#'
+#' @param file base name of the fit, possibly with a directory
+#' @return the matching paths, relative to the working directory
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveFitFiles <- function(file) {
+  .files <- list.files(dirname(file),
+                       pattern=paste0("^", basename(file), "(-|[.]csv$|[.]R$)"),
+                       full.names=TRUE)
+  gsub("^[.]/", "", .files)
+}
+
 .minfo <- function (text, ..., .envir = parent.frame()) {
   .opt <- getOption("nlmixr2save.quiet", FALSE)
   if (checkmate::testLogical(.opt,
@@ -556,9 +574,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
   writeLines(.str, con = paste0(file,"-env.R"))
-  .files <- c(list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
-                         full.names=TRUE))
-  .files <- gsub("^[.]/", "", .files)
+  .files <- .nlmixr2saveFitFiles(file)
   # nlmixr2est <= 6.0 stores parFixedDf with named "Estimate"/"SE" columns;
   # the $parFixed refactor (nlmixr2est#645) stores them unnamed.  Record
   # which structure this fit uses so the restore script rebuilds it exactly.
@@ -684,9 +700,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
              con = paste0(file,".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
-    .files <- c(list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
-                           full.names=TRUE))
-    .files <- gsub("^[.]/", "", .files)
+    .files <- .nlmixr2saveFitFiles(file)
     zip::zip(zipfile = paste0(file, ".zip"),
              files = .files)
     .minfo("removing unzipped fit files")
@@ -747,14 +761,19 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
       }
     }
   }
+  .id <- as.character(fit[["ID"]])
   if (is.null(.levels)) {
-    .levels <- unique(as.character(fit[["ID"]]))
+    .levels <- unique(.id)
+  } else {
+    # ranef should cover every subject in the table, but never turn an ID the
+    # table does have into NA on the way to fixing its type
+    .levels <- c(.levels, setdiff(unique(.id), .levels))
   }
   ## `class<-` last: the class attribute of a fit carries the `.foceiEnv`
   ## attribute that `$` dispatches through, and column assignment must not be
   ## allowed to drop it.
   .cls <- class(fit)
-  fit[["ID"]] <- factor(as.character(fit[["ID"]]), levels=.levels)
+  fit[["ID"]] <- factor(.id, levels=.levels)
   class(fit) <- .cls
   fit
 }
@@ -790,7 +809,10 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   }
   .csv <- paste0(file, "-parHistData.csv")
   if (!file.exists(.csv)) return(invisible(fit))
-  .raw <- try(utils::read.csv(.csv, check.names=FALSE), silent=TRUE)
+  # colClasses="character": type is a level name, and letting read.csv infer
+  # would turn a level like "01" into 1 or "T" into TRUE on the way back
+  .raw <- try(utils::read.csv(.csv, check.names=FALSE, colClasses="character"),
+              silent=TRUE)
   if (!is.data.frame(.raw) || is.null(.raw$type) || nrow(.raw) != nrow(.phd)) {
     return(invisible(fit))
   }
@@ -844,9 +866,7 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
       .nlmixr2saveWarnVersion(ret)
     }
     if (.didUnzip) {
-      .files <- list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
-                           full.names=TRUE)
-      .files <- gsub("^[.]/", "", .files)
+      .files <- .nlmixr2saveFitFiles(file)
       .minfo("removing unzipped fit files")
       lapply(.files, unlink)
     }
