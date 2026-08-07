@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/RcppCommon.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// RcppCommon.h: Rcpp R/C++ interface class library -- common include and defines statements
         -:    3://
@@ -119,13 +119,13 @@
         -:  115:    // end deprecated interface not using precious list
         -:  116:
         -:  117:    // new preferred interface using token-based precious list
-     3720:  118:    inline SEXP Rcpp_PreciousPreserve(SEXP object) {
-     3720:  119:        return Rcpp_precious_preserve(object);
+     4464:  118:    inline SEXP Rcpp_PreciousPreserve(SEXP object) {
+     4464:  119:        return Rcpp_precious_preserve(object);
         -:  120:    }
         -:  121:
-     6380:  122:    inline void Rcpp_PreciousRelease(SEXP token) {
-     6380:  123:        Rcpp_precious_remove(token);
-     6380:  124:    }
+     7656:  122:    inline void Rcpp_PreciousRelease(SEXP token) {
+     7656:  123:        Rcpp_precious_remove(token);
+     7656:  124:    }
         -:  125:
         -:  126:}
         -:  127:

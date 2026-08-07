@@ -1,7 +1,7 @@
         -:    0:Source:/usr/include/c++/14/bits/new_allocator.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Allocator that wraps operator new -*- C++ -*-
         -:    2:
         -:    3:// Copyright (C) 2001-2024 Free Software Foundation, Inc.
@@ -105,13 +105,13 @@
         -:  101:#endif
         -:  102:
         -:  103:#if __cplusplus <= 201703L
-    2255*:  104:      ~__new_allocator() _GLIBCXX_USE_NOEXCEPT { }
+    2706*:  104:      ~__new_allocator() _GLIBCXX_USE_NOEXCEPT { }
 ------------------
 _ZNSt15__new_allocatorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEED2Ev:
     #####:  104:      ~__new_allocator() _GLIBCXX_USE_NOEXCEPT { }
 ------------------
 _ZNSt15__new_allocatorIcED2Ev:
-     2255:  104:      ~__new_allocator() _GLIBCXX_USE_NOEXCEPT { }
+     2706:  104:      ~__new_allocator() _GLIBCXX_USE_NOEXCEPT { }
 ------------------
         -:  105:
         -:  106:      pointer

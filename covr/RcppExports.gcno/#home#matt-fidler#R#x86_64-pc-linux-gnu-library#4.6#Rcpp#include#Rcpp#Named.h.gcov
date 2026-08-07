@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/Named.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; tab-width: 8 -*-
         -:    2://
         -:    3:// Named.h: Rcpp R/C++ interface class library -- named object
@@ -69,8 +69,8 @@ _ZN4Rcpp8ArgumentaSIA1_cEENS_6traits12named_objectIT_EERKS5_:
         -:   49:
         -:   50:class NamedPlaceHolder {
         -:   51:public:
-       30:   52:	NamedPlaceHolder(){}
-       30:   53:	~NamedPlaceHolder(){}
+       36:   52:	NamedPlaceHolder(){}
+       36:   53:	~NamedPlaceHolder(){}
     #####:   54:	Argument operator[]( const std::string& arg) const {
     #####:   55:		return Argument( arg ) ;
         -:   56:	}

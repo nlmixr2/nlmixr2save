@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/internal/wrap.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
         -:    2:/* :tabSize=4:indentSize=4:noTabs=false:folding=explicit:collapseFolds=1: */
         -:    3://
@@ -507,11 +507,11 @@
         -:  503:         * into a SEXP
         -:  504:         */
         -:  505:	template <typename T>
-    1195*:  506:        inline SEXP wrap_dispatch_unknown(const T& object, ::Rcpp::traits::true_type) {
+    1434*:  506:        inline SEXP wrap_dispatch_unknown(const T& object, ::Rcpp::traits::true_type) {
         -:  507:            RCPP_DEBUG_1("wrap_dispatch_unknown<%s>(., false )", DEMANGLE(T))
         -:  508:            // here we know (or assume) that T is convertible to SEXP
-    1195*:  509:            SEXP x = object;
-    1195*:  510:            return x;
+    1434*:  509:            SEXP x = object;
+    1434*:  510:            return x;
         -:  511:        }
 ------------------
 _ZN4Rcpp8internal21wrap_dispatch_unknownINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6traits17integral_constantIbLb1EEE:
@@ -523,11 +523,11 @@ _ZN4Rcpp8internal21wrap_dispatch_unknownINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6trai
         -:  511:        }
 ------------------
 _ZN4Rcpp8internal21wrap_dispatch_unknownINS_6VectorILi14ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits17integral_constantIbLb1EEE:
-     1060:  506:        inline SEXP wrap_dispatch_unknown(const T& object, ::Rcpp::traits::true_type) {
+     1272:  506:        inline SEXP wrap_dispatch_unknown(const T& object, ::Rcpp::traits::true_type) {
         -:  507:            RCPP_DEBUG_1("wrap_dispatch_unknown<%s>(., false )", DEMANGLE(T))
         -:  508:            // here we know (or assume) that T is convertible to SEXP
-     1060:  509:            SEXP x = object;
-     1060:  510:            return x;
+     1272:  509:            SEXP x = object;
+     1272:  510:            return x;
         -:  511:        }
 ------------------
 _ZN4Rcpp8internal21wrap_dispatch_unknownIP7SEXPRECEES3_RKT_NS_6traits17integral_constantIbLb1EEE:
@@ -539,11 +539,11 @@ _ZN4Rcpp8internal21wrap_dispatch_unknownIP7SEXPRECEES3_RKT_NS_6traits17integral_
         -:  511:        }
 ------------------
 _ZN4Rcpp8internal21wrap_dispatch_unknownINS_6VectorILi19ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits17integral_constantIbLb1EEE:
-      135:  506:        inline SEXP wrap_dispatch_unknown(const T& object, ::Rcpp::traits::true_type) {
+      162:  506:        inline SEXP wrap_dispatch_unknown(const T& object, ::Rcpp::traits::true_type) {
         -:  507:            RCPP_DEBUG_1("wrap_dispatch_unknown<%s>(., false )", DEMANGLE(T))
         -:  508:            // here we know (or assume) that T is convertible to SEXP
-      135:  509:            SEXP x = object;
-      135:  510:            return x;
+      162:  509:            SEXP x = object;
+      162:  510:            return x;
         -:  511:        }
 ------------------
         -:  512:
@@ -802,9 +802,9 @@ _ZN4Rcpp8internal21wrap_dispatch_unknownINS_6VectorILi19ENS_15PreserveStorageEEE
         -:  765:        }
         -:  766:
         -:  767:	template <typename T>
-    1195*:  768:        inline SEXP wrap_dispatch_eigen(const T& object, ::Rcpp::traits::false_type) {
+    1434*:  768:        inline SEXP wrap_dispatch_eigen(const T& object, ::Rcpp::traits::false_type) {
         -:  769:            RCPP_DEBUG_1("wrap_dispatch_eigen<%s>(., false )", DEMANGLE(T))
-    1195*:  770:            return wrap_dispatch_unknown(object, typename ::Rcpp::traits::is_convertible<T,SEXP>::type());
+    1434*:  770:            return wrap_dispatch_unknown(object, typename ::Rcpp::traits::is_convertible<T,SEXP>::type());
         -:  771:        }
 ------------------
 _ZN4Rcpp8internal19wrap_dispatch_eigenINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6traits17integral_constantIbLb0EEE:
@@ -814,9 +814,9 @@ _ZN4Rcpp8internal19wrap_dispatch_eigenINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6traits
         -:  771:        }
 ------------------
 _ZN4Rcpp8internal19wrap_dispatch_eigenINS_6VectorILi14ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits17integral_constantIbLb0EEE:
-     1060:  768:        inline SEXP wrap_dispatch_eigen(const T& object, ::Rcpp::traits::false_type) {
+     1272:  768:        inline SEXP wrap_dispatch_eigen(const T& object, ::Rcpp::traits::false_type) {
         -:  769:            RCPP_DEBUG_1("wrap_dispatch_eigen<%s>(., false )", DEMANGLE(T))
-     1060:  770:            return wrap_dispatch_unknown(object, typename ::Rcpp::traits::is_convertible<T,SEXP>::type());
+     1272:  770:            return wrap_dispatch_unknown(object, typename ::Rcpp::traits::is_convertible<T,SEXP>::type());
         -:  771:        }
 ------------------
 _ZN4Rcpp8internal19wrap_dispatch_eigenIP7SEXPRECEES3_RKT_NS_6traits17integral_constantIbLb0EEE:
@@ -826,9 +826,9 @@ _ZN4Rcpp8internal19wrap_dispatch_eigenIP7SEXPRECEES3_RKT_NS_6traits17integral_co
         -:  771:        }
 ------------------
 _ZN4Rcpp8internal19wrap_dispatch_eigenINS_6VectorILi19ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits17integral_constantIbLb0EEE:
-      135:  768:        inline SEXP wrap_dispatch_eigen(const T& object, ::Rcpp::traits::false_type) {
+      162:  768:        inline SEXP wrap_dispatch_eigen(const T& object, ::Rcpp::traits::false_type) {
         -:  769:            RCPP_DEBUG_1("wrap_dispatch_eigen<%s>(., false )", DEMANGLE(T))
-      135:  770:            return wrap_dispatch_unknown(object, typename ::Rcpp::traits::is_convertible<T,SEXP>::type());
+      162:  770:            return wrap_dispatch_unknown(object, typename ::Rcpp::traits::is_convertible<T,SEXP>::type());
         -:  771:        }
 ------------------
         -:  772:
@@ -844,9 +844,9 @@ _ZN4Rcpp8internal19wrap_dispatch_eigenINS_6VectorILi19ENS_15PreserveStorageEEEEE
         -:  782:         * The next step is to try implicit conversion to SEXP
         -:  783:         */
         -:  784:    	template <typename T>
-    1195*:  785:        inline SEXP wrap_dispatch_unknown_importable(const T& object, ::Rcpp::traits::false_type) {
+    1434*:  785:        inline SEXP wrap_dispatch_unknown_importable(const T& object, ::Rcpp::traits::false_type) {
         -:  786:            RCPP_DEBUG_1("wrap_dispatch_unknown_importable<%s>(., false )", DEMANGLE(T))
-    1195*:  787:            return wrap_dispatch_eigen(object, typename traits::is_eigen_base<T>::type());
+    1434*:  787:            return wrap_dispatch_eigen(object, typename traits::is_eigen_base<T>::type());
         -:  788:        }
 ------------------
 _ZN4Rcpp8internal32wrap_dispatch_unknown_importableINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6traits17integral_constantIbLb0EEE:
@@ -856,9 +856,9 @@ _ZN4Rcpp8internal32wrap_dispatch_unknown_importableINS_6ShieldIP7SEXPRECEEEES4_R
         -:  788:        }
 ------------------
 _ZN4Rcpp8internal32wrap_dispatch_unknown_importableINS_6VectorILi14ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits17integral_constantIbLb0EEE:
-     1060:  785:        inline SEXP wrap_dispatch_unknown_importable(const T& object, ::Rcpp::traits::false_type) {
+     1272:  785:        inline SEXP wrap_dispatch_unknown_importable(const T& object, ::Rcpp::traits::false_type) {
         -:  786:            RCPP_DEBUG_1("wrap_dispatch_unknown_importable<%s>(., false )", DEMANGLE(T))
-     1060:  787:            return wrap_dispatch_eigen(object, typename traits::is_eigen_base<T>::type());
+     1272:  787:            return wrap_dispatch_eigen(object, typename traits::is_eigen_base<T>::type());
         -:  788:        }
 ------------------
 _ZN4Rcpp8internal32wrap_dispatch_unknown_importableIP7SEXPRECEES3_RKT_NS_6traits17integral_constantIbLb0EEE:
@@ -868,9 +868,9 @@ _ZN4Rcpp8internal32wrap_dispatch_unknown_importableIP7SEXPRECEES3_RKT_NS_6traits
         -:  788:        }
 ------------------
 _ZN4Rcpp8internal32wrap_dispatch_unknown_importableINS_6VectorILi19ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits17integral_constantIbLb0EEE:
-      135:  785:        inline SEXP wrap_dispatch_unknown_importable(const T& object, ::Rcpp::traits::false_type) {
+      162:  785:        inline SEXP wrap_dispatch_unknown_importable(const T& object, ::Rcpp::traits::false_type) {
         -:  786:            RCPP_DEBUG_1("wrap_dispatch_unknown_importable<%s>(., false )", DEMANGLE(T))
-      135:  787:            return wrap_dispatch_eigen(object, typename traits::is_eigen_base<T>::type());
+      162:  787:            return wrap_dispatch_eigen(object, typename traits::is_eigen_base<T>::type());
         -:  788:        }
 ------------------
         -:  789:
@@ -889,9 +889,9 @@ _ZN4Rcpp8internal32wrap_dispatch_unknown_importableINS_6VectorILi19ENS_15Preserv
         -:  802:         * This tries to identify if the object conforms to the Importer class
         -:  803:         */
         -:  804:	template <typename T>
-    1195*:  805:        inline SEXP wrap_dispatch(const T& object, ::Rcpp::traits::wrap_type_unknown_tag) {
+    1434*:  805:        inline SEXP wrap_dispatch(const T& object, ::Rcpp::traits::wrap_type_unknown_tag) {
         -:  806:	    RCPP_DEBUG_1("wrap_dispatch<%s>(., wrap_type_unknown_tag)", DEMANGLE(T))
-    1195*:  807:            return wrap_dispatch_unknown_importable(object, typename ::Rcpp::traits::is_importer<T>::type());
+    1434*:  807:            return wrap_dispatch_unknown_importable(object, typename ::Rcpp::traits::is_importer<T>::type());
         -:  808:        }
 ------------------
 _ZN4Rcpp8internal13wrap_dispatchINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6traits21wrap_type_unknown_tagE:
@@ -901,9 +901,9 @@ _ZN4Rcpp8internal13wrap_dispatchINS_6ShieldIP7SEXPRECEEEES4_RKT_NS_6traits21wrap
         -:  808:        }
 ------------------
 _ZN4Rcpp8internal13wrap_dispatchINS_6VectorILi14ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits21wrap_type_unknown_tagE:
-     1060:  805:        inline SEXP wrap_dispatch(const T& object, ::Rcpp::traits::wrap_type_unknown_tag) {
+     1272:  805:        inline SEXP wrap_dispatch(const T& object, ::Rcpp::traits::wrap_type_unknown_tag) {
         -:  806:	    RCPP_DEBUG_1("wrap_dispatch<%s>(., wrap_type_unknown_tag)", DEMANGLE(T))
-     1060:  807:            return wrap_dispatch_unknown_importable(object, typename ::Rcpp::traits::is_importer<T>::type());
+     1272:  807:            return wrap_dispatch_unknown_importable(object, typename ::Rcpp::traits::is_importer<T>::type());
         -:  808:        }
 ------------------
 _ZN4Rcpp8internal13wrap_dispatchIP7SEXPRECEES3_RKT_NS_6traits21wrap_type_unknown_tagE:
@@ -913,9 +913,9 @@ _ZN4Rcpp8internal13wrap_dispatchIP7SEXPRECEES3_RKT_NS_6traits21wrap_type_unknown
         -:  808:        }
 ------------------
 _ZN4Rcpp8internal13wrap_dispatchINS_6VectorILi19ENS_15PreserveStorageEEEEEP7SEXPRECRKT_NS_6traits21wrap_type_unknown_tagE:
-      135:  805:        inline SEXP wrap_dispatch(const T& object, ::Rcpp::traits::wrap_type_unknown_tag) {
+      162:  805:        inline SEXP wrap_dispatch(const T& object, ::Rcpp::traits::wrap_type_unknown_tag) {
         -:  806:	    RCPP_DEBUG_1("wrap_dispatch<%s>(., wrap_type_unknown_tag)", DEMANGLE(T))
-      135:  807:            return wrap_dispatch_unknown_importable(object, typename ::Rcpp::traits::is_importer<T>::type());
+      162:  807:            return wrap_dispatch_unknown_importable(object, typename ::Rcpp::traits::is_importer<T>::type());
         -:  808:        }
 ------------------
         -:  809:	// }}}

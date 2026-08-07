@@ -1,7 +1,7 @@
         -:    0:Source:/usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Predefined symbols and macros -*- C++ -*-
         -:    2:
         -:    3:// Copyright (C) 1997-2024 Free Software Foundation, Inc.
@@ -551,7 +551,7 @@
         -:  547:    if consteval { return true; } else { return false; }
         -:  548:#elif __cplusplus >= 201103L && __has_builtin(__builtin_is_constant_evaluated)
         -:  549:# define _GLIBCXX_HAVE_IS_CONSTANT_EVALUATED 1
-     2255:  550:    return __builtin_is_constant_evaluated();
+     2706:  550:    return __builtin_is_constant_evaluated();
         -:  551:#else
         -:  552:    return false;
         -:  553:#endif

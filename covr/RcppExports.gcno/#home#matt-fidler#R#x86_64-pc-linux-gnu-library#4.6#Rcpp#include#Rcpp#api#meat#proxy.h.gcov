@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/api/meat/proxy.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
         -:    2://
         -:    3:// proxy.h: Rcpp R/C++ interface class library -- proxy meat

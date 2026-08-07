@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/internal/caster.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// caster.h: Rcpp R/C++ interface class library --
         -:    3://
@@ -28,8 +28,8 @@
         -:   24:namespace Rcpp{
         -:   25:namespace internal{
         -:   26:
-      135:   27:template <typename FROM, typename TO> TO caster(FROM from){ // #nocov start
-      135:   28:	return static_cast<TO>(from) ;
+      162:   27:template <typename FROM, typename TO> TO caster(FROM from){ // #nocov start
+      162:   28:	return static_cast<TO>(from) ;
         -:   29:} 														    // #nocov end
         -:   30:
         -:   31:template <typename T>

@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/converter.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; tab-width: 8 -*-
         -:    2://
         -:    3:// converter.h: Rcpp R/C++ interface class library -- converters

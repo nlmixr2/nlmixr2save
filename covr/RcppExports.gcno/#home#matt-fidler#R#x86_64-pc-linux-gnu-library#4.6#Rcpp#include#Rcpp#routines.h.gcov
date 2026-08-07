@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/routines.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// routines.h: Rcpp R/C++ interface class library -- callable function setup
         -:    3://
@@ -92,16 +92,16 @@
         -:   88:    }
         -:   89:
         -:   90:    namespace internal{
-      135:   91:        inline attribute_hidden unsigned long enterRNGScope(){
+      162:   91:        inline attribute_hidden unsigned long enterRNGScope(){
         -:   92:            typedef unsigned long (*Fun)(void);
-      135:   93:            static Fun fun = GET_CALLABLE("enterRNGScope");
-      135:   94:            return fun();
+      162:   93:            static Fun fun = GET_CALLABLE("enterRNGScope");
+      162:   94:            return fun();
         -:   95:        }
         -:   96:
-      135:   97:        inline attribute_hidden unsigned long exitRNGScope(){
+      162:   97:        inline attribute_hidden unsigned long exitRNGScope(){
         -:   98:            typedef unsigned long (*Fun)(void);
-      135:   99:            static Fun fun = GET_CALLABLE("exitRNGScope");
-      135:  100:            return fun();
+      162:   99:            static Fun fun = GET_CALLABLE("exitRNGScope");
+      162:  100:            return fun();
         -:  101:        }
         -:  102:
         -:  103:        inline attribute_hidden unsigned long beginSuspendRNGSynchronization(){
@@ -153,16 +153,16 @@
         -:  149:        static Fun fun = GET_CALLABLE("Rcpp_precious_teardown");
         -:  150:        fun();
         -:  151:    }
-     3720:  152:    inline attribute_hidden SEXP Rcpp_precious_preserve(SEXP object) {
+     4464:  152:    inline attribute_hidden SEXP Rcpp_precious_preserve(SEXP object) {
         -:  153:        typedef SEXP (*Fun)(SEXP);
-     3720:  154:        static Fun fun = GET_CALLABLE("Rcpp_precious_preserve");
-     3720:  155:        return fun(object);
+     4464:  154:        static Fun fun = GET_CALLABLE("Rcpp_precious_preserve");
+     4464:  155:        return fun(object);
         -:  156:    }
-     6380:  157:    inline attribute_hidden void Rcpp_precious_remove(SEXP token) {
+     7656:  157:    inline attribute_hidden void Rcpp_precious_remove(SEXP token) {
         -:  158:        typedef void (*Fun)(SEXP);
-     6380:  159:        static Fun fun = GET_CALLABLE("Rcpp_precious_remove");
-     6380:  160:        fun(token);
-     6380:  161:    }
+     7656:  159:        static Fun fun = GET_CALLABLE("Rcpp_precious_remove");
+     7656:  160:        fun(token);
+     7656:  161:    }
         -:  162:
         -:  163:    inline attribute_hidden Rostream<true>&  Rcpp_cout_get() {
         -:  164:        typedef Rostream<true>& (*Fun)();

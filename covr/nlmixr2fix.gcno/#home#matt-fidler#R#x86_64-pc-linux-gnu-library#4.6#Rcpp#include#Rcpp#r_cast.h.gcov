@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/r_cast.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// rcast.h: Rcpp R/C++ interface class library -- cast from one SEXP type to another
         -:    3://
@@ -59,15 +59,15 @@
         -:   55:        }
         -:   56:
         -:   57:        template <int RTYPE>
-       15:   58:        SEXP basic_cast( SEXP x) {				// #nocov start
-      15*:   59:            if( TYPEOF(x) == RTYPE ) return x;
-       15:   60:            switch( TYPEOF(x) ){
-       15:   61:            case REALSXP:
+       18:   58:        SEXP basic_cast( SEXP x) {				// #nocov start
+      18*:   59:            if( TYPEOF(x) == RTYPE ) return x;
+       18:   60:            switch( TYPEOF(x) ){
+       18:   61:            case REALSXP:
         -:   62:            case RAWSXP:
         -:   63:            case LGLSXP:
         -:   64:            case CPLXSXP:
         -:   65:            case INTSXP:
-       15:   66:                return Rf_coerceVector(x, RTYPE);
+       18:   66:                return Rf_coerceVector(x, RTYPE);
     #####:   67:            default:
     #####:   68:                const char* fmt = "Not compatible with requested type: "
         -:   69:                                  "[type=%s; target=%s].";
@@ -90,8 +90,8 @@
         -:   86:            return basic_cast<INTSXP>(x);
         -:   87:        }
         -:   88:        template<>
-       15:   89:        inline SEXP r_true_cast<REALSXP>(SEXP x){		// #nocov
-       15:   90:            return basic_cast<REALSXP>(x);			// #nocov
+       18:   89:        inline SEXP r_true_cast<REALSXP>(SEXP x){		// #nocov
+       18:   90:            return basic_cast<REALSXP>(x);			// #nocov
         -:   91:        }
         -:   92:        template<>
         -:   93:        inline SEXP r_true_cast<RAWSXP>(SEXP x){
@@ -159,9 +159,9 @@
         -:  155:
         -:  156:    } // namespace internal
         -:  157:
-     1195:  158:    template <int TARGET> SEXP r_cast(SEXP x) {				// #nocov start
-     1195:  159:        if (TYPEOF(x) == TARGET) {
-     1180:  160:            return x;
+     1434:  158:    template <int TARGET> SEXP r_cast(SEXP x) {				// #nocov start
+     1434:  159:        if (TYPEOF(x) == TARGET) {
+     1416:  160:            return x;
         -:  161:        } else {
         -:  162:            #ifdef RCPP_WARN_ON_COERCE
         -:  163:            Shield<SEXP> result( internal::r_true_cast<TARGET>(x) );
@@ -171,7 +171,7 @@
         -:  167:            );
         -:  168:            return result;
         -:  169:            #else
-      15*:  170:            return internal::r_true_cast<TARGET>(x);		// #nocov end
+      18*:  170:            return internal::r_true_cast<TARGET>(x);		// #nocov end
         -:  171:            #endif
         -:  172:        }
         -:  173:    }

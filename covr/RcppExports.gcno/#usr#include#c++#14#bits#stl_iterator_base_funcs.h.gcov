@@ -1,7 +1,7 @@
         -:    0:Source:/usr/include/c++/14/bits/stl_iterator_base_funcs.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Functions used by iterators -*- C++ -*-
         -:    2:
         -:    3:// Copyright (C) 2001-2024 Free Software Foundation, Inc.
@@ -107,7 +107,7 @@
         -:  103:      // concept requirements
         -:  104:      __glibcxx_function_requires(_RandomAccessIteratorConcept<
         -:  105:				  _RandomAccessIterator>)
-    2255*:  106:      return __last - __first;
+    2706*:  106:      return __last - __first;
         -:  107:    }
         -:  108:
         -:  109:#if _GLIBCXX_USE_CXX11_ABI
@@ -152,8 +152,8 @@
         -:  148:    distance(_InputIterator __first, _InputIterator __last)
         -:  149:    {
         -:  150:      // concept requirements -- taken care of in __distance
-    4510*:  151:      return std::__distance(__first, __last,
-    4510*:  152:			     std::__iterator_category(__first));
+    5412*:  151:      return std::__distance(__first, __last,
+    5412*:  152:			     std::__iterator_category(__first));
         -:  153:    }
         -:  154:
         -:  155:  template<typename _InputIterator, typename _Distance>

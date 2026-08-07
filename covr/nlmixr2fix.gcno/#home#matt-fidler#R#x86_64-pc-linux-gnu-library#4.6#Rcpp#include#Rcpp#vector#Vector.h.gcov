@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/Vector.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Vector.h: Rcpp R/C++ interface class library -- vectors
         -:    2://
         -:    3:// Copyright (C) 2010 - 2026  Dirk Eddelbuettel and Romain Francois
@@ -56,49 +56,49 @@
         -:   52:     * Default constructor. Creates a vector of the appropriate type
         -:   53:     * and 0 length
         -:   54:     */
-      135:   55:    Vector() {
-      135:   56:      Storage::set__( Rf_allocVector(RTYPE, 0 ) );
-      135:   57:      init() ;
-      135:   58:    }
+      162:   55:    Vector() {
+      162:   56:      Storage::set__( Rf_allocVector(RTYPE, 0 ) );
+      162:   57:      init() ;
+      162:   58:    }
         -:   59:
         -:   60:    /**
         -:   61:     * copy constructor. shallow copy of the SEXP
         -:   62:     */
-     1195:   63:    Vector( const Vector& other){
-     1195:   64:        Storage::copy__(other) ;
-     1195:   65:    }
+     1434:   63:    Vector( const Vector& other){
+     1434:   64:        Storage::copy__(other) ;
+     1434:   65:    }
 ------------------
 _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEEC2ERKS2_:
-     1060:   63:    Vector( const Vector& other){
-     1060:   64:        Storage::copy__(other) ;
-     1060:   65:    }
+     1272:   63:    Vector( const Vector& other){
+     1272:   64:        Storage::copy__(other) ;
+     1272:   65:    }
 ------------------
 _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEEC2ERKS2_:
-      135:   63:    Vector( const Vector& other){
-      135:   64:        Storage::copy__(other) ;
-      135:   65:    }
+      162:   63:    Vector( const Vector& other){
+      162:   64:        Storage::copy__(other) ;
+      162:   65:    }
 ------------------
         -:   66:
-     1060:   67:    Vector& operator=(const Vector& rhs) {
-     1060:   68:        return Storage::copy__(rhs) ;
+     1272:   67:    Vector& operator=(const Vector& rhs) {
+     1272:   68:        return Storage::copy__(rhs) ;
         -:   69:    }
         -:   70:
-     1195:   71:    Vector( SEXP x ) {
-     1195:   72:        Rcpp::Shield<SEXP> safe(x);
-     1195:   73:        Storage::set__( r_cast<RTYPE>(safe) ) ;
-     1195:   74:    }
+     1434:   71:    Vector( SEXP x ) {
+     1434:   72:        Rcpp::Shield<SEXP> safe(x);
+     1434:   73:        Storage::set__( r_cast<RTYPE>(safe) ) ;
+     1434:   74:    }
 ------------------
 _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEEC2EP7SEXPREC:
-      135:   71:    Vector( SEXP x ) {
-      135:   72:        Rcpp::Shield<SEXP> safe(x);
-      135:   73:        Storage::set__( r_cast<RTYPE>(safe) ) ;
-      135:   74:    }
+      162:   71:    Vector( SEXP x ) {
+      162:   72:        Rcpp::Shield<SEXP> safe(x);
+      162:   73:        Storage::set__( r_cast<RTYPE>(safe) ) ;
+      162:   74:    }
 ------------------
 _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEEC2EP7SEXPREC:
-     1060:   71:    Vector( SEXP x ) {
-     1060:   72:        Rcpp::Shield<SEXP> safe(x);
-     1060:   73:        Storage::set__( r_cast<RTYPE>(safe) ) ;
-     1060:   74:    }
+     1272:   71:    Vector( SEXP x ) {
+     1272:   72:        Rcpp::Shield<SEXP> safe(x);
+     1272:   73:        Storage::set__( r_cast<RTYPE>(safe) ) ;
+     1272:   74:    }
 ------------------
         -:   75:
         -:   76:    template <typename Proxy>
@@ -298,18 +298,18 @@ _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEEC2EP7SEXPREC:
         -:  270:    /**
         -:  271:     * alias of length
         -:  272:     */
-     7555:  273:    inline R_xlen_t size() const {
-     7555:  274:        return ::Rf_xlength( Storage::get__() ) ;
+     9066:  273:    inline R_xlen_t size() const {
+     9066:  274:        return ::Rf_xlength( Storage::get__() ) ;
         -:  275:    }
 ------------------
 _ZNK4Rcpp6VectorILi19ENS_15PreserveStorageEE4sizeEv:
-     4240:  273:    inline R_xlen_t size() const {
-     4240:  274:        return ::Rf_xlength( Storage::get__() ) ;
+     5088:  273:    inline R_xlen_t size() const {
+     5088:  274:        return ::Rf_xlength( Storage::get__() ) ;
         -:  275:    }
 ------------------
 _ZNK4Rcpp6VectorILi14ENS_15PreserveStorageEE4sizeEv:
-     3315:  273:    inline R_xlen_t size() const {
-     3315:  274:        return ::Rf_xlength( Storage::get__() ) ;
+     3978:  273:    inline R_xlen_t size() const {
+     3978:  274:        return ::Rf_xlength( Storage::get__() ) ;
         -:  275:    }
 ------------------
         -:  276:
@@ -344,16 +344,16 @@ _ZNK4Rcpp6VectorILi14ENS_15PreserveStorageEE4sizeEv:
         -:  305:        return i ;																		// #nocov end
         -:  306:    }
         -:  307:
-     2120:  308:    R_xlen_t offset(const std::string& name) const {
-     2120:  309:        SEXP names = RCPP_GET_NAMES( Storage::get__() ) ;
-     2120:  310:        if( Rf_isNull(names) ) {
+     2544:  308:    R_xlen_t offset(const std::string& name) const {
+     2544:  309:        SEXP names = RCPP_GET_NAMES( Storage::get__() ) ;
+     2544:  310:        if( Rf_isNull(names) ) {
     #####:  311:            throw index_out_of_bounds("Object was created without names.");
         -:  312:        }
         -:  313:
-     2120:  314:        R_xlen_t n=size() ;
-    11060:  315:        for( R_xlen_t i=0; i<n; ++i){
-    11060:  316:            if( ! name.compare( CHAR(STRING_ELT(names, i)) ) ){
-     2120:  317:                return i ;
+     2544:  314:        R_xlen_t n=size() ;
+    13272:  315:        for( R_xlen_t i=0; i<n; ++i){
+    13272:  316:            if( ! name.compare( CHAR(STRING_ELT(names, i)) ) ){
+     2544:  317:                return i ;
         -:  318:            }
         -:  319:        }
         -:  320:
@@ -374,7 +374,7 @@ _ZNK4Rcpp6VectorILi14ENS_15PreserveStorageEE4sizeEv:
         -:  335:    inline const_iterator cbegin() const{ return cache.get_const() ; }
         -:  336:    inline const_iterator cend() const{ return cache.get_const() + size() ; }
         -:  337:
-     2120:  338:    inline Proxy operator[]( R_xlen_t i ){ return cache.ref(i) ; }
+     2544:  338:    inline Proxy operator[]( R_xlen_t i ){ return cache.ref(i) ; }
         -:  339:    inline const_Proxy operator[]( R_xlen_t i ) const { return cache.ref(i) ; }
         -:  340:
         -:  341:    inline Proxy operator()( const size_t& i) {
@@ -398,8 +398,8 @@ _ZNK4Rcpp6VectorILi14ENS_15PreserveStorageEE4sizeEv:
         -:  359:        return cache.ref( offset(i,j) ) ;
         -:  360:    }
         -:  361:
-     2120:  362:    inline NameProxy operator[]( const std::string& name ){
-     2120:  363:        return NameProxy( *this, name ) ;
+     2544:  362:    inline NameProxy operator[]( const std::string& name ){
+     2544:  363:        return NameProxy( *this, name ) ;
         -:  364:    }
         -:  365:    inline NameProxy operator()( const std::string& name ){
         -:  366:        return NameProxy( *this, name ) ;
@@ -542,9 +542,9 @@ _ZNK4Rcpp6VectorILi14ENS_15PreserveStorageEE4sizeEv:
         -:  503:        return erase_range__impl( first, last ) ;
         -:  504:    }
         -:  505:
-    3315*:  506:    void update(SEXP){
-    3315*:  507:        cache.update(*this) ;
-    3315*:  508:    }
+    3978*:  506:    void update(SEXP){
+    3978*:  507:        cache.update(*this) ;
+    3978*:  508:    }
 ------------------
 _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEE6updateEP7SEXPREC:
     #####:  506:    void update(SEXP){
@@ -552,9 +552,9 @@ _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEE6updateEP7SEXPREC:
     #####:  508:    }
 ------------------
 _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEE6updateEP7SEXPREC:
-     3315:  506:    void update(SEXP){
-     3315:  507:        cache.update(*this) ;
-     3315:  508:    }
+     3978:  506:    void update(SEXP){
+     3978:  507:        cache.update(*this) ;
+     3978:  508:    }
 ------------------
         -:  509:
         -:  510:    template <typename U>
@@ -630,15 +630,15 @@ _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEE6updateEP7SEXPREC:
         -:  580:    /**
         -:  581:     *  Does this vector have an element with the target name
         -:  582:     */
-     1350:  583:    bool containsElementNamed( const char* target ) const {
-     1350:  584:          SEXP names = RCPP_GET_NAMES(Storage::get__()) ;
-    1350*:  585:        if( Rf_isNull(names) ) return false ;
-     1350:  586:        R_xlen_t n = Rf_xlength(names) ;
-     8290:  587:        for( R_xlen_t i=0; i<n; i++){
-     8000:  588:            if( !strcmp( target, CHAR(STRING_ELT(names, i)) ) )
-     1060:  589:                return true ;
+     1620:  583:    bool containsElementNamed( const char* target ) const {
+     1620:  584:          SEXP names = RCPP_GET_NAMES(Storage::get__()) ;
+    1620*:  585:        if( Rf_isNull(names) ) return false ;
+     1620:  586:        R_xlen_t n = Rf_xlength(names) ;
+     9948:  587:        for( R_xlen_t i=0; i<n; i++){
+     9600:  588:            if( !strcmp( target, CHAR(STRING_ELT(names, i)) ) )
+     1272:  589:                return true ;
         -:  590:        }
-      290:  591:        return false ;
+      348:  591:        return false ;
         -:  592:    }
         -:  593:
         -:  594:    R_xlen_t findName(const std::string& name) const {
@@ -661,10 +661,10 @@ _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEE6updateEP7SEXPREC:
         -:  611:        if( !::Rf_isMatrix(Storage::get__()) ) throw not_a_matrix() ;
         -:  612:        return INTEGER( ::Rf_getAttrib( Storage::get__(), R_DimSymbol ) ) ;
         -:  613:    }
-     135*:  614:    void init(){
+     162*:  614:    void init(){
         -:  615:        RCPP_DEBUG_2( "VECTOR<%d>::init( SEXP = <%p> )", RTYPE, Storage::get__() )
-     135*:  616:        internal::r_init_vector<RTYPE>(Storage::get__()) ;
-     135*:  617:    }
+     162*:  616:        internal::r_init_vector<RTYPE>(Storage::get__()) ;
+     162*:  617:    }
 ------------------
 _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEE4initEv:
     #####:  614:    void init(){
@@ -673,10 +673,10 @@ _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEE4initEv:
     #####:  617:    }
 ------------------
 _ZN4Rcpp6VectorILi14ENS_15PreserveStorageEE4initEv:
-      135:  614:    void init(){
+      162:  614:    void init(){
         -:  615:        RCPP_DEBUG_2( "VECTOR<%d>::init( SEXP = <%p> )", RTYPE, Storage::get__() )
-      135:  616:        internal::r_init_vector<RTYPE>(Storage::get__()) ;
-      135:  617:    }
+      162:  616:        internal::r_init_vector<RTYPE>(Storage::get__()) ;
+      162:  617:    }
 ------------------
         -:  618:
         -:  619:private:

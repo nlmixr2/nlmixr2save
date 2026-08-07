@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/internal/wrap_end.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
         -:    2://
         -:    3:// wrap_end.h: R/C++ interface class library
@@ -29,9 +29,9 @@
         -:   25:namespace Rcpp{
         -:   26:
         -:   27:    template <typename T>
-     270*:   28:    inline SEXP wrap(const T& object){
+     324*:   28:    inline SEXP wrap(const T& object){
         -:   29:        RCPP_DEBUG_1( "inline SEXP wrap<%s>(const T& object)", DEMANGLE(T) )
-     270*:   30:    	  return internal::wrap_dispatch( object, typename ::Rcpp::traits::wrap_type_traits<T>::wrap_category() ) ;
+     324*:   30:    	  return internal::wrap_dispatch( object, typename ::Rcpp::traits::wrap_type_traits<T>::wrap_category() ) ;
         -:   31:    }
         -:   32:
         -:   33:    template <typename T>

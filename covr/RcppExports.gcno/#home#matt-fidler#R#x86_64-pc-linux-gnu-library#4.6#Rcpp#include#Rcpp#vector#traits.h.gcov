@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/traits.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// traits.h: Rcpp R/C++ interface class library -- support traits for vector
         -:    3://
@@ -77,30 +77,30 @@
         -:   73:		typedef typename r_vector_proxy<RTYPE, StoragePolicy>::type proxy ;
         -:   74:		typedef typename r_vector_const_proxy<RTYPE, StoragePolicy>::type const_proxy ;
         -:   75:
-     270*:   76:		proxy_cache(): p(0){}
+     324*:   76:		proxy_cache(): p(0){}
 ------------------
 _ZN4Rcpp6traits11proxy_cacheILi19ENS_15PreserveStorageEEC2Ev:
-      270:   76:		proxy_cache(): p(0){}
+      324:   76:		proxy_cache(): p(0){}
 ------------------
 _ZN4Rcpp6traits11proxy_cacheILi16ENS_15PreserveStorageEEC2Ev:
     #####:   76:		proxy_cache(): p(0){}
 ------------------
-     270*:   77:		~proxy_cache(){}
+     324*:   77:		~proxy_cache(){}
 ------------------
 _ZN4Rcpp6traits11proxy_cacheILi19ENS_15PreserveStorageEED2Ev:
-      270:   77:		~proxy_cache(){}
+      324:   77:		~proxy_cache(){}
 ------------------
 _ZN4Rcpp6traits11proxy_cacheILi16ENS_15PreserveStorageEED2Ev:
     #####:   77:		~proxy_cache(){}
 ------------------
-     270*:   78:		void update( const VECTOR& v ){
-     270*:   79:			p = const_cast<VECTOR*>(&v) ;
-     270*:   80:		}
+     324*:   78:		void update( const VECTOR& v ){
+     324*:   79:			p = const_cast<VECTOR*>(&v) ;
+     324*:   80:		}
 ------------------
 _ZN4Rcpp6traits11proxy_cacheILi19ENS_15PreserveStorageEE6updateERKNS_6VectorILi19ES2_EE:
-      270:   78:		void update( const VECTOR& v ){
-      270:   79:			p = const_cast<VECTOR*>(&v) ;
-      270:   80:		}
+      324:   78:		void update( const VECTOR& v ){
+      324:   79:			p = const_cast<VECTOR*>(&v) ;
+      324:   80:		}
 ------------------
 _ZN4Rcpp6traits11proxy_cacheILi16ENS_15PreserveStorageEE6updateERKNS_6VectorILi16ES2_EE:
     #####:   78:		void update( const VECTOR& v ){

@@ -1,7 +1,7 @@
         -:    0:Source:nlmixr2fix.cpp
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:#include <Rcpp.h>
         -:    2:
         -:    3://' Fix nlmixr2 save output
@@ -33,32 +33,32 @@
         -:   29://' @export
         -:   30://'
         -:   31:// [[Rcpp::export]]
-      135:   32:SEXP nlmixr2saveParFixedDf(SEXP obj, bool named = true) {
+      162:   32:SEXP nlmixr2saveParFixedDf(SEXP obj, bool named = true) {
         -:   33:  // This makes the data.frame types match what nlmixr2 outputs
-      135:   34:  Rcpp::List ret = Rcpp::as<Rcpp::List>(obj);
-      135:   35:  Rcpp::NumericVector nv;
-      135:   36:  const char *nameCols[] = {"Estimate", "SE"};
-      405:   37:  for (int i = 0; i < 2; i++) {
-      270:   38:    if (ret.containsElementNamed(nameCols[i])) {
-      270:   39:      nv = Rcpp::as<Rcpp::NumericVector>(ret[nameCols[i]]);
-      270:   40:      if (named) {
-      260:   41:        Rf_setAttrib(nv, R_NamesSymbol, Rf_getAttrib(obj, R_RowNamesSymbol));
+      162:   34:  Rcpp::List ret = Rcpp::as<Rcpp::List>(obj);
+      162:   35:  Rcpp::NumericVector nv;
+      162:   36:  const char *nameCols[] = {"Estimate", "SE"};
+      486:   37:  for (int i = 0; i < 2; i++) {
+      324:   38:    if (ret.containsElementNamed(nameCols[i])) {
+      324:   39:      nv = Rcpp::as<Rcpp::NumericVector>(ret[nameCols[i]]);
+      324:   40:      if (named) {
+      312:   41:        Rf_setAttrib(nv, R_NamesSymbol, Rf_getAttrib(obj, R_RowNamesSymbol));
         -:   42:      } else {
-       10:   43:        Rf_setAttrib(nv, R_NamesSymbol, R_NilValue);
+       12:   43:        Rf_setAttrib(nv, R_NamesSymbol, R_NilValue);
         -:   44:      }
-      540:   45:      ret[nameCols[i]] = nv;
+      648:   45:      ret[nameCols[i]] = nv;
         -:   46:    }
         -:   47:  }
-      135:   48:  const char *numCols[] = {"%RSE", "Back-transformed", "CI Lower", "CI Upper",
+      162:   48:  const char *numCols[] = {"%RSE", "Back-transformed", "CI Lower", "CI Upper",
         -:   49:                           "BSV(SD)", "BSV(CV%)", "BSV(CV% or SD)",
         -:   50:                           "Shrink(SD)%"};
-     1215:   51:  for (int i = 0; i < 8; i++) {
-     1080:   52:    if (ret.containsElementNamed(numCols[i])) {
-     1580:   53:      nv = Rcpp::as<Rcpp::NumericVector>(ret[numCols[i]]);
-     1580:   54:      ret[numCols[i]] = nv;
+     1458:   51:  for (int i = 0; i < 8; i++) {
+     1296:   52:    if (ret.containsElementNamed(numCols[i])) {
+     1896:   53:      nv = Rcpp::as<Rcpp::NumericVector>(ret[numCols[i]]);
+     1896:   54:      ret[numCols[i]] = nv;
         -:   55:    }
         -:   56:  }
-      135:   57:  Rf_setAttrib(ret, R_RowNamesSymbol, Rf_getAttrib(obj, R_RowNamesSymbol));
-      135:   58:  ret.attr("class") = "data.frame";
-      270:   59:  return Rcpp::wrap(ret);
-      135:   60:}
+      162:   57:  Rf_setAttrib(ret, R_RowNamesSymbol, Rf_getAttrib(obj, R_RowNamesSymbol));
+      162:   58:  ret.attr("class") = "data.frame";
+      324:   59:  return Rcpp::wrap(ret);
+      162:   60:}

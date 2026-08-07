@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/generic_proxy.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// generic_proxy.h: Rcpp R/C++ interface class library --
         -:    2://
         -:    3:// Copyright (C) 2010 - 2018 Dirk Eddelbuettel and Romain Francois
@@ -38,13 +38,13 @@
     #####:   34:				parent(other.parent), index(other.index)
     #####:   35:			{}
         -:   36:
-     2120:   37:			generic_proxy( VECTOR& v, R_xlen_t i ) :
-     2120:   38:			    parent(&v), index(i)
-     2120:   39:			{}
+     2544:   37:			generic_proxy( VECTOR& v, R_xlen_t i ) :
+     2544:   38:			    parent(&v), index(i)
+     2544:   39:			{}
         -:   40:
-     1060:   41:			generic_proxy& operator=(SEXP rhs) {
-     1060:   42:				set(rhs) ;
-     1060:   43:				return *this ;
+     1272:   41:			generic_proxy& operator=(SEXP rhs) {
+     1272:   42:				set(rhs) ;
+     1272:   43:				return *this ;
         -:   44:			}
         -:   45:
         -:   46:			generic_proxy& operator=(const generic_proxy& rhs){
@@ -96,9 +96,9 @@
         -:   92:			}
         -:   93:
         -:   94:		private:
-     1060:   95:			inline void set(SEXP x) {
-     1060:   96:			    SET_VECTOR_ELT( *parent, index, x ) ;
-     1060:   97:			}
+     1272:   95:			inline void set(SEXP x) {
+     1272:   96:			    SET_VECTOR_ELT( *parent, index, x ) ;
+     1272:   97:			}
         -:   98:
         -:   99:
         -:  100:	}  ;

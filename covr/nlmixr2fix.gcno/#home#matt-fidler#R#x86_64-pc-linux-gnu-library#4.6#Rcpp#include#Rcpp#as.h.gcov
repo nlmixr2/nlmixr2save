@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/as.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// as.h: Rcpp R/C++ interface class library -- convert SEXP to C++ objects
         -:    3://
@@ -85,28 +85,28 @@
         -:   81:            return STRING_ELT(::Rcpp::r_cast<STRSXP>(x), 0);
         -:   82:        }
         -:   83:
-     1195:   84:        template <typename T> T as(SEXP x, ::Rcpp::traits::r_type_generic_tag) {
+     1434:   84:        template <typename T> T as(SEXP x, ::Rcpp::traits::r_type_generic_tag) {
         -:   85:            RCPP_DEBUG_1("as(SEXP = <%p>, r_type_generic_tag )", x);
-     1195:   86:            ::Rcpp::traits::Exporter<T> exporter(x);
+     1434:   86:            ::Rcpp::traits::Exporter<T> exporter(x);
         -:   87:            RCPP_DEBUG_1("exporter type = %s", DEMANGLE(exporter));
-     2390:   88:            return exporter.get();
-     1195:   89:        }
+     2868:   88:            return exporter.get();
+     1434:   89:        }
 ------------------
 _ZN4Rcpp8internal2asINS_6VectorILi14ENS_15PreserveStorageEEEEET_P7SEXPRECNS_6traits18r_type_generic_tagE:
-     1060:   84:        template <typename T> T as(SEXP x, ::Rcpp::traits::r_type_generic_tag) {
+     1272:   84:        template <typename T> T as(SEXP x, ::Rcpp::traits::r_type_generic_tag) {
         -:   85:            RCPP_DEBUG_1("as(SEXP = <%p>, r_type_generic_tag )", x);
-     1060:   86:            ::Rcpp::traits::Exporter<T> exporter(x);
+     1272:   86:            ::Rcpp::traits::Exporter<T> exporter(x);
         -:   87:            RCPP_DEBUG_1("exporter type = %s", DEMANGLE(exporter));
-     2120:   88:            return exporter.get();
-     1060:   89:        }
+     2544:   88:            return exporter.get();
+     1272:   89:        }
 ------------------
 _ZN4Rcpp8internal2asINS_6VectorILi19ENS_15PreserveStorageEEEEET_P7SEXPRECNS_6traits18r_type_generic_tagE:
-      135:   84:        template <typename T> T as(SEXP x, ::Rcpp::traits::r_type_generic_tag) {
+      162:   84:        template <typename T> T as(SEXP x, ::Rcpp::traits::r_type_generic_tag) {
         -:   85:            RCPP_DEBUG_1("as(SEXP = <%p>, r_type_generic_tag )", x);
-      135:   86:            ::Rcpp::traits::Exporter<T> exporter(x);
+      162:   86:            ::Rcpp::traits::Exporter<T> exporter(x);
         -:   87:            RCPP_DEBUG_1("exporter type = %s", DEMANGLE(exporter));
-      270:   88:            return exporter.get();
-      135:   89:        }
+      324:   88:            return exporter.get();
+      162:   89:        }
 ------------------
         -:   90:
         -:   91:        void* as_module_object_internal(SEXP obj);
@@ -168,8 +168,8 @@ _ZN4Rcpp8internal2asINS_6VectorILi19ENS_15PreserveStorageEEEEET_P7SEXPRECNS_6tra
         -:  147:     * Environment x = ... ; // some environment
         -:  148:     * Foo y = x["bla"] ;    // if as<Foo> makes sense then this works !!
         -:  149:     */
-     1195:  150:    template <typename T> T as(SEXP x) {
-     1195:  151:        return internal::as<T>(x, typename traits::r_type_traits<T>::r_category());
+     1434:  150:    template <typename T> T as(SEXP x) {
+     1434:  151:        return internal::as<T>(x, typename traits::r_type_traits<T>::r_category());
         -:  152:    }
         -:  153:
         -:  154:    template <> inline char as<char>(SEXP x) {

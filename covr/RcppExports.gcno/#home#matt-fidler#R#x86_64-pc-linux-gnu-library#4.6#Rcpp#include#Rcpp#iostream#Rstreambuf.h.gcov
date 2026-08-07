@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/iostream/Rstreambuf.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1://
         -:    2:// Rstreambuf.h: Rcpp R/C++ interface class library -- stream buffer
         -:    3://
@@ -34,13 +34,13 @@
         -:   30:    template <bool OUTPUT>
         -:   31:    class Rstreambuf : public std::streambuf {
         -:   32:    public:
-       60:   33:        Rstreambuf(){}
+       72:   33:        Rstreambuf(){}
 ------------------
 _ZN4Rcpp10RstreambufILb0EEC2Ev:
-       30:   33:        Rstreambuf(){}
+       36:   33:        Rstreambuf(){}
 ------------------
 _ZN4Rcpp10RstreambufILb1EEC2Ev:
-       30:   33:        Rstreambuf(){}
+       36:   33:        Rstreambuf(){}
 ------------------
         -:   34:
         -:   35:    protected:
@@ -56,13 +56,13 @@ _ZN4Rcpp10RstreambufILb1EEC2Ev:
         -:   45:        typedef Rstreambuf<OUTPUT> Buffer;
         -:   46:        Buffer buf;
         -:   47:    public:
-       60:   48:        Rostream() : std::ostream( &buf ) {}
+       72:   48:        Rostream() : std::ostream( &buf ) {}
 ------------------
 _ZN4Rcpp8RostreamILb0EEC1Ev:
-       30:   48:        Rostream() : std::ostream( &buf ) {}
+       36:   48:        Rostream() : std::ostream( &buf ) {}
 ------------------
 _ZN4Rcpp8RostreamILb1EEC1Ev:
-       30:   48:        Rostream() : std::ostream( &buf ) {}
+       36:   48:        Rostream() : std::ostream( &buf ) {}
 ------------------
         -:   49:    };
         -:   50:							// #nocov start

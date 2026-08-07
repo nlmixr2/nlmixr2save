@@ -1,7 +1,7 @@
         -:    0:Source:/usr/include/c++/14/bits/allocator.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Allocators -*- C++ -*-
         -:    2:
         -:    3:// Copyright (C) 2001-2024 Free Software Foundation, Inc.
@@ -162,7 +162,7 @@
         -:  158:      // 3035. std::allocator's constructors should be constexpr
         -:  159:      __attribute__((__always_inline__))
         -:  160:      _GLIBCXX20_CONSTEXPR
-    2255*:  161:      allocator() _GLIBCXX_NOTHROW { }
+    2706*:  161:      allocator() _GLIBCXX_NOTHROW { }
         -:  162:
         -:  163:      __attribute__((__always_inline__))
         -:  164:      _GLIBCXX20_CONSTEXPR
@@ -183,7 +183,7 @@
         -:  179:#if __cpp_constexpr_dynamic_alloc
         -:  180:      constexpr
         -:  181:#endif
-    2255*:  182:      ~allocator() _GLIBCXX_NOTHROW { }
+    2706*:  182:      ~allocator() _GLIBCXX_NOTHROW { }
         -:  183:
         -:  184:#if __cplusplus > 201703L
         -:  185:      [[nodiscard,__gnu__::__always_inline__]]

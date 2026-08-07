@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/r_cast.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// rcast.h: Rcpp R/C++ interface class library -- cast from one SEXP type to another
         -:    3://
@@ -159,9 +159,9 @@
         -:  155:
         -:  156:    } // namespace internal
         -:  157:
-      135:  158:    template <int TARGET> SEXP r_cast(SEXP x) {				// #nocov start
-      135:  159:        if (TYPEOF(x) == TARGET) {
-      135:  160:            return x;
+      162:  158:    template <int TARGET> SEXP r_cast(SEXP x) {				// #nocov start
+      162:  159:        if (TYPEOF(x) == TARGET) {
+      162:  160:            return x;
         -:  161:        } else {
         -:  162:            #ifdef RCPP_WARN_ON_COERCE
         -:  163:            Shield<SEXP> result( internal::r_true_cast<TARGET>(x) );

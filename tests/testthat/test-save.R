@@ -531,6 +531,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         })
       }
 
+      message("TIMING-START expensive fit block: ", format(Sys.time(), "%H:%M:%S"))
       fitF <- suppressMessages(nlmixr(one.cmt, theo_sd, est="focei",
                                       control=list(print=0, compress=FALSE)))
 
@@ -581,6 +582,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_true(file.exists("fitIS.zip"))
       })
 
+      message("TIMING-START fits done, loads begin: ", format(Sys.time(), "%H:%M:%S"))
       fit2F <- suppressMessages(loadFit("fitF"))
       fit2S <- suppressMessages(loadFit(fitS))
 
@@ -600,6 +602,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(levels(fit2S$ID), levels(fitS$ID))
       })
 
+      message("TIMING-START a cache saved before the lev: ", format(Sys.time(), "%H:%M:%S"))
       test_that("a cache saved before the levels were recorded still loads", {
         # A cache written by an earlier nlmixr2save has no `..id.level..` and no
         # `..parHistType.level..`.  Simulate one by blanking both out of the
@@ -645,6 +648,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(as.character(.old$parHistData$type[1]), "Future Gradient")
       })
 
+      message("TIMING-START saving one fit leaves anothe: ", format(Sys.time(), "%H:%M:%S"))
       test_that("saving one fit leaves another cache's files alone", {
         # the file list was matched with an unanchored pattern, so a cache
         # named "fit" also picked up "myfit-env.R" -- zipping another cache's
@@ -666,6 +670,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(sort(list.files(pattern="^myClobber")), .before)
       })
 
+      message("TIMING-START restored ID levels come from: ", format(Sys.time(), "%H:%M:%S"))
       test_that("restored ID levels come from ranef, not the row order", {
         # theo_sd's IDs appear in level order, so the two candidate sources
         # agree and the round-trip test above cannot tell them apart.  Reverse
@@ -685,6 +690,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_false(identical(levels(.rev$ID), unique(as.character(.rev$ID))))
       })
 
+      message("TIMING-START a cache whose own script dro: ", format(Sys.time(), "%H:%M:%S"))
       test_that("a cache whose own script dropped a type is repaired on load", {
         # The type levels are applied by the restore script stored inside the
         # cache, so a cache written before nlmixr2est added a type has a script
@@ -774,6 +780,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       fit2IS <- loadFit("fitIS")
       fitEquals(fitIS, fit2IS)
 
+      message("TIMING-START a compressed fit still recor: ", format(Sys.time(), "%H:%M:%S"))
       test_that("a compressed fit still records its parHistData type levels", {
         # nlmixr2est stores parHistData compressed (a raw vector in the env)
         # unless compress=FALSE, so saveFit() has to decompress before it can

@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/protection/Shield.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Copyright (C) 2013 Romain Francois and Kevin Ushey
         -:    2://
         -:    3:// This file is part of Rcpp.
@@ -24,26 +24,26 @@
         -:   20:
         -:   21:namespace Rcpp{
         -:   22:
-     2660:   23:    inline SEXP Rcpp_protect(SEXP x){
-     2660:   24:        if( x != R_NilValue ) PROTECT(x) ;
-     2660:   25:        return x ;
+     3192:   23:    inline SEXP Rcpp_protect(SEXP x){
+     3192:   24:        if( x != R_NilValue ) PROTECT(x) ;
+     3192:   25:        return x ;
         -:   26:    }
         -:   27:
-     2660:   28:    inline void Rcpp_unprotect(int i){
+     3192:   28:    inline void Rcpp_unprotect(int i){
         -:   29:        // Prefer this function over UNPROTECT() in Rcpp so that all
         -:   30:        // balance checks errors by rchk are contained at one location (#892)
-     2660:   31:        UNPROTECT(i);
-     2660:   32:    }
+     3192:   31:        UNPROTECT(i);
+     3192:   32:    }
         -:   33:
         -:   34:    template <typename T>
         -:   35:    class Shield{
         -:   36:    public:
-     2660:   37:        Shield( SEXP t_) : t(Rcpp_protect(t_)){}
-     2660:   38:        ~Shield(){
-     2660:   39:            if( t != R_NilValue ) Rcpp_unprotect(1) ;
-     2660:   40:        }
+     3192:   37:        Shield( SEXP t_) : t(Rcpp_protect(t_)){}
+     3192:   38:        ~Shield(){
+     3192:   39:            if( t != R_NilValue ) Rcpp_unprotect(1) ;
+     3192:   40:        }
         -:   41:
-     2660:   42:        operator SEXP() const { return t; }
+     3192:   42:        operator SEXP() const { return t; }
         -:   43:        SEXP t ;
         -:   44:
         -:   45:    private:

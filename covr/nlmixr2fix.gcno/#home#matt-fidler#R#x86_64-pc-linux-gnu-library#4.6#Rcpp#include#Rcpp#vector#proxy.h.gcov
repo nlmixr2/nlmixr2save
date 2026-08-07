@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/proxy.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// proxy.h: Rcpp R/C++ interface class library -- proxies
         -:    3://
@@ -140,11 +140,11 @@
         -:  136:	class generic_name_proxy {
         -:  137:	public:
         -:  138:		typedef ::Rcpp::Vector<RTYPE, StoragePolicy> VECTOR ;
-     2120:  139:		generic_name_proxy( VECTOR& v, const std::string& name_) :
-     2120:  140:			parent(v), name(name_){}
+     2544:  139:		generic_name_proxy( VECTOR& v, const std::string& name_) :
+     2544:  140:			parent(v), name(name_){}
         -:  141:		generic_name_proxy( const generic_name_proxy& other ) :
         -:  142:			parent(other.parent), name(other.name){}
-     2120:  143:		~generic_name_proxy(){} ;
+     2544:  143:		~generic_name_proxy(){} ;
         -:  144:
         -:  145:		generic_name_proxy& operator=( SEXP rhs ){
         -:  146:			set( rhs ) ;
@@ -156,15 +156,15 @@
         -:  152:		}
         -:  153:
         -:  154:		template <typename T>
-     1060:  155:		generic_name_proxy& operator=( const T& rhs ){
-     1060:  156:		    set(Shield<SEXP>(wrap(rhs)));
-     1060:  157:			return *this ;
+     1272:  155:		generic_name_proxy& operator=( const T& rhs ){
+     1272:  156:		    set(Shield<SEXP>(wrap(rhs)));
+     1272:  157:			return *this ;
         -:  158:		}
         -:  159:
         -:  160:		// TODO: other operators +=, -=, ...
         -:  161:
-     1060:  162:		operator SEXP() const {
-     1060:  163:			 return get() ;
+     1272:  162:		operator SEXP() const {
+     1272:  163:			 return get() ;
         -:  164:		}
         -:  165:
         -:  166:		template <typename T>
@@ -181,17 +181,17 @@
         -:  177:	private:
         -:  178:		VECTOR& parent ;
         -:  179:		std::string name;
-     1060:  180:		void set( SEXP rhs ){
-     1060:  181:			R_xlen_t index = 0 ;
+     1272:  180:		void set( SEXP rhs ){
+     1272:  181:			R_xlen_t index = 0 ;
         -:  182:			try{
-     1060:  183:				index = parent.offset(name) ;
-     1060:  184:				parent[ index ] = rhs ;  // #nocov
+     1272:  183:				index = parent.offset(name) ;
+     1272:  184:				parent[ index ] = rhs ;  // #nocov
     =====:  185:			} catch( const index_out_of_bounds& ex ){
     =====:  186:				parent.push_back( rhs, name );
         -:  187:			}
-     1060:  188:		}
-     1060:  189:		SEXP get() const {
-     1060:  190:			return parent[ parent.offset(name) ];
+     1272:  188:		}
+     1272:  189:		SEXP get() const {
+     1272:  190:			return parent[ parent.offset(name) ];
         -:  191:		}
         -:  192:	} ;
         -:  193:}

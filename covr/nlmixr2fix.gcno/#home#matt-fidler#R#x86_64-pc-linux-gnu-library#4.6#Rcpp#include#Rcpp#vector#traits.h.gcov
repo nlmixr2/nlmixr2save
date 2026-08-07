@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/traits.h
         -:    0:Graph:./nlmixr2fix.gcno
         -:    0:Data:./nlmixr2fix.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:
         -:    2:// traits.h: Rcpp R/C++ interface class library -- support traits for vector
         -:    3://
@@ -38,12 +38,12 @@
         -:   34:		typedef typename r_vector_const_proxy<RTYPE>::type const_proxy ;
         -:   35:		typedef typename storage_type<RTYPE>::type storage_type ;
         -:   36:
-     2255:   37:		r_vector_cache() : start(0), size(0) {} ;
+     2706:   37:		r_vector_cache() : start(0), size(0) {} ;
         -:   38:
-     3315:   39:		inline void update( const VECTOR& v ) {
-     3315:   40:			start = ::Rcpp::internal::r_vector_start<RTYPE>(v) ;
-     3315:   41:			size = v.size();
-     3315:   42:		}
+     3978:   39:		inline void update( const VECTOR& v ) {
+     3978:   40:			start = ::Rcpp::internal::r_vector_start<RTYPE>(v) ;
+     3978:   41:			size = v.size();
+     3978:   42:		}
         -:   43:
         -:   44:		inline iterator get() const { return start; }
         -:   45:		inline const_iterator get_const() const { return start; }
@@ -86,7 +86,7 @@
         -:   82:		inline const_iterator get_const() const { return const_iterator( const_proxy(*p, 0) ) ; }
         -:   83:
         -:   84:		inline proxy ref() { check_index(0); return proxy(*p,0) ; }
-     2120:   85:		inline proxy ref(R_xlen_t i) { check_index(i); return proxy(*p,i);}
+     2544:   85:		inline proxy ref(R_xlen_t i) { check_index(i); return proxy(*p,i);}
         -:   86:
         -:   87:		inline const_proxy ref() const { check_index(0); return const_proxy(*p,0) ; }
         -:   88:		inline const_proxy ref(R_xlen_t i) const { check_index(i); return const_proxy(*p,i);}
@@ -94,13 +94,13 @@
         -:   90:	private:
         -:   91:		VECTOR* p ;
         -:   92:
-     2120:   93:		void check_index(R_xlen_t i) const {
+     2544:   93:		void check_index(R_xlen_t i) const {
         -:   94:#ifndef RCPP_NO_BOUNDS_CHECK
-     2120:   95:			if (i >= p->size()) {
+     2544:   95:			if (i >= p->size()) {
     #####:   96:				warning("subscript out of bounds (index %s >= vector size %s)", i, p->size()); // #nocov
         -:   97:			}
         -:   98:#endif
-     2120:   99:		}
+     2544:   99:		}
         -:  100:	} ;
         -:  101:
         -:  102:	// regular types for INTSXP, REALSXP, ...

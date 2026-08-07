@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/vector/Vector.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Vector.h: Rcpp R/C++ interface class library -- vectors
         -:    2://
         -:    3:// Copyright (C) 2010 - 2026  Dirk Eddelbuettel and Romain Francois
@@ -529,14 +529,14 @@ _ZN4Rcpp6VectorILi16ENS_15PreserveStorageEE5beginEv:
         -:  503:        return erase_range__impl( first, last ) ;
         -:  504:    }
         -:  505:
-     270*:  506:    void update(SEXP){
-     270*:  507:        cache.update(*this) ;
-     270*:  508:    }
+     324*:  506:    void update(SEXP){
+     324*:  507:        cache.update(*this) ;
+     324*:  508:    }
 ------------------
 _ZN4Rcpp6VectorILi19ENS_15PreserveStorageEE6updateEP7SEXPREC:
-      270:  506:    void update(SEXP){
-      270:  507:        cache.update(*this) ;
-      270:  508:    }
+      324:  506:    void update(SEXP){
+      324:  507:        cache.update(*this) ;
+      324:  508:    }
 ------------------
 _ZN4Rcpp6VectorILi16ENS_15PreserveStorageEE6updateEP7SEXPREC:
     #####:  506:    void update(SEXP){

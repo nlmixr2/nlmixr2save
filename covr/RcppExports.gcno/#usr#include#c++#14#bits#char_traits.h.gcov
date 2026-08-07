@@ -1,7 +1,7 @@
         -:    0:Source:/usr/include/c++/14/bits/char_traits.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// Character Traits for use by standard string and iostream -*- C++ -*-
         -:    2:
         -:    3:// Copyright (C) 1997-2024 Free Software Foundation, Inc.
@@ -386,13 +386,13 @@
         -:  382:      }
         -:  383:
         -:  384:      static _GLIBCXX17_CONSTEXPR size_t
-     2255:  385:      length(const char_type* __s)
+     2706:  385:      length(const char_type* __s)
         -:  386:      {
         -:  387:#if __cplusplus >= 201703L
-     2255:  388:	if (std::__is_constant_evaluated())
+     2706:  388:	if (std::__is_constant_evaluated())
     #####:  389:	  return __gnu_cxx::char_traits<char_type>::length(__s);
         -:  390:#endif
-     2255:  391:	return __builtin_strlen(__s);
+     2706:  391:	return __builtin_strlen(__s);
         -:  392:      }
         -:  393:
         -:  394:      static _GLIBCXX17_CONSTEXPR const char_type*

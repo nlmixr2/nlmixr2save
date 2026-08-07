@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/RObject.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
         -:    2://
         -:    3:// RObject.h: Rcpp R/C++ interface class library -- general R object wrapper
@@ -34,7 +34,7 @@
         -:   30:        /**
         -:   31:         * default constructor. uses R_NilValue
         -:   32:         */
-      135:   33:        RObject_Impl() {};
+      162:   33:        RObject_Impl() {};
         -:   34:
         -:   35:        RCPP_GENERATE_CTOR_ASSIGN(RObject_Impl)
         -:   36:
@@ -51,12 +51,12 @@
         -:   47:         * Assignement operator. Set this SEXP to the given SEXP
         -:   48:         */
         -:   49:        template <typename T>
-      135:   50:        RObject_Impl& operator=(const T& other) {
-      135:   51:            Storage::set__(Shield<SEXP>(wrap(other)));
-      135:   52:            return *this;
+      162:   50:        RObject_Impl& operator=(const T& other) {
+      162:   51:            Storage::set__(Shield<SEXP>(wrap(other)));
+      162:   52:            return *this;
         -:   53:        }
         -:   54:
-      135:   55:        void update(SEXP){}
+      162:   55:        void update(SEXP){}
         -:   56:    };
         -:   57:
         -:   58:    typedef RObject_Impl<PreserveStorage> RObject ;

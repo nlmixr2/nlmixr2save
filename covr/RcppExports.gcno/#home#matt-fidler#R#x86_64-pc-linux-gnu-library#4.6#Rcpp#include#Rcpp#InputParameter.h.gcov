@@ -1,7 +1,7 @@
         -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/InputParameter.h
         -:    0:Graph:./RcppExports.gcno
         -:    0:Data:./RcppExports.gcda
-        -:    0:Runs:15
+        -:    0:Runs:18
         -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
         -:    2://
         -:    3:// InputParameter.h: Rcpp R/C++ interface class library --
@@ -33,22 +33,22 @@
         -:   29:    template <typename T>
         -:   30:    class InputParameter {
         -:   31:    public:
-      270:   32:        InputParameter(SEXP x_) : x(x_){}
+      324:   32:        InputParameter(SEXP x_) : x(x_){}
 ------------------
 _ZN4Rcpp14InputParameterIbEC2EP7SEXPREC:
-      135:   32:        InputParameter(SEXP x_) : x(x_){}
+      162:   32:        InputParameter(SEXP x_) : x(x_){}
 ------------------
 _ZN4Rcpp14InputParameterIP7SEXPRECEC2ES2_:
-      135:   32:        InputParameter(SEXP x_) : x(x_){}
+      162:   32:        InputParameter(SEXP x_) : x(x_){}
 ------------------
         -:   33:
-      270:   34:        inline operator T() { return as<T>(x) ; }
+      324:   34:        inline operator T() { return as<T>(x) ; }
 ------------------
 _ZN4Rcpp14InputParameterIbEcvbEv:
-      135:   34:        inline operator T() { return as<T>(x) ; }
+      162:   34:        inline operator T() { return as<T>(x) ; }
 ------------------
 _ZN4Rcpp14InputParameterIP7SEXPRECEcvS2_Ev:
-      135:   34:        inline operator T() { return as<T>(x) ; }
+      162:   34:        inline operator T() { return as<T>(x) ; }
 ------------------
         -:   35:
         -:   36:    private:
