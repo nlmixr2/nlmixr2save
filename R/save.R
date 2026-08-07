@@ -759,6 +759,53 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   fit
 }
 
+#' Repair `parHistData$type` levels a cache's own restore script dropped
+#'
+#' The factor levels for `parHistData$type` are applied by the restore script
+#' stored *inside* the cache.  A script written before a given nlmixr2est
+#' version knows nothing of the types that version added ("Analytic Gradient
+#' (relaxed)" and friends), so it coerces them to `NA` -- and re-saving cannot
+#' recover them, because by then the strings are already gone.
+#'
+#' The `-parHistData.csv` still holds the original strings and has not been
+#' cleaned up yet at this point in [loadFit()], so read the column back from
+#' there and append whatever the script's level list was missing.
+#'
+#' @param fit restored object
+#' @param file base name the fit was loaded from
+#' @return `fit`, invisibly; `parHistData` is repaired in the fit environment
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveRestoreParHistType <- function(fit, file) {
+  # a fit table dispatches `$env` through its class attribute; a data-less fit
+  # (`nlmixr2saveShare(noFit=TRUE)`) restores as the environment itself
+  .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
+  if (!is.environment(.env)) return(invisible(fit))
+  if (!exists("parHistData", envir=.env, inherits=FALSE)) return(invisible(fit))
+  .phd <- try(get("parHistData", envir=.env, inherits=FALSE), silent=TRUE)
+  # only NA types are worth repairing; a cache whose script knew the levels is
+  # already correct
+  if (!is.data.frame(.phd) || !is.factor(.phd$type) || !anyNA(.phd$type)) {
+    return(invisible(fit))
+  }
+  .csv <- paste0(file, "-parHistData.csv")
+  if (!file.exists(.csv)) return(invisible(fit))
+  .raw <- try(utils::read.csv(.csv, check.names=FALSE), silent=TRUE)
+  if (!is.data.frame(.raw) || is.null(.raw$type) || nrow(.raw) != nrow(.phd)) {
+    return(invisible(fit))
+  }
+  .type <- as.character(.raw$type)
+  .levels <- c(levels(.phd$type), setdiff(unique(.type[!is.na(.type)]),
+                                          levels(.phd$type)))
+  ## `class<-` last: for a saem fit the class attribute of parHistData carries
+  ## the `niter` attribute, which column assignment must not drop.
+  .cls <- class(.phd)
+  .phd$type <- factor(.type, levels=.levels)
+  class(.phd) <- .cls
+  assign("parHistData", .phd, envir=.env)
+  invisible(fit)
+}
+
 #' Load a fitted model object from a file
 #'
 #' @param file the base name of the files to load the fit from.
@@ -791,6 +838,8 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
     source(.r, local=TRUE)
     ret <- get(file)
     ret <- .nlmixr2saveRestoreIdFactor(ret)
+    # must run before the unzipped files are removed below; it reads the csv
+    .nlmixr2saveRestoreParHistType(ret, file)
     if (isTRUE(checkVersion)) {
       .nlmixr2saveWarnVersion(ret)
     }

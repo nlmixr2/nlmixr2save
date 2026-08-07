@@ -604,6 +604,51 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(as.character(.old$parHistData$type[1]), "Future Gradient")
       })
 
+      test_that("restored ID levels come from ranef, not the row order", {
+        # theo_sd's IDs appear in level order, so the two candidate sources
+        # agree and the round-trip test above cannot tell them apart.  Reverse
+        # the recorded levels so they disagree: the restore script hands them
+        # to ranef/etaObf, and the repair must follow ranef rather than fall
+        # back to the order the rows happen to appear in.
+        suppressMessages(saveFit(fitS, "fitRev", zip=FALSE))
+        cat("env$`..id.level..` <- rev(env$`..id.level..`)\n",
+            file="fitRev-env.R", append=TRUE, sep="")
+        .rev <- suppressMessages(loadFit("fitRev", checkVersion=FALSE))
+
+        expect_true(is.factor(.rev$ID))
+        expect_equal(levels(.rev$ID), rev(levels(fitS$ID)))
+        # the labels still line up with the rows; only the coding changed
+        expect_equal(as.character(.rev$ID), as.character(fitS$ID))
+        # and this is genuinely not the appearance-order fallback
+        expect_false(identical(levels(.rev$ID), unique(as.character(.rev$ID))))
+      })
+
+      test_that("a cache whose own script dropped a type is repaired on load", {
+        # The type levels are applied by the restore script stored inside the
+        # cache, so a cache written before nlmixr2est added a type has a script
+        # that coerces it to NA.  Simulate that script by pinning it to a level
+        # list that omits the type, and injecting that type into the csv.
+        suppressMessages(saveFit(fitS, "fitDrop", zip=FALSE))
+        .ph <- utils::read.csv("fitDrop-parHistData.csv", check.names=FALSE)
+        .ph$type[1] <- "Future Gradient"
+        utils::write.csv(.ph, "fitDrop-parHistData.csv", row.names=FALSE)
+        .lv <- levels(fitS$parHistData$type)
+        cat("env$`..parHistType.level..` <- ", deparse1(.lv), "\n",
+            file="fitDrop-env.R", append=TRUE, sep="")
+
+        .drop <- suppressMessages(loadFit("fitDrop", checkVersion=FALSE))
+        # loadFit() re-reads the csv, so the string survives even though the
+        # cache's own script had no level for it
+        expect_false(anyNA(.drop$parHistData$type))
+        expect_true("Future Gradient" %in% levels(.drop$parHistData$type))
+        expect_equal(as.character(.drop$parHistData$type[1]), "Future Gradient")
+        # the levels the script did know keep their original order
+        expect_equal(levels(.drop$parHistData$type)[seq_along(.lv)], .lv)
+        # saem's niter attribute on the class survives the column assignment
+        expect_equal(attr(class(.drop$parHistData), "niter"),
+                     attr(class(fitS$parHistData), "niter"))
+      })
+
       test_that("saveFit(data=FALSE) omits the original data", {
         suppressMessages(saveFit(fitF, "fitFnd", data=FALSE))
         expect_true(file.exists("fitFnd.zip"))

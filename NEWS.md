@@ -15,11 +15,15 @@
   vector rather than a data frame, so the levels were silently not recorded and
   `loadFit()` fell back to a hardcoded level list.  nlmixr2est has since added
   types that list predates ("Analytic Gradient (relaxed)" and friends), and
-  those came back as `NA`.  When the levels cannot be recorded at all, the
-  restore script now appends any unrecognized type to its hardcoded fallback
-  list rather than dropping it to `NA`.  (Unlike the `ID` repair, this lives in
-  the restore script inside the zip, so an already-written cache picks it up
-  only once it is saved again.)
+  those came back as `NA`.
+
+* `loadFit()` now repairs a `parHistData$type` that the cache's *own* restore
+  script dropped to `NA`.  Those levels are applied by the script stored inside
+  the cache, so a cache written before nlmixr2est added a type has no level for
+  it and coerces it to `NA` -- and re-saving cannot recover it, because by then
+  the string is already gone.  `loadFit()` reads the column back from the
+  `-parHistData.csv` in the cache and appends whatever the script was missing,
+  so existing caches are repaired in place.
 
 * `saveFit(fit, zip=FALSE)` now actually leaves the fit unzipped for a fit table
   (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the
