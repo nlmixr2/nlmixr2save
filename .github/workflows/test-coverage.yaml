@@ -35,6 +35,11 @@ jobs:
           needs: coverage
 
       - name: Test coverage
+        # Without this the job has died at ~21-25 min with exit 143 and no
+        # output at all: the runner is torn down, so none of the `always()`
+        # diagnostic steps below ever run and there is nothing to look at.  A
+        # step-level timeout fails just this step, which leaves them to run.
+        timeout-minutes: 20
         run: |
           cov <- covr::package_coverage(
             quiet = FALSE,
@@ -44,6 +49,18 @@ jobs:
           print(cov)
           covr::to_cobertura(cov)
         shell: Rscript {0}
+
+      - name: Runner resources
+        if: always()
+        run: |
+          ## --------------------------------------------------------------------
+          echo "::group::memory"; free -m || true; echo "::endgroup::"
+          echo "::group::disk"; df -h || true; echo "::endgroup::"
+          echo "::group::cpu"; nproc || true; echo "::endgroup::"
+          echo "::group::kernel oom/kill messages"
+          dmesg 2>/dev/null | tail -40 || echo "dmesg unavailable"
+          echo "::endgroup::"
+        shell: bash
 
       - uses: codecov/codecov-action@v5
         with:

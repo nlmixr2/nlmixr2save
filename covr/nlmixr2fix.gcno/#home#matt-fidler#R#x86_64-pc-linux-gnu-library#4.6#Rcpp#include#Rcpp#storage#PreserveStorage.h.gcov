@@ -1,0 +1,172 @@
+        -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/storage/PreserveStorage.h
+        -:    0:Graph:./nlmixr2fix.gcno
+        -:    0:Data:./nlmixr2fix.gcda
+        -:    0:Runs:15
+        -:    1:
+        -:    2:// PreserveStorage.h: Rcpp R/C++ interface class library -- helper class
+        -:    3://
+        -:    4:// Copyright (C) 2013 - 2020  Romain Francois
+        -:    5:// Copyright (C) 2021         Romain Francois and Iñaki Ucar
+        -:    6://
+        -:    7:// This file is part of Rcpp.
+        -:    8://
+        -:    9:// Rcpp is free software: you can redistribute it and/or modify it
+        -:   10:// under the terms of the GNU General Public License as published by
+        -:   11:// the Free Software Foundation, either version 2 of the License, or
+        -:   12:// (at your option) any later version.
+        -:   13://
+        -:   14:// Rcpp is distributed in the hope that it will be useful, but
+        -:   15:// WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   16:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   17:// GNU General Public License for more details.
+        -:   18://
+        -:   19:// You should have received a copy of the GNU General Public License
+        -:   20:// along with Rcpp.  If not, see <http://www.gnu.org/licenses/>.
+        -:   21:
+        -:   22:#ifndef Rcpp_PreserveStorage_h
+        -:   23:#define Rcpp_PreserveStorage_h
+        -:   24:
+        -:   25:namespace Rcpp{
+        -:   26:
+        -:   27:    template <typename CLASS>
+        -:   28:    class PreserveStorage {
+        -:   29:    public:
+        -:   30:
+    2255*:   31:        PreserveStorage() : data(R_NilValue), token(R_NilValue){}
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi19ES0_EEEC2Ev:
+    #####:   31:        PreserveStorage() : data(R_NilValue), token(R_NilValue){}
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi14ES0_EEEC2Ev:
+     2255:   31:        PreserveStorage() : data(R_NilValue), token(R_NilValue){}
+------------------
+        -:   32:
+    2255*:   33:        ~PreserveStorage(){
+    2255*:   34:            Rcpp_PreciousRelease(token) ;
+    2255*:   35:            data = R_NilValue;
+    2255*:   36:            token = R_NilValue;
+    2255*:   37:        }
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi19ES0_EEED2Ev:
+    #####:   33:        ~PreserveStorage(){
+    #####:   34:            Rcpp_PreciousRelease(token) ;
+    #####:   35:            data = R_NilValue;
+    #####:   36:            token = R_NilValue;
+    #####:   37:        }
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi14ES0_EEED2Ev:
+     2255:   33:        ~PreserveStorage(){
+     2255:   34:            Rcpp_PreciousRelease(token) ;
+     2255:   35:            data = R_NilValue;
+     2255:   36:            token = R_NilValue;
+     2255:   37:        }
+------------------
+        -:   38:
+    3315*:   39:        inline void set__(SEXP x){
+    3315*:   40:            if (data != x) {
+    3315*:   41:                data = x;
+    3315*:   42:                Rcpp_PreciousRelease(token);
+    3315*:   43:                token = Rcpp_PreciousPreserve(data);
+        -:   44:            }
+        -:   45:
+        -:   46:            // calls the update method of CLASS
+        -:   47:            // this is where to react to changes in the underlying SEXP
+    3315*:   48:            static_cast<CLASS&>(*this).update(data) ;
+    3315*:   49:        }
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi19ES0_EEE5set__EP7SEXPREC:
+    #####:   39:        inline void set__(SEXP x){
+    #####:   40:            if (data != x) {
+    #####:   41:                data = x;
+    #####:   42:                Rcpp_PreciousRelease(token);
+    #####:   43:                token = Rcpp_PreciousPreserve(data);
+        -:   44:            }
+        -:   45:
+        -:   46:            // calls the update method of CLASS
+        -:   47:            // this is where to react to changes in the underlying SEXP
+    #####:   48:            static_cast<CLASS&>(*this).update(data) ;
+    #####:   49:        }
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi14ES0_EEE5set__EP7SEXPREC:
+     3315:   39:        inline void set__(SEXP x){
+     3315:   40:            if (data != x) {
+     3315:   41:                data = x;
+     3315:   42:                Rcpp_PreciousRelease(token);
+     3315:   43:                token = Rcpp_PreciousPreserve(data);
+        -:   44:            }
+        -:   45:
+        -:   46:            // calls the update method of CLASS
+        -:   47:            // this is where to react to changes in the underlying SEXP
+     3315:   48:            static_cast<CLASS&>(*this).update(data) ;
+     3315:   49:        }
+------------------
+        -:   50:
+    5570*:   51:        inline SEXP get__() const {
+    5570*:   52:            return data ;
+        -:   53:        }
+------------------
+_ZNK4Rcpp15PreserveStorageINS_6VectorILi19ES0_EEE5get__Ev:
+    #####:   51:        inline SEXP get__() const {
+    #####:   52:            return data ;
+        -:   53:        }
+------------------
+_ZNK4Rcpp15PreserveStorageINS_6VectorILi14ES0_EEE5get__Ev:
+     5570:   51:        inline SEXP get__() const {
+     5570:   52:            return data ;
+        -:   53:        }
+------------------
+        -:   54:
+        -:   55:        inline SEXP invalidate__(){
+        -:   56:            SEXP out = data ;
+        -:   57:            Rcpp_PreciousRelease(token);
+        -:   58:            data = R_NilValue ;
+        -:   59:            token = R_NilValue ;
+        -:   60:            return out ;
+        -:   61:        }
+        -:   62:
+        -:   63:        template <typename T>
+     2255:   64:        inline T& copy__(const T& other){
+     2255:   65:            if( this != &other){
+     2255:   66:                set__(other.get__());
+        -:   67:            }
+     2255:   68:            return static_cast<T&>(*this) ;
+        -:   69:        }
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi14ES0_EEE6copy__IS2_EERT_RKS5_:
+     2120:   64:        inline T& copy__(const T& other){
+     2120:   65:            if( this != &other){
+     2120:   66:                set__(other.get__());
+        -:   67:            }
+     2120:   68:            return static_cast<T&>(*this) ;
+        -:   69:        }
+------------------
+_ZN4Rcpp15PreserveStorageINS_6VectorILi19ES0_EEE6copy__IS2_EERT_RKS5_:
+      135:   64:        inline T& copy__(const T& other){
+      135:   65:            if( this != &other){
+      135:   66:                set__(other.get__());
+        -:   67:            }
+      135:   68:            return static_cast<T&>(*this) ;
+        -:   69:        }
+------------------
+        -:   70:
+        -:   71:        inline bool inherits(const char* clazz) const {
+        -:   72:            return ::Rf_inherits( data, clazz) ;
+        -:   73:        }
+        -:   74:
+    4645*:   75:        inline operator SEXP() const { return data; }
+------------------
+_ZNK4Rcpp15PreserveStorageINS_6VectorILi19ES0_EEEcvP7SEXPRECEv:
+    #####:   75:        inline operator SEXP() const { return data; }
+------------------
+_ZNK4Rcpp15PreserveStorageINS_6VectorILi14ES0_EEEcvP7SEXPRECEv:
+     4645:   75:        inline operator SEXP() const { return data; }
+------------------
+        -:   76:
+        -:   77:    private:
+        -:   78:        SEXP data ;
+        -:   79:        SEXP token ;
+        -:   80:    } ;
+        -:   81:
+        -:   82:}
+        -:   83:
+        -:   84:#endif

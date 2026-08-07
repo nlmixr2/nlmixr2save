@@ -1,0 +1,119 @@
+        -:    0:Source:/home/matt-fidler/R/x86_64-pc-linux-gnu-library/4.6/Rcpp/include/Rcpp/InputParameter.h
+        -:    0:Graph:./RcppExports.gcno
+        -:    0:Data:./RcppExports.gcda
+        -:    0:Runs:15
+        -:    1:// -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
+        -:    2://
+        -:    3:// InputParameter.h: Rcpp R/C++ interface class library --
+        -:    4://
+        -:    5:// Copyright (C) 2013    Dirk Eddelbuettel and Romain Francois
+        -:    6://
+        -:    7:// This file is part of Rcpp.
+        -:    8://
+        -:    9:// Rcpp is free software: you can redistribute it and/or modify it
+        -:   10:// under the terms of the GNU General Public License as published by
+        -:   11:// the Free Software Foundation, either version 2 of the License, or
+        -:   12:// (at your option) any later version.
+        -:   13://
+        -:   14:// Rcpp is distributed in the hope that it will be useful, but
+        -:   15:// WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   16:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   17:// GNU General Public License for more details.
+        -:   18://
+        -:   19:// You should have received a copy of the GNU General Public License
+        -:   20:// along with Rcpp.  If not, see <http://www.gnu.org/licenses/>.
+        -:   21:
+        -:   22:#ifndef Rcpp__InputParameter__h
+        -:   23:#define Rcpp__InputParameter__h
+        -:   24:
+        -:   25:namespace Rcpp {
+        -:   26:
+        -:   27:    // default implementation used for pass by value and modules objects
+        -:   28:    // as<> is called on the conversion operator
+        -:   29:    template <typename T>
+        -:   30:    class InputParameter {
+        -:   31:    public:
+      270:   32:        InputParameter(SEXP x_) : x(x_){}
+------------------
+_ZN4Rcpp14InputParameterIbEC2EP7SEXPREC:
+      135:   32:        InputParameter(SEXP x_) : x(x_){}
+------------------
+_ZN4Rcpp14InputParameterIP7SEXPRECEC2ES2_:
+      135:   32:        InputParameter(SEXP x_) : x(x_){}
+------------------
+        -:   33:
+      270:   34:        inline operator T() { return as<T>(x) ; }
+------------------
+_ZN4Rcpp14InputParameterIbEcvbEv:
+      135:   34:        inline operator T() { return as<T>(x) ; }
+------------------
+_ZN4Rcpp14InputParameterIP7SEXPRECEcvS2_Ev:
+      135:   34:        inline operator T() { return as<T>(x) ; }
+------------------
+        -:   35:
+        -:   36:    private:
+        -:   37:        SEXP x ;
+        -:   38:    } ;
+        -:   39:
+        -:   40:    // impl for references. It holds an object at the constructor and then
+        -:   41:    // returns a reference in the reference operator
+        -:   42:    template <typename T>
+        -:   43:    class ReferenceInputParameter {
+        -:   44:    public:
+        -:   45:        typedef T& reference ;
+        -:   46:        ReferenceInputParameter(SEXP x_) : obj( as<T>(x_) ){}
+        -:   47:
+        -:   48:        inline operator reference() { return obj ; }
+        -:   49:
+        -:   50:    private:
+        -:   51:        T obj ;
+        -:   52:    } ;
+        -:   53:
+        -:   54:    // same for const
+        -:   55:    template <typename T>
+        -:   56:    class ConstInputParameter {
+        -:   57:    public:
+        -:   58:        typedef const T const_nonref ;
+        -:   59:        ConstInputParameter(SEXP x_) : obj( as<T>(x_) ){}
+        -:   60:
+        -:   61:        inline operator const_nonref() { return obj ; }
+        -:   62:
+        -:   63:    private:
+        -:   64:        T obj ;
+        -:   65:    } ;
+        -:   66:
+        -:   67:    // same for const references
+        -:   68:    template <typename T>
+        -:   69:    class ConstReferenceInputParameter {
+        -:   70:    public:
+        -:   71:        typedef const T& const_reference ;
+        -:   72:        ConstReferenceInputParameter(SEXP x_) : obj( as<T>(x_) ){}
+        -:   73:
+        -:   74:        inline operator const_reference() { return obj ; }
+        -:   75:
+        -:   76:    private:
+        -:   77:        T obj ;
+        -:   78:    } ;
+        -:   79:
+        -:   80:    namespace traits{
+        -:   81:        template <typename T>
+        -:   82:        struct input_parameter {
+        -:   83:            typedef typename Rcpp::InputParameter<T> type ;
+        -:   84:        } ;
+        -:   85:        template <typename T>
+        -:   86:        struct input_parameter<T&> {
+        -:   87:            typedef typename Rcpp::ReferenceInputParameter<T> type ;
+        -:   88:        } ;
+        -:   89:        template <typename T>
+        -:   90:        struct input_parameter<const T> {
+        -:   91:            typedef typename Rcpp::ConstInputParameter<T> type ;
+        -:   92:        } ;
+        -:   93:        template <typename T>
+        -:   94:        struct input_parameter<const T&> {
+        -:   95:            typedef typename Rcpp::ConstReferenceInputParameter<T> type ;
+        -:   96:        } ;
+        -:   97:    }
+        -:   98:
+        -:   99:}
+        -:  100:
+        -:  101:#endif
