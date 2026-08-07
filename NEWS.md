@@ -15,9 +15,16 @@
   vector rather than a data frame, so the levels were silently not recorded and
   `loadFit()` fell back to a hardcoded level list.  nlmixr2est has since added
   types that list predates ("Analytic Gradient (relaxed)" and friends), and
-  those came back as `NA`.  For caches saved before the levels were recorded,
-  `loadFit()` now appends any unrecognized type to the fallback list instead of
-  dropping it to `NA`.
+  those came back as `NA`.  When the levels cannot be recorded at all, the
+  restore script now appends any unrecognized type to its hardcoded fallback
+  list rather than dropping it to `NA`.  (Unlike the `ID` repair, this lives in
+  the restore script inside the zip, so an already-written cache picks it up
+  only once it is saved again.)
+
+* `saveFit(fit, zip=FALSE)` now actually leaves the fit unzipped for a fit table
+  (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the
+  core method with a hardcoded `zip=TRUE`, so the argument was silently ignored
+  for every fit that carries data.
 
 * `nlmixrDataSimplify()` gained `est` and `control` arguments and no longer
   drops the covariate columns that `est="vae"` searches for.  The VAE covariate

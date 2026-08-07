@@ -702,7 +702,7 @@ saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     file <- as.character(substitute(fit))
   }
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
-  saveFit.nlmixr2FitCore(fit, file, zip=TRUE, data=data)
+  saveFit.nlmixr2FitCore(fit, file, zip=zip, data=data)
 }
 
 #' @rdname saveFit

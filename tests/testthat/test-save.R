@@ -568,6 +568,42 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(levels(fit2S$ID), levels(fitS$ID))
       })
 
+      test_that("a cache saved before the levels were recorded still loads", {
+        # A cache written by an earlier nlmixr2save has no `..id.level..` and no
+        # `..parHistType.level..`.  Simulate one by blanking both out of the
+        # env script (`env` is a plain environment when those lines run, so
+        # assigning NULL leaves exactly what a missing entry looks like to the
+        # restore script), and by injecting a parHistData type that postdates
+        # the loader's hardcoded fallback list.
+        suppressMessages(saveFit(fitS, "fitOld", zip=FALSE))
+        # zip=FALSE has to be honored for a fit table too, not just for a core
+        expect_false(file.exists("fitOld.zip"))
+        expect_true(file.exists("fitOld-env.R"))
+        expect_true(file.exists("fitOld.csv"))
+        cat("env$`..id.level..` <- NULL\n",
+            "env$`..parHistType.level..` <- NULL\n",
+            file="fitOld-env.R", append=TRUE, sep="")
+
+        .ph <- utils::read.csv("fitOld-parHistData.csv", check.names=FALSE)
+        .ph$type[1] <- "Future Gradient"
+        utils::write.csv(.ph, "fitOld-parHistData.csv", row.names=FALSE)
+
+        .old <- suppressMessages(loadFit("fitOld", checkVersion=FALSE))
+
+        # ID is repaired from the order the IDs appear, not from a sort --
+        # a character sort would put "10" before "2".
+        expect_true(is.factor(.old$ID))
+        expect_equal(levels(.old$ID), unique(as.character(fitS$ID)))
+        expect_equal(as.character(.old$ID), as.character(fitS$ID))
+
+        # the unrecognized type is appended to the fallback list rather than
+        # dropped to NA
+        expect_true(is.factor(.old$parHistData$type))
+        expect_false(anyNA(.old$parHistData$type))
+        expect_true("Future Gradient" %in% levels(.old$parHistData$type))
+        expect_equal(as.character(.old$parHistData$type[1]), "Future Gradient")
+      })
+
       test_that("saveFit(data=FALSE) omits the original data", {
         suppressMessages(saveFit(fitF, "fitFnd", data=FALSE))
         expect_true(file.exists("fitFnd.zip"))
