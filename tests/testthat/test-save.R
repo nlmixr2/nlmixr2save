@@ -12,6 +12,38 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
+test_that(".nlmixr2saveFitFiles matches one fit's files and no others", {
+  # what comes back is zipped and then unlinked, so matching one file too many
+  # destroys another cache and one too few leaves an unloadable one
+  withr::with_tempdir({
+    file.create(c("fit-env.R", "fit-ui.R", "fit.csv", "fit.R", "fit.zip",
+                  "myfit-env.R", "myfit.csv", "fitExtra-env.R", "fit2.csv",
+                  "my.fit-env.R", "my.fit.csv", "my_fit-env.R", "my_fit.csv",
+                  "fit+1-env.R", ".dot-env.R", ".dot.csv"))
+
+    expect_equal(sort(.nlmixr2saveFitFiles("fit")),
+                 c("fit-env.R", "fit-ui.R", "fit.R", "fit.csv"))
+    # not the .zip, and not a longer name that merely starts the same way
+    expect_false(any(c("fit.zip", "fit2.csv", "fitExtra-env.R", "myfit.csv") %in%
+                       .nlmixr2saveFitFiles("fit")))
+    # a base name is a variable name, so it can hold regexp metacharacters:
+    # as a pattern, "my.fit" would also match my_fit's files
+    expect_equal(sort(.nlmixr2saveFitFiles("my.fit")),
+                 c("my.fit-env.R", "my.fit.csv"))
+    expect_equal(sort(.nlmixr2saveFitFiles("my_fit")),
+                 c("my_fit-env.R", "my_fit.csv"))
+    expect_equal(.nlmixr2saveFitFiles("fit+1"), "fit+1-env.R")
+    # `.dot` is an ordinary R name, and its files are hidden
+    expect_equal(sort(.nlmixr2saveFitFiles(".dot")), c(".dot-env.R", ".dot.csv"))
+    expect_equal(length(.nlmixr2saveFitFiles("nosuch")), 0)
+
+    dir.create("sub")
+    file.create(c("sub/a-env.R", "sub/a.csv", "sub/ab.csv"))
+    expect_equal(sort(.nlmixr2saveFitFiles(file.path("sub", "a"))),
+                 c("sub/a-env.R", "sub/a.csv"))
+  })
+})
+
 test_that("saveFitRandom adds and removes registered random functions", {
   .old <- saveFitRandom()
   on.exit(saveFitRandom(.old), add = TRUE)
