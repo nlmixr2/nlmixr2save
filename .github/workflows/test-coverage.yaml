@@ -35,6 +35,11 @@ jobs:
           needs: coverage
 
       - name: Test coverage
+        # The whole run takes about 6 minutes.  Without a step timeout, a test
+        # that hangs instead takes the runner down with it (exit 143, no
+        # output), and the `always()` steps below never run, so there is
+        # nothing to diagnose from.  Failing the step leaves them to run.
+        timeout-minutes: 20
         run: |
           cov <- covr::package_coverage(
             quiet = FALSE,

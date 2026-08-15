@@ -12,6 +12,38 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
+test_that(".nlmixr2saveFitFiles matches one fit's files and no others", {
+  # what comes back is zipped and then unlinked, so matching one file too many
+  # destroys another cache and one too few leaves an unloadable one
+  withr::with_tempdir({
+    file.create(c("fit-env.R", "fit-ui.R", "fit.csv", "fit.R", "fit.zip",
+                  "myfit-env.R", "myfit.csv", "fitExtra-env.R", "fit2.csv",
+                  "my.fit-env.R", "my.fit.csv", "my_fit-env.R", "my_fit.csv",
+                  "fit+1-env.R", ".dot-env.R", ".dot.csv"))
+
+    expect_equal(sort(.nlmixr2saveFitFiles("fit")),
+                 c("fit-env.R", "fit-ui.R", "fit.R", "fit.csv"))
+    # not the .zip, and not a longer name that merely starts the same way
+    expect_false(any(c("fit.zip", "fit2.csv", "fitExtra-env.R", "myfit.csv") %in%
+                       .nlmixr2saveFitFiles("fit")))
+    # a base name is a variable name, so it can hold regexp metacharacters:
+    # as a pattern, "my.fit" would also match my_fit's files
+    expect_equal(sort(.nlmixr2saveFitFiles("my.fit")),
+                 c("my.fit-env.R", "my.fit.csv"))
+    expect_equal(sort(.nlmixr2saveFitFiles("my_fit")),
+                 c("my_fit-env.R", "my_fit.csv"))
+    expect_equal(.nlmixr2saveFitFiles("fit+1"), "fit+1-env.R")
+    # `.dot` is an ordinary R name, and its files are hidden
+    expect_equal(sort(.nlmixr2saveFitFiles(".dot")), c(".dot-env.R", ".dot.csv"))
+    expect_equal(length(.nlmixr2saveFitFiles("nosuch")), 0)
+
+    dir.create("sub")
+    file.create(c("sub/a-env.R", "sub/a.csv", "sub/ab.csv"))
+    expect_equal(sort(.nlmixr2saveFitFiles(file.path("sub", "a"))),
+                 c("sub/a-env.R", "sub/a.csv"))
+  })
+})
+
 test_that("saveFitRandom adds and removes registered random functions", {
   .old <- saveFitRandom()
   on.exit(saveFitRandom(.old), add = TRUE)
@@ -555,6 +587,166 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)
 
+      test_that("a restored fit keeps ID a factor", {
+        # the fit table round-trips through a plain .csv, so ID comes back as an
+        # integer unless it is put back.  Anything joining the fit table to
+        # something derived from the fit then hits a type mismatch --
+        # nlme::augPred() keeps `id` a factor, and ggPMX::pmx_nlmixr() dies in a
+        # data.table join on it.
+        expect_true(is.factor(fit2F$ID))
+        expect_equal(levels(fit2F$ID), levels(fitF$ID))
+        expect_equal(as.character(fit2F$ID), as.character(fitF$ID))
+        expect_true(is.factor(fit2S$ID))
+        expect_equal(levels(fit2S$ID), levels(fitS$ID))
+      })
+
+      # The two repair functions are exercised on hand-built objects rather
+      # than on another saved-and-reloaded fit.  Each extra round trip rebuilds
+      # an rxode2 model, which is nearly free against a warm cache but costs
+      # minutes against a cold one -- three such tests took over 18 minutes on
+      # CI where all five fits together took 81 seconds.  Synthetic inputs also
+      # pin the behavior down harder, since the levels can be made to disagree
+      # with the row order in a way theo_sd's IDs never do.
+
+      test_that(".nlmixr2saveRestoreIdFactor takes its levels from ranef", {
+        .env <- new.env(parent=emptyenv())
+        # levels deliberately in the opposite order to the rows, so following
+        # ranef and following the order of appearance give different answers
+        assign("ranef", data.frame(ID=factor(c("b", "a"), levels=c("b", "a"))),
+               envir=.env)
+        .cls <- c("nlmixr2FitData", "nlmixr2FitCore", "data.frame")
+        .fit <- data.frame(ID=c("a", "b", "a"), DV=1:3)
+        attr(.cls, ".foceiEnv") <- .env
+        class(.fit) <- .cls
+
+        .r <- .nlmixr2saveRestoreIdFactor(.fit)
+        expect_true(is.factor(.r$ID))
+        expect_equal(levels(.r$ID), c("b", "a"))
+        # the labels still line up with the rows; only the coding changed
+        expect_equal(as.character(.r$ID), c("a", "b", "a"))
+        # the class attribute carries the env `$` dispatches through, and
+        # column assignment must not drop it
+        expect_true(is.environment(attr(class(.r), ".foceiEnv")))
+
+        # with no usable ranef it falls back to the order the IDs appear, not
+        # a sort -- a character sort would put "10" before "2"
+        .env2 <- new.env(parent=emptyenv())
+        assign("ranef", data.frame(ID=c(2L, 10L)), envir=.env2)
+        .cls2 <- c("nlmixr2FitData", "nlmixr2FitCore", "data.frame")
+        .fit2 <- data.frame(ID=c(2L, 10L, 2L), DV=1:3)
+        attr(.cls2, ".foceiEnv") <- .env2
+        class(.fit2) <- .cls2
+        expect_equal(levels(.nlmixr2saveRestoreIdFactor(.fit2)$ID), c("2", "10"))
+
+        # an ID the ranef levels do not cover must not become NA
+        .env3 <- new.env(parent=emptyenv())
+        assign("ranef", data.frame(ID=factor("a", levels="a")), envir=.env3)
+        .cls3 <- c("nlmixr2FitData", "nlmixr2FitCore", "data.frame")
+        .fit3 <- data.frame(ID=c("a", "z"), DV=1:2)
+        attr(.cls3, ".foceiEnv") <- .env3
+        class(.fit3) <- .cls3
+        .r3 <- .nlmixr2saveRestoreIdFactor(.fit3)
+        expect_false(anyNA(.r3$ID))
+        expect_equal(levels(.r3$ID), c("a", "z"))
+
+        # nothing to do for an object that is not a fit table with an ID
+        expect_identical(.nlmixr2saveRestoreIdFactor(1L), 1L)
+        expect_identical(.nlmixr2saveRestoreIdFactor(data.frame(a=1)),
+                         data.frame(a=1))
+      })
+
+      test_that(".nlmixr2saveRestoreParHistType repairs a dropped type", {
+        withr::with_tempdir({
+          .e <- new.env(parent=emptyenv())
+          .ph <- data.frame(iter=1:3,
+                            type=c("Unscaled", "Unscaled", "Future Gradient"))
+          utils::write.csv(.ph, "b-parHistData.csv", row.names=FALSE)
+          # what the cache's own script leaves behind: a level list that
+          # predates the type, so it came back NA
+          .ph$type <- factor(.ph$type, levels="Unscaled")
+          expect_true(anyNA(.ph$type))
+          .cls <- class(.ph)
+          attr(.cls, "niter") <- 42L   # saem hangs this off the class
+          class(.ph) <- .cls
+          assign("parHistData", .ph, envir=.e)
+
+          .nlmixr2saveRestoreParHistType(.e, "b")
+          .out <- get("parHistData", envir=.e)
+          expect_false(anyNA(.out$type))
+          expect_equal(levels(.out$type), c("Unscaled", "Future Gradient"))
+          expect_equal(as.character(.out$type[3]), "Future Gradient")
+          # every attribute nlmixr2est hangs off the class survives
+          expect_equal(attr(class(.out), "niter"), 42L)
+
+          # a type column with no NA is left exactly as it was
+          .e2 <- new.env(parent=emptyenv())
+          .ok <- data.frame(iter=1L, type=factor("Unscaled"))
+          assign("parHistData", .ok, envir=.e2)
+          .nlmixr2saveRestoreParHistType(.e2, "b")
+          expect_identical(get("parHistData", envir=.e2), .ok)
+
+          # a missing csv, or one whose rows do not line up, is left alone
+          .e3 <- new.env(parent=emptyenv())
+          assign("parHistData", .ph, envir=.e3)
+          .nlmixr2saveRestoreParHistType(.e3, "nosuch")
+          expect_true(anyNA(get("parHistData", envir=.e3)$type))
+
+          utils::write.csv(.ph[1, ], "short-parHistData.csv", row.names=FALSE)
+          .e4 <- new.env(parent=emptyenv())
+          assign("parHistData", .ph, envir=.e4)
+          .nlmixr2saveRestoreParHistType(.e4, "short")
+          expect_true(anyNA(get("parHistData", envir=.e4)$type))
+
+          # an env with no parHistData at all is fine
+          expect_error(.nlmixr2saveRestoreParHistType(new.env(), "b"), NA)
+        })
+      })
+
+      test_that("a cache saved before the levels were recorded still loads", {
+        # A cache written by an earlier nlmixr2save has no `..id.level..` and no
+        # `..parHistType.level..`.  Simulate one by blanking both out of the
+        # env script (`env` is a plain environment when those lines run, so
+        # assigning NULL leaves exactly what a missing entry looks like to the
+        # restore script), and by injecting a parHistData type that postdates
+        # the loader's hardcoded fallback list.
+        suppressMessages(saveFit(fitS, "fitOld", zip=FALSE))
+        # zip=FALSE has to be honored for a fit table too, not just for a core
+        expect_false(file.exists("fitOld.zip"))
+        expect_true(file.exists("fitOld-env.R"))
+        expect_true(file.exists("fitOld.csv"))
+        cat("env$`..id.level..` <- NULL\n",
+            "env$`..parHistType.level..` <- NULL\n",
+            file="fitOld-env.R", append=TRUE, sep="")
+
+        .ph <- utils::read.csv("fitOld-parHistData.csv", check.names=FALSE)
+        .ph$type[1] <- "Future Gradient"
+        utils::write.csv(.ph, "fitOld-parHistData.csv", row.names=FALSE)
+
+        .old <- suppressMessages(loadFit("fitOld", checkVersion=FALSE))
+
+        # ID is repaired from the order the IDs appear, not from a sort --
+        # a character sort would put "10" before "2".
+        expect_true(is.factor(.old$ID))
+        expect_equal(levels(.old$ID), unique(as.character(fitS$ID)))
+        expect_equal(as.character(.old$ID), as.character(fitS$ID))
+
+        # the unrecognized type is appended to the fallback list rather than
+        # dropped to NA.  Source the restore script directly rather than going
+        # through loadFit(): loadFit() also repairs an NA type from the csv,
+        # which would mask a broken script.
+        .se <- new.env()
+        source("fitOld.R", local=.se)
+        .script <- get("fitOld", envir=.se)
+        expect_true(is.factor(.script$parHistData$type))
+        expect_false(anyNA(.script$parHistData$type))
+        expect_true("Future Gradient" %in% levels(.script$parHistData$type))
+        expect_equal(as.character(.script$parHistData$type[1]), "Future Gradient")
+
+        # and the same holds through loadFit()
+        expect_false(anyNA(.old$parHistData$type))
+        expect_equal(as.character(.old$parHistData$type[1]), "Future Gradient")
+      })
+
       test_that("saveFit(data=FALSE) omits the original data", {
         suppressMessages(saveFit(fitF, "fitFnd", data=FALSE))
         expect_true(file.exists("fitFnd.zip"))
@@ -617,6 +809,22 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
 
       fit2IS <- loadFit("fitIS")
       fitEquals(fitIS, fit2IS)
+
+      test_that("a compressed fit still records its parHistData type levels", {
+        # nlmixr2est stores parHistData compressed (a raw vector in the env)
+        # unless compress=FALSE, so saveFit() has to decompress before it can
+        # read the type levels off it.  Without that it fell through to the
+        # loader's hardcoded level list, which nlmixr2est has since outgrown
+        # ("Analytic Gradient (relaxed)" and friends), and those levels came
+        # back as NA.
+        expect_true(is.raw(get("parHistData", envir=fitIS$env)))
+        expect_equal(levels(fit2IS$parHistData$type),
+                     levels(fitIS$parHistData$type))
+        expect_false(anyNA(fit2IS$parHistData$type))
+        expect_equal(levels(fit2IF$parHistData$type),
+                     levels(fitIF$parHistData$type))
+        expect_false(anyNA(fit2IF$parHistData$type))
+      })
 
       one.cmt.nlm <- function() {
         ini({

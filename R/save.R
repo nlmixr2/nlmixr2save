@@ -8,6 +8,37 @@
 .saveFitEnv$fun <- ""
 .saveFitEnv$restore <- FALSE
 
+#' The unzipped files belonging to one saved fit
+#'
+#' That is `<file>-*` plus `<file>.csv` and `<file>.R`.
+#'
+#' Matched literally rather than by regexp.  A base name is a variable name or
+#' a `nlmixr2save.prefix`, so it can hold regexp metacharacters -- `my.fit` is
+#' an ordinary R name, and as a pattern its `.` also matches `my_fit`'s files.
+#' The caller zips what it gets back and then unlinks it, so matching one
+#' character too many silently destroys another cache; matching one too few
+#' leaves a cache that cannot be loaded.
+#'
+#' @param file base name of the fit, possibly with a directory
+#' @return the matching paths, relative to the working directory
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveFitFiles <- function(file) {
+  .base <- basename(file)
+  .dir <- dirname(file)
+  # dirname("fit") is "." but dirname("") is "", and file.path("", x) would
+  # make that an absolute path at the filesystem root
+  if (.dir == "") .dir <- "."
+  # all.files: a base name can start with a dot, since `.fit` is an ordinary
+  # R name and saveFit() takes the base name from the variable
+  .all <- setdiff(list.files(.dir, all.files=TRUE), c(".", ".."))
+  .keep <- startsWith(.all, .base) &
+    (substring(.all, nchar(.base) + 1L, nchar(.base) + 1L) == "-" |
+       .all == paste0(.base, ".csv") |
+       .all == paste0(.base, ".R"))
+  gsub("^[.]/", "", file.path(.dir, .all[.keep]))
+}
+
 .minfo <- function (text, ..., .envir = parent.frame()) {
   .opt <- getOption("nlmixr2save.quiet", FALSE)
   if (checkmate::testLogical(.opt,
@@ -538,6 +569,10 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .parHistTypeLevel <- NULL
   if (exists("parHistData", envir=fit$env, inherits=FALSE)) {
     .phd <- get("parHistData", envir=fit$env)
+    if (is.raw(.phd)) {
+      # nlmixr2est stores parHistData compressed; `$` decompresses it
+      .phd <- fit$parHistData
+    }
     if (is.data.frame(.phd) && is.factor(.phd$type)) {
       .parHistTypeLevel <- levels(.phd$type)
     }
@@ -552,9 +587,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
   writeLines(.str, con = paste0(file,"-env.R"))
-  .files <- c(list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
-                         full.names=TRUE))
-  .files <- gsub("^[.]/", "", .files)
+  .files <- .nlmixr2saveFitFiles(file)
   # nlmixr2est <= 6.0 stores parFixedDf with named "Estimate"/"SE" columns;
   # the $parFixed refactor (nlmixr2est#645) stores them unnamed.  Record
   # which structure this fit uses so the restore script rebuilds it exactly.
@@ -648,7 +681,12 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
                     # use the levels recorded from the fit; fall back to the
                     # known level set for fits saved before they were recorded
                     "  .phLevels <- .parHistType.level\n",
-                    "  if (is.null(.phLevels)) .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    "  if (is.null(.phLevels)) {\n",
+                    "    .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    # a fit saved before the levels were recorded can still use a
+                    # type this list predates; append it rather than drop it to NA
+                    "    .phLevels <- c(.phLevels, setdiff(unique(as.character(env$parHistData$type)), .phLevels))\n",
+                    "  }\n",
                     "  env$parHistData$type <- factor(env$parHistData$type, levels=.phLevels)\n",
                     "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
                     "}\n",
@@ -675,9 +713,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
              con = paste0(file,".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
-    .files <- c(list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
-                           full.names=TRUE))
-    .files <- gsub("^[.]/", "", .files)
+    .files <- .nlmixr2saveFitFiles(file)
     zip::zip(zipfile = paste0(file, ".zip"),
              files = .files)
     .minfo("removing unzipped fit files")
@@ -693,7 +729,7 @@ saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     file <- as.character(substitute(fit))
   }
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
-  saveFit.nlmixr2FitCore(fit, file, zip=TRUE, data=data)
+  saveFit.nlmixr2FitCore(fit, file, zip=zip, data=data)
 }
 
 #' @rdname saveFit
@@ -702,6 +738,108 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   stop("saveFit not implemented for object of class ", paste(class(fit), collapse=", "), call.=FALSE)
 }
 
+
+#' Put the `ID` column of a restored fit back to a factor
+#'
+#' The fit table is written as a plain `.csv`, so `read.csv()` brings `ID` back
+#' as an integer (or character) while a real fit carries a factor.  Anything that
+#' joins the fit table against something derived from the fit then hits a type
+#' mismatch -- `nlme::augPred()` keeps `id` a factor, so `ggPMX::pmx_nlmixr()`
+#' dies in a data.table join with "Incompatible join types: x.ID (factor) and
+#' i.ID (integer)".
+#'
+#' Done here rather than in the restore script written by [saveFit()] so that
+#' caches saved by earlier versions are repaired on load too.
+#'
+#' Levels come from `ranef`/`etaObf`, which the restore script has already put
+#' back as factors with the fit's own levels; failing that, from the order the
+#' IDs appear (the order nlmixr2est itself uses).
+#'
+#' @param fit restored object
+#' @return `fit`, with `ID` a factor when it is a fit table that has one
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveRestoreIdFactor <- function(fit) {
+  if (!inherits(fit, "nlmixr2FitData")) return(fit)
+  if (!is.data.frame(fit)) return(fit)
+  if (is.null(fit[["ID"]]) || is.factor(fit[["ID"]])) return(fit)
+  .env <- try(fit$env, silent=TRUE)
+  .levels <- NULL
+  if (is.environment(.env)) {
+    for (.n in c("ranef", "etaObf")) {
+      .df <- try(get(.n, envir=.env, inherits=FALSE), silent=TRUE)
+      if (is.data.frame(.df) && is.factor(.df$ID)) {
+        .levels <- levels(.df$ID)
+        break
+      }
+    }
+  }
+  .id <- as.character(fit[["ID"]])
+  if (is.null(.levels)) {
+    .levels <- unique(.id)
+  } else {
+    # ranef should cover every subject in the table, but never turn an ID the
+    # table does have into NA on the way to fixing its type
+    .levels <- c(.levels, setdiff(unique(.id), .levels))
+  }
+  ## `class<-` last: the class attribute of a fit carries the `.foceiEnv`
+  ## attribute that `$` dispatches through, and column assignment must not be
+  ## allowed to drop it.
+  .cls <- class(fit)
+  fit[["ID"]] <- factor(.id, levels=.levels)
+  class(fit) <- .cls
+  fit
+}
+
+#' Repair `parHistData$type` levels a cache's own restore script dropped
+#'
+#' The factor levels for `parHistData$type` are applied by the restore script
+#' stored *inside* the cache.  A script written before a given nlmixr2est
+#' version knows nothing of the types that version added ("Analytic Gradient
+#' (relaxed)" and friends), so it coerces them to `NA` -- and re-saving cannot
+#' recover them, because by then the strings are already gone.
+#'
+#' The `-parHistData.csv` still holds the original strings and has not been
+#' cleaned up yet at this point in [loadFit()], so read the column back from
+#' there and append whatever the script's level list was missing.
+#'
+#' @param fit restored object
+#' @param file base name the fit was loaded from
+#' @return `fit`, invisibly; `parHistData` is repaired in the fit environment
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveRestoreParHistType <- function(fit, file) {
+  # a fit table dispatches `$env` through its class attribute; a data-less fit
+  # (`nlmixr2saveShare(noFit=TRUE)`) restores as the environment itself
+  .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
+  if (!is.environment(.env)) return(invisible(fit))
+  if (!exists("parHistData", envir=.env, inherits=FALSE)) return(invisible(fit))
+  .phd <- try(get("parHistData", envir=.env, inherits=FALSE), silent=TRUE)
+  # only NA types are worth repairing; a cache whose script knew the levels is
+  # already correct
+  if (!is.data.frame(.phd) || !is.factor(.phd$type) || !anyNA(.phd$type)) {
+    return(invisible(fit))
+  }
+  .csv <- paste0(file, "-parHistData.csv")
+  if (!file.exists(.csv)) return(invisible(fit))
+  # colClasses="character": type is a level name, and letting read.csv infer
+  # would turn a level like "01" into 1 or "T" into TRUE on the way back
+  .raw <- try(utils::read.csv(.csv, check.names=FALSE, colClasses="character"),
+              silent=TRUE)
+  if (!is.data.frame(.raw) || is.null(.raw$type) || nrow(.raw) != nrow(.phd)) {
+    return(invisible(fit))
+  }
+  .type <- as.character(.raw$type)
+  .levels <- c(levels(.phd$type), setdiff(unique(.type[!is.na(.type)]),
+                                          levels(.phd$type)))
+  ## `class<-` last: for a saem fit the class attribute of parHistData carries
+  ## the `niter` attribute, which column assignment must not drop.
+  .cls <- class(.phd)
+  .phd$type <- factor(.type, levels=.levels)
+  class(.phd) <- .cls
+  assign("parHistData", .phd, envir=.env)
+  invisible(fit)
+}
 
 #' Load a fitted model object from a file
 #'
@@ -734,13 +872,14 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
     .minfo(paste0("loading fit from ", .r))
     source(.r, local=TRUE)
     ret <- get(file)
+    ret <- .nlmixr2saveRestoreIdFactor(ret)
+    # must run before the unzipped files are removed below; it reads the csv
+    .nlmixr2saveRestoreParHistType(ret, file)
     if (isTRUE(checkVersion)) {
       .nlmixr2saveWarnVersion(ret)
     }
     if (.didUnzip) {
-      .files <- list.files(dirname(file), pattern=paste0(basename(file), "(-|[.]csv$|[.]R$)"),
-                           full.names=TRUE)
-      .files <- gsub("^[.]/", "", .files)
+      .files <- .nlmixr2saveFitFiles(file)
       .minfo("removing unzipped fit files")
       lapply(.files, unlink)
     }

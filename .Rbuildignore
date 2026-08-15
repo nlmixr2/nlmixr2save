@@ -11,3 +11,5 @@
 ^CRAN-SUBMISSION$
 ^\.Rhistory$
 ^\.vexp$
+^covr$
+^src/.*\.(o|so|gcda|gcno|gcov)$

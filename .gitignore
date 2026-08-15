@@ -4,3 +4,12 @@ docs
 /sim.rds
 /.vexp
 /CRAN-SUBMISSION
+
+# covr leaves these behind when run with clean=FALSE; they carry absolute
+# paths from whoever ran it, and stale .gcda counters break a later gcov merge
+/covr
+*.gcda
+*.gcno
+*.gcov
+src/*.o
+src/*.so

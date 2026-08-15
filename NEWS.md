@@ -1,5 +1,45 @@
 # nlmixr2save 0.2.0
 
+* `loadFit()` (and therefore `:=`) now restores the fit table's `ID` column as a
+  factor.  The table round-trips through a plain `.csv`, so `ID` came back as an
+  integer while a live fit carries a factor; anything joining the fit table to
+  something derived from the fit then hit a type mismatch, since
+  `nlme::augPred()` keeps its `id` a factor.  `ggPMX::pmx_nlmixr()` on a cached
+  fit failed outright with "Incompatible join types: x.ID (factor) and i.ID
+  (integer)".  The repair happens on load, so caches written by earlier versions
+  are fixed too.
+
+* `saveFit()` now records the `parHistData$type` factor levels for fits that
+  store `parHistData` compressed (the nlmixr2est default).  It read the levels
+  straight out of the fit environment, where a compressed fit keeps a raw
+  vector rather than a data frame, so the levels were silently not recorded and
+  `loadFit()` fell back to a hardcoded level list.  nlmixr2est has since added
+  types that list predates ("Analytic Gradient (relaxed)" and friends), and
+  those came back as `NA`.
+
+* `loadFit()` now repairs a `parHistData$type` that the cache's *own* restore
+  script dropped to `NA`.  Those levels are applied by the script stored inside
+  the cache, so a cache written before nlmixr2est added a type has no level for
+  it and coerces it to `NA` -- and re-saving cannot recover it, because by then
+  the string is already gone.  `loadFit()` reads the column back from the
+  `-parHistData.csv` in the cache and appends whatever the script was missing,
+  so existing caches are repaired in place.
+
+* Saving or loading a fit no longer disturbs another cache whose base name it
+  is a suffix of.  The list of files belonging to a fit was matched with an
+  unanchored pattern, so a cache named `fit` also matched `myfit-env.R` --
+  zipping another cache's files into its own archive and then deleting them
+  from disk.  This is reachable whenever unzipped files are lying around, which
+  `saveFit(zip=FALSE)` leaves by design.  The names are now matched literally
+  rather than as a regexp, so a base name holding a metacharacter (`my.fit` is
+  an ordinary R name, and as a pattern its `.` also matched `my_fit`) is
+  matched exactly.
+
+* `saveFit(fit, zip=FALSE)` now actually leaves the fit unzipped for a fit table
+  (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the
+  core method with a hardcoded `zip=TRUE`, so the argument was silently ignored
+  for every fit that carries data.
+
 * `nlmixrDataSimplify()` gained `est` and `control` arguments and no longer
   drops the covariate columns that `est="vae"` searches for.  The VAE covariate
   search picks its covariates out of the data instead of out of the model, so
