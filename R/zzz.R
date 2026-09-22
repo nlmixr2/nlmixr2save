@@ -24,16 +24,26 @@
   if (is.na(.us) || is.na(.dt) || .us < .dt) {
     return(invisible(FALSE))
   }
-  detach(pos=.us)
+  # force: an attached package that Depends on nlmixr2save makes detach()
+  # stop ("required by ... so will not be detached"), and the hook's try()
+  # would swallow that, leaving `:=` broken.  nlmixr2save is back on the
+  # search path immediately, so the "may no longer work correctly" warning
+  # that force gives instead does not apply.
+  suppressWarnings(detach(pos=.us, force=TRUE))
   # nlmixr2save sat below data.table, so detaching it left data.table's
-  # position unchanged; attaching there puts nlmixr2save just in front of it
+  # position unchanged; attaching there puts nlmixr2save just in front of it.
+  # Anything that sat between the two now sits below nlmixr2save too, which
+  # is unavoidable if nlmixr2save is to come before data.table.
   tryCatch({
     attachNamespace("nlmixr2save", pos=.dt)
   }, error=function(e) {
-    # never leave the package detached
-    attachNamespace("nlmixr2save", pos=.us)
     warning("could not re-attach nlmixr2save in front of data.table; use ",
             "nlmixr2save::`:=` (", conditionMessage(e), ")", call.=FALSE)
+    # never leave the package detached
+    tryCatch(attachNamespace("nlmixr2save", pos=.us), error=function(e2) {
+      warning("could not re-attach nlmixr2save; call library(nlmixr2save) (",
+              conditionMessage(e2), ")", call.=FALSE)
+    })
   })
   if ("package:nlmixr2save" %in% search()[seq_len(.dt)]) {
     packageStartupMessage(
