@@ -65,16 +65,17 @@ test_that("nlmixr2save moves in front of data.table attached lower down", {
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
   writeLines(c(
-    "suppressPackageStartupMessages({library(tools); library(nlmixr2save)})",
+    "suppressPackageStartupMessages({library(nlmixr2save); library(tools)})",
     "if (!exists('.nlmixr2saveReattach', asNamespace('nlmixr2save'))) {",
     "  cat('stale'); quit(save='no')",
     "}",
     "s0 <- search()",
+    "stopifnot(identical(s0[2:3], c('package:tools', 'package:nlmixr2save')))",
     # data.table lands below tools but above nlmixr2save
-    "suppressPackageStartupMessages(library(data.table, pos=4))",
+    "suppressPackageStartupMessages(library(data.table, pos=3))",
     "s <- search()",
-    "stopifnot(identical(s[1:5], c('.GlobalEnv', 'package:nlmixr2save',",
-    "  'package:tools', 'package:data.table', s0[4])))",
+    "stopifnot(identical(s[1:5], c('.GlobalEnv', 'package:tools',",
+    "  'package:nlmixr2save', 'package:data.table', s0[4])))",
     "stopifnot(environmentName(environment(`:=`)) == 'nlmixr2save')",
     "cat('ok')"), .script)
   .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),

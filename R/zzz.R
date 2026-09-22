@@ -39,7 +39,7 @@
   }, error=function(e) {
     warning("could not re-attach nlmixr2save in front of data.table; use ",
             "nlmixr2save::`:=` (", conditionMessage(e), ")", call.=FALSE)
-    # never leave the package detached
+    # never leave the package detached, even if back behind data.table
     tryCatch(attachNamespace("nlmixr2save", pos=.us), error=function(e2) {
       warning("could not re-attach nlmixr2save; call library(nlmixr2save) (",
               conditionMessage(e2), ")", call.=FALSE)
