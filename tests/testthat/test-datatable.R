@@ -3,6 +3,17 @@
 # Under devtools::test() that can be an older build than the source being
 # tested, so only run those tests when the loaded namespace is the installed
 # one (always true under R CMD check).
+# Run an R script in a fresh session that sees the same library paths as
+# this one (Rscript does not inherit a runtime .libPaths() change), so it loads
+# the same nlmixr2save build.
+.runScript <- function(script) {
+  suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
+                           c("--vanilla", shQuote(script)),
+                           stdout=TRUE, stderr=TRUE,
+                           env=paste0("R_LIBS=", shQuote(paste(
+                             .libPaths(), collapse=.Platform$path.sep)))))
+}
+
 .skipIfNotInstalledBuild <- function() {
   .installed <- tryCatch(find.package("nlmixr2save", lib.loc=.libPaths()),
                          error=function(e) "")
@@ -69,9 +80,7 @@ test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
     "stopifnot(!('package:nlmixr2save' %in% search()))",
     "stopifnot(environmentName(environment(`:=`)) == 'data.table')",
     "cat('ok')"), .script)
-  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-                                   c("--vanilla", shQuote(.script)),
-                                   stdout=TRUE, stderr=TRUE))
+  .out <- .runScript(.script)
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
 
@@ -92,9 +101,7 @@ test_that("nlmixr2save moves in front of data.table attached lower down", {
     "  'package:nlmixr2save', 'package:data.table', s0[4])))",
     "stopifnot(environmentName(environment(`:=`)) == 'nlmixr2save')",
     "cat('ok')"), .script)
-  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-                                   c("--vanilla", shQuote(.script)),
-                                   stdout=TRUE, stderr=TRUE))
+  .out <- .runScript(.script)
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
 
@@ -139,9 +146,7 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
     "stopifnot(environmentName(environment(`:=`)) == 'nlmixr2save')",
     "stopifnot(depFun() == 1)",
     "cat('ok')"), .script)
-  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-                                   c("--vanilla", shQuote(.script)),
-                                   stdout=TRUE, stderr=TRUE))
+  .out <- .runScript(.script)
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
 
@@ -166,9 +171,7 @@ test_that("a strict conflicts.policy is left for library() to resolve", {
     "  stopifnot(!('package:data.table' %in% search()))",
     "}",
     "cat('ok')"), .script)
-  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-                                   c("--vanilla", shQuote(.script)),
-                                   stdout=TRUE, stderr=TRUE))
+  .out <- .runScript(.script)
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
 
@@ -195,8 +198,31 @@ test_that("a selective attach of nlmixr2save is re-attached as it was", {
     "stopifnot(!(':=' %in% ls('package:nlmixr2save')))",
     "stopifnot(environmentName(environment(`:=`)) == 'data.table')",
     "cat('ok')"), .script)
-  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-                                   c("--vanilla", shQuote(.script)),
-                                   stdout=TRUE, stderr=TRUE))
+  .out <- .runScript(.script)
+  expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
+})
+
+test_that("a load_all() attach is left alone rather than lost", {
+  skip_on_cran()
+  skip_if_not_installed("data.table")
+  skip_if_not_installed("pkgload")
+  # only from a source checkout (devtools::test()), not an installed package
+  .src <- normalizePath(test_path("..", ".."), mustWork=FALSE)
+  skip_if_not(file.exists(file.path(.src, "DESCRIPTION")) &&
+                file.exists(file.path(.src, "R", "zzz.R")),
+              "not running from the package source")
+  .script <- tempfile(fileext=".R")
+  on.exit(unlink(.script), add=TRUE)
+  writeLines(c(
+    sprintf("suppressMessages(pkgload::load_all(%s, quiet=TRUE))",
+            deparse(.src)),
+    "w <- NULL",
+    "withCallingHandlers(suppressPackageStartupMessages(library(data.table)),",
+    "  warning=function(e) {w <<- c(w, conditionMessage(e));",
+    "    invokeRestart('muffleWarning')})",
+    "stopifnot(is.null(w))",
+    "stopifnot('package:nlmixr2save' %in% search())",
+    "cat('ok')"), .script)
+  .out <- .runScript(.script)
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })

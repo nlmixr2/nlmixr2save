@@ -31,6 +31,12 @@
   if (!(":=" %in% .attached)) {
     return(invisible(FALSE))
   }
+  # Anything besides exports means this was not attached by library() --
+  # pkgload::load_all() attaches the internal functions too -- and
+  # attachNamespace() cannot recreate that, so leave it alone.
+  if (length(setdiff(.attached, getNamespaceExports("nlmixr2save")))) {
+    return(invisible(FALSE))
+  }
   # force: an attached package that Depends on nlmixr2save makes detach()
   # stop ("required by ... so will not be detached"), and the hook's try()
   # would swallow that, leaving `:=` broken.  nlmixr2save is back on the
