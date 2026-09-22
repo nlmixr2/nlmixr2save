@@ -58,7 +58,8 @@
 
 #' Whether `library()` turns masking conflicts into errors
 #'
-#' With `options(conflicts.policy="strict")` or `list(error=TRUE)`,
+#' With `options(conflicts.policy=)` of `"strict"`, `"depends.ok"` or a list
+#' with `error=TRUE` (the cases `library()` treats as errors),
 #' `library(data.table)` checks conflicts after the attach hooks have run and,
 #' on a conflict, detaches whatever sits at the position it attached
 #' data.table to.  Once nlmixr2save has moved into that position, that would
@@ -69,7 +70,8 @@
 #' @author Matthew L. Fidler
 .nlmixr2saveConflictsError <- function() {
   .p <- getOption("conflicts.policy")
-  if (is.character(.p)) return(identical(.p, "strict"))
+  if (is.character(.p)) return(length(.p) == 1L &&
+                                .p %in% c("strict", "depends.ok"))
   is.list(.p) && isTRUE(.p$error)
 }
 

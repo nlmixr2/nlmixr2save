@@ -133,7 +133,9 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
     "stopifnot(is.null(w))",
     "s <- search()",
     "stopifnot(match('package:nlmixr2save', s) < match('package:data.table', s))",
-    "stopifnot('package:nlmixr2saveDep' %in% s)",
+    # nlmixr2save now comes before the package that Depends on it too;
+    # dependents reach it through their namespace imports, not the search path
+    "stopifnot(match('package:nlmixr2save', s) < match('package:nlmixr2saveDep', s))",
     "stopifnot(environmentName(environment(`:=`)) == 'nlmixr2save')",
     "stopifnot(depFun() == 1)",
     "cat('ok')"), .script)
@@ -157,10 +159,12 @@ test_that("a strict conflicts.policy is left for library() to resolve", {
     "try(suppressPackageStartupMessages(library(data.table)), silent=TRUE)",
     "stopifnot('package:nlmixr2save' %in% search())",
     "stopifnot(!('package:data.table' %in% search()))",
-    "options(conflicts.policy='strict')",
-    "try(suppressPackageStartupMessages(library(data.table)), silent=TRUE)",
-    "stopifnot('package:nlmixr2save' %in% search())",
-    "stopifnot(!('package:data.table' %in% search()))",
+    "for (p in c('strict', 'depends.ok')) {",
+    "  options(conflicts.policy=p)",
+    "  try(suppressPackageStartupMessages(library(data.table)), silent=TRUE)",
+    "  stopifnot('package:nlmixr2save' %in% search())",
+    "  stopifnot(!('package:data.table' %in% search()))",
+    "}",
     "cat('ok')"), .script)
   .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
                                    c("--vanilla", shQuote(.script)),

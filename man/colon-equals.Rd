@@ -63,7 +63,8 @@ re-attaches itself in front of data.table, so \code{fit := nlmixr2(...)} keeps
 working.  data.table's own \code{DT[, a := b]} is unaffected, since data.table
 handles \verb{:=} inside \verb{[.data.table} rather than looking it up.
 \code{nlmixr2save::`:=`} works regardless of the search path.  Under
-\code{options(conflicts.policy="strict")} (or \code{list(error=TRUE)}) nlmixr2save
+a \code{conflicts.policy} that makes conflicts errors (\code{"strict"},
+\code{"depends.ok"} or \code{list(error=TRUE)}, see \code{\link[base:library]{base::library()}}) nlmixr2save
 stays where it is and \code{library()} reports the conflict as usual.
 }
 
