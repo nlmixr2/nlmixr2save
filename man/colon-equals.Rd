@@ -59,11 +59,10 @@ to check the arguments for a cache, so loading from cache is not possible.
 data.table also exports a \verb{:=}, which only works inside \code{DT[...]} and
 errors anywhere else.  When data.table is attached after nlmixr2save (for
 example \code{library(nlmixr2)} followed by \code{library(data.table)}), nlmixr2save
-re-attaches its own \verb{:=} (as the search-path entry \code{"nlmixr2save:assign"})
-in front of data.table's, so \code{fit := nlmixr2(...)} keeps working.
-data.table's own \code{DT[, a := b]} is unaffected, since data.table handles
-\verb{:=} inside \verb{[.data.table} rather than looking it up.  \code{nlmixr2save::`:=`}
-works regardless of the search path.
+re-attaches itself in front of data.table, so \code{fit := nlmixr2(...)} keeps
+working.  data.table's own \code{DT[, a := b]} is unaffected, since data.table
+handles \verb{:=} inside \verb{[.data.table} rather than looking it up.
+\code{nlmixr2save::`:=`} works regardless of the search path.
 }
 
 \examples{

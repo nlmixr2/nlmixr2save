@@ -1,54 +1,48 @@
-#' Name of the search-path entry that holds nlmixr2save's `:=` ahead of
-#' data.table's
-#' @noRd
-.nlmixr2saveAssignName <- "nlmixr2save:assign"
-
-#' Put nlmixr2save's `:=` back in front of data.table's
+#' Re-attach nlmixr2save in front of data.table
 #'
 #' data.table exports a `:=` that only errors when called outside of
 #' `DT[...]` ("Check that is.data.table(DT) == TRUE"), so attaching data.table
 #' after nlmixr2save (e.g. `library(nlmixr2); library(data.table)`) turns every
 #' `fit := nlmixr2(...)` into that error.  data.table itself never looks `:=`
 #' up on the search path -- `[.data.table` handles it inside `j` -- so putting
-#' nlmixr2save's `:=` first costs data.table nothing.
+#' nlmixr2save back in front costs data.table nothing.
 #'
-#' This attaches a one-function environment holding nlmixr2save's `:=` at
-#' position 2, which is ahead of data.table just after data.table's attach.
-#' It does nothing when nlmixr2save is not attached, since then `:=` was never
-#' going to reach nlmixr2save's anyway.
+#' This detaches `package:nlmixr2save` and re-attaches it (as `library()`
+#' does) directly in front of data.table.  It does nothing when nlmixr2save is
+#' not attached, since then `:=` was never going to reach nlmixr2save's, or
+#' when nlmixr2save is already in front of data.table.
 #'
 #' @param pkgname,pkgpath passed by the package-event hook; ignored
-#' @return invisible `TRUE` when the `:=` was re-attached, otherwise `FALSE`
+#' @return invisible `TRUE` when nlmixr2save was re-attached, otherwise
+#'   `FALSE`
 #' @noRd
 #' @author Matthew L. Fidler
-.nlmixr2saveReattachAssign <- function(pkgname, pkgpath) {
-  if (!("package:nlmixr2save" %in% search())) {
+.nlmixr2saveReattach <- function(pkgname, pkgpath) {
+  .search <- search()
+  .us <- match("package:nlmixr2save", .search)
+  .dt <- match("package:data.table", .search)
+  if (is.na(.us) || is.na(.dt) || .us < .dt) {
     return(invisible(FALSE))
   }
-  .nlmixr2saveDetachAssign()
-  .env <- new.env(parent=emptyenv())
-  assign(":=", get(":=", envir=asNamespace("nlmixr2save")), envir=.env)
-  # The entry is emptied when nlmixr2save is detached and removed when it is
-  # unloaded (see cran-comments.md for why this attaches).
-  attach(.env, pos=2L, name=.nlmixr2saveAssignName, warn.conflicts=FALSE)
-  packageStartupMessage(
-    "nlmixr2save: data.table's `:=` masked nlmixr2save's; re-attached ",
-    "nlmixr2save's `:=` so `fit := nlmixr2(...)` keeps working ",
-    "(data.table's `DT[, a := b]` is unaffected)")
-  invisible(TRUE)
-}
-
-#' Remove the `:=` entry added by `.nlmixr2saveReattachAssign()`
-#' @return invisible `TRUE` when an entry was removed
-#' @noRd
-#' @author Matthew L. Fidler
-.nlmixr2saveDetachAssign <- function() {
-  .ret <- FALSE
-  while (.nlmixr2saveAssignName %in% search()) {
-    detach(pos=match(.nlmixr2saveAssignName, search()), character.only=TRUE)
-    .ret <- TRUE
+  detach(pos=.us)
+  # nlmixr2save sat below data.table, so detaching it left data.table's
+  # position unchanged; attaching there puts nlmixr2save just in front of it
+  tryCatch({
+    attachNamespace("nlmixr2save", pos=.dt)
+  }, error=function(e) {
+    # never leave the package detached
+    attachNamespace("nlmixr2save", pos=.us)
+    warning("could not re-attach nlmixr2save in front of data.table; use ",
+            "nlmixr2save::`:=` (", conditionMessage(e), ")", call.=FALSE)
+  })
+  if ("package:nlmixr2save" %in% search()[seq_len(.dt)]) {
+    packageStartupMessage(
+      "nlmixr2save: re-attached in front of data.table so ",
+      "`fit := nlmixr2(...)` keeps working ",
+      "(data.table's `DT[, a := b]` is unaffected)")
+    return(invisible(TRUE))
   }
-  invisible(.ret)
+  invisible(FALSE)
 }
 
 .onLoad <- function(libname, pkgname) {
@@ -62,27 +56,10 @@
     .fun <- function(pkgname, pkgpath) {
       # look the function up at call time so a reloaded namespace is used
       if (isNamespaceLoaded("nlmixr2save")) {
-        asNamespace("nlmixr2save")$.nlmixr2saveReattachAssign(pkgname, pkgpath)
+        asNamespace("nlmixr2save")$.nlmixr2saveReattach(pkgname, pkgpath)
       }
     }
     attr(.fun, "nlmixr2save") <- TRUE
     setHook(.hook, .fun, "append")
   }
-}
-
-# detach() has already worked out which search position to drop when it runs
-# .onDetach(), so removing the entry there would shift the search path and make
-# detach() drop the wrong package.  Instead empty it, so `:=` falls through to
-# whatever is next on the search path, exactly as if it were gone; the empty
-# entry is removed on unload (by then unloadNamespace() has finished
-# detaching) or replaced on the next data.table attach.
-.onDetach <- function(libpath) {
-  if (.nlmixr2saveAssignName %in% search()) {
-    .env <- as.environment(.nlmixr2saveAssignName)
-    if (exists(":=", envir=.env, inherits=FALSE)) rm(list=":=", envir=.env)
-  }
-}
-
-.onUnload <- function(libpath) {
-  .nlmixr2saveDetachAssign()
 }
