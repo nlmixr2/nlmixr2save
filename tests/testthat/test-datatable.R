@@ -171,3 +171,32 @@ test_that("a strict conflicts.policy is left for library() to resolve", {
                                    stdout=TRUE, stderr=TRUE))
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
+
+test_that("a selective attach of nlmixr2save is re-attached as it was", {
+  skip_on_cran()
+  skip_if_not_installed("data.table")
+  .skipIfNotInstalledBuild()
+  .script <- tempfile(fileext=".R")
+  on.exit(unlink(.script), add=TRUE)
+  writeLines(c(
+    "suppressPackageStartupMessages(library(nlmixr2save,",
+    "  include.only=c(':=', 'saveFit')))",
+    "suppressPackageStartupMessages(library(data.table))",
+    "s <- search()",
+    "stopifnot(match('package:nlmixr2save', s) < match('package:data.table', s))",
+    "stopifnot(setequal(ls('package:nlmixr2save'), c(':=', 'saveFit')))",
+    "stopifnot(environmentName(environment(`:=`)) == 'nlmixr2save')",
+    "detach('package:data.table'); detach('package:nlmixr2save')",
+    # `:=` deliberately left out: data.table's stays, nothing moves
+    "suppressPackageStartupMessages(library(nlmixr2save, exclude=':='))",
+    "s0 <- search()",
+    "suppressPackageStartupMessages(library(data.table))",
+    "stopifnot(identical(search(), append(s0, 'package:data.table', 1)))",
+    "stopifnot(!(':=' %in% ls('package:nlmixr2save')))",
+    "stopifnot(environmentName(environment(`:=`)) == 'data.table')",
+    "cat('ok')"), .script)
+  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
+                                   c("--vanilla", shQuote(.script)),
+                                   stdout=TRUE, stderr=TRUE))
+  expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
+})

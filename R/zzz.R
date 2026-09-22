@@ -25,6 +25,12 @@
         .nlmixr2saveConflictsError()) {
     return(invisible(FALSE))
   }
+  # library(nlmixr2save, include.only=/exclude=) attaches only some exports;
+  # re-attach exactly those.  Without `:=` among them nothing needs moving.
+  .attached <- ls(as.environment(.us), all.names=TRUE)
+  if (!(":=" %in% .attached)) {
+    return(invisible(FALSE))
+  }
   # force: an attached package that Depends on nlmixr2save makes detach()
   # stop ("required by ... so will not be detached"), and the hook's try()
   # would swallow that, leaving `:=` broken.  nlmixr2save is back on the
@@ -36,12 +42,13 @@
   # Anything that sat between the two now sits below nlmixr2save too, which
   # is unavoidable if nlmixr2save is to come before data.table.
   tryCatch({
-    attachNamespace("nlmixr2save", pos=.dt)
+    attachNamespace("nlmixr2save", pos=.dt, include.only=.attached)
   }, error=function(e) {
     warning("could not re-attach nlmixr2save in front of data.table; use ",
             "nlmixr2save::`:=` (", conditionMessage(e), ")", call.=FALSE)
     # never leave the package detached, even if back behind data.table
-    tryCatch(attachNamespace("nlmixr2save", pos=.us), error=function(e2) {
+    tryCatch(attachNamespace("nlmixr2save", pos=.us,
+                             include.only=.attached), error=function(e2) {
       warning("could not re-attach nlmixr2save; call library(nlmixr2save) (",
               conditionMessage(e2), ")", call.=FALSE)
     })
