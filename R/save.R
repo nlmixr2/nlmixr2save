@@ -1282,6 +1282,17 @@ nlmixr2saveInvalidate <- function() {
 #' instead. Unlike the un-evaluated function dispach there is no way
 #' to check the arguments for a cache, so loading from cache is not possible.
 #'
+#' @section data.table:
+#'
+#' data.table also exports a `:=`, which only works inside `DT[...]` and
+#' errors anywhere else.  When data.table is attached after nlmixr2save (for
+#' example `library(nlmixr2)` followed by `library(data.table)`), nlmixr2save
+#' re-attaches its own `:=` (as the search-path entry `"nlmixr2save:assign"`)
+#' in front of data.table's, so `fit := nlmixr2(...)` keeps working.
+#' data.table's own `DT[, a := b]` is unaffected, since data.table handles
+#' `:=` inside `[.data.table` rather than looking it up.  `nlmixr2save::`:=``
+#' works regardless of the search path.
+#'
 #' @param x the name of the object to assign the value to
 #'
 #' @param value the value to assign to the object, because R can use

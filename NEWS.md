@@ -1,5 +1,12 @@
 # nlmixr2save 0.2.0
 
+* `fit := nlmixr2(...)` no longer fails when data.table is attached after
+  nlmixr2save (e.g. `library(nlmixr2); library(data.table)`).  data.table's
+  exported `:=` masked nlmixr2save's and errored with "Check that
+  is.data.table(DT) == TRUE".  nlmixr2save now re-attaches its own `:=` ahead
+  of data.table's when data.table is attached; data.table's `DT[, a := b]` is
+  unaffected (#8).
+
 * `loadFit()` (and therefore `:=`) now restores the fit table's `ID` column as a
   factor.  The table round-trips through a plain `.csv`, so `ID` came back as an
   integer while a live fit carries a factor; anything joining the fit table to
