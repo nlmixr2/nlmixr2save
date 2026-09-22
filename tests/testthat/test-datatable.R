@@ -39,6 +39,20 @@ test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
     "DT <- data.table(a=1:3)",
     "DT[, b := a * 2]",
     "stopifnot(identical(DT$b, c(2, 4, 6)))",
+    # detaching nlmixr2save hands `:=` back to data.table without dropping
+    # the wrong search-path entry
+    "detach('package:nlmixr2save')",
+    "stopifnot(environmentName(environment(`:=`)) == 'data.table')",
+    "stopifnot('package:data.table' %in% search())",
+    # unloading removes the entry altogether
+    "unloadNamespace('nlmixr2save')",
+    "stopifnot(!('nlmixr2save:assign' %in% search()))",
+    "detach('package:data.table')",
+    # loaded but not attached: `:=` never reached nlmixr2save, so leave it
+    "loadNamespace('nlmixr2save')",
+    "suppressPackageStartupMessages(library(data.table))",
+    "stopifnot(!('nlmixr2save:assign' %in% search()))",
+    "stopifnot(environmentName(environment(`:=`)) == 'data.table')",
     "cat('ok')"), .script)
   .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
                                    c("--vanilla", shQuote(.script)),

@@ -28,12 +28,9 @@
   .nlmixr2saveDetachAssign()
   .env <- new.env(parent=emptyenv())
   assign(":=", get(":=", envir=asNamespace("nlmixr2save")), envir=.env)
-  # base::attach() is what puts an environment on the search path; it is
-  # looked up rather than called by name only so R CMD check does not flag a
-  # package calling attach().  The entry is removed again when nlmixr2save is
-  # unloaded.
-  .attach <- get("attach", envir=baseenv())
-  .attach(.env, pos=2L, name=.nlmixr2saveAssignName, warn.conflicts=FALSE)
+  # The entry is emptied when nlmixr2save is detached and removed when it is
+  # unloaded (see cran-comments.md for why this attaches).
+  attach(.env, pos=2L, name=.nlmixr2saveAssignName, warn.conflicts=FALSE)
   packageStartupMessage(
     "nlmixr2save: data.table's `:=` masked nlmixr2save's; re-attached ",
     "nlmixr2save's `:=` so `fit := nlmixr2(...)` keeps working ",
@@ -73,10 +70,19 @@
   }
 }
 
-# No .onDetach(): detach() has already worked out which search position to
-# drop when it runs that hook, so removing another entry there would shift the
-# search path and make detach() drop the wrong package.  By the time
-# .onUnload() runs, unloadNamespace() has finished detaching.
+# detach() has already worked out which search position to drop when it runs
+# .onDetach(), so removing the entry there would shift the search path and make
+# detach() drop the wrong package.  Instead empty it, so `:=` falls through to
+# whatever is next on the search path, exactly as if it were gone; the empty
+# entry is removed on unload (by then unloadNamespace() has finished
+# detaching) or replaced on the next data.table attach.
+.onDetach <- function(libpath) {
+  if (.nlmixr2saveAssignName %in% search()) {
+    .env <- as.environment(.nlmixr2saveAssignName)
+    if (exists(":=", envir=.env, inherits=FALSE)) rm(list=":=", envir=.env)
+  }
+}
+
 .onUnload <- function(libpath) {
   .nlmixr2saveDetachAssign()
 }

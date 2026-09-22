@@ -34,7 +34,21 @@ for the full list.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
+
+    Found the following calls to attach():
+    File 'nlmixr2save/R/zzz.R':
+      attach(.env, pos = 2L, name = .nlmixr2saveAssignName, warn.conflicts = FALSE)
+
+This is deliberate.  'data.table' exports a `:=` that only errors outside
+`DT[...]`, so attaching 'data.table' after this package (e.g.
+`library(nlmixr2); library(data.table)`) masks this package's `:=` and breaks
+`fit := nlmixr2(...)` (issue #8).  When 'data.table' is attached, and only if
+this package is attached, a hook attaches a single-object environment named
+"nlmixr2save:assign" holding this package's `:=` ahead of it.  It attaches no
+data and nothing else; 'data.table' is unaffected since `[.data.table` handles
+`:=` itself.  The binding is removed when the package is detached and the
+entry itself when the namespace is unloaded.  This is documented in `?":="`.
 
 ## Released version's check results
 
