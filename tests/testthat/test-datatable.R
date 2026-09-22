@@ -3,15 +3,18 @@
 # Under devtools::test() that can be an older build than the source being
 # tested, so only run those tests when the loaded namespace is the installed
 # one (always true under R CMD check).
-# Run an R script in a fresh session that sees the same library paths as
-# this one (Rscript does not inherit a runtime .libPaths() change), so it loads
-# the same nlmixr2save build.
+# Child R processes see the same library paths as this one (they do not
+# inherit a runtime .libPaths() change), so they load the same nlmixr2save
+# build.
+.rLibsEnv <- function() {
+  paste0("R_LIBS=", shQuote(paste(.libPaths(), collapse=.Platform$path.sep)))
+}
+
+# Run an R script in a fresh session
 .runScript <- function(script) {
   suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
                            c("--vanilla", shQuote(script)),
-                           stdout=TRUE, stderr=TRUE,
-                           env=paste0("R_LIBS=", shQuote(paste(
-                             .libPaths(), collapse=.Platform$path.sep)))))
+                           stdout=TRUE, stderr=TRUE, env=.rLibsEnv()))
 }
 
 .skipIfNotInstalledBuild <- function() {
@@ -126,9 +129,11 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
   .inst <- suppressWarnings(system2(file.path(R.home("bin"), "R"),
                                     c("CMD", "INSTALL", "-l", shQuote(.lib),
                                       shQuote(.pkg)),
-                                    stdout=TRUE, stderr=TRUE))
+                                    stdout=TRUE, stderr=TRUE,
+                                    env=.rLibsEnv()))
   skip_if_not(dir.exists(file.path(.lib, "nlmixr2saveDep")),
-              "could not install the test package")
+              paste(c("could not install the test package:",
+                      utils::tail(.inst, 5)), collapse="\n"))
   .script <- file.path(.dir, "run.R")
   writeLines(c(
     sprintf(".libPaths(c(%s, .libPaths()))", deparse(.lib)),
