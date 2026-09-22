@@ -1290,7 +1290,9 @@ nlmixr2saveInvalidate <- function() {
 #' re-attaches itself in front of data.table, so `fit := nlmixr2(...)` keeps
 #' working.  data.table's own `DT[, a := b]` is unaffected, since data.table
 #' handles `:=` inside `[.data.table` rather than looking it up.
-#' `` nlmixr2save::`:=` `` works regardless of the search path.
+#' `` nlmixr2save::`:=` `` works regardless of the search path.  Under
+#' `options(conflicts.policy="strict")` (or `list(error=TRUE)`) nlmixr2save
+#' stays where it is and `library()` reports the conflict as usual.
 #'
 #' @param x the name of the object to assign the value to
 #'

@@ -1,3 +1,17 @@
+# The data.table hook is exercised in a fresh R session (data.table may
+# already be attached in this one), which loads the *installed* nlmixr2save.
+# Under devtools::test() that can be an older build than the source being
+# tested, so only run those tests when the loaded namespace is the installed
+# one (always true under R CMD check).
+.skipIfNotInstalledBuild <- function() {
+  .installed <- tryCatch(find.package("nlmixr2save", lib.loc=.libPaths()),
+                         error=function(e) "")
+  .loaded <- getNamespaceInfo("nlmixr2save", "path")
+  skip_if_not(identical(normalizePath(.installed, mustWork=FALSE),
+                        normalizePath(.loaded, mustWork=FALSE)),
+              "the loaded nlmixr2save is not the installed build")
+}
+
 test_that("nlmixr2save is only re-attached when data.table is ahead of it", {
   # already ahead, or data.table not attached: leave the search path alone
   .search <- search()
@@ -18,15 +32,13 @@ test_that("the data.table attach hook is registered once", {
 test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  .skipIfNotInstalledBuild()
   skip_if_not_installed("withr")
   # needs a fresh session, since data.table may already be attached here
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
   writeLines(c(
     "suppressPackageStartupMessages(library(nlmixr2save))",
-    "if (!exists('.nlmixr2saveReattach', asNamespace('nlmixr2save'))) {",
-    "  cat('stale'); quit(save='no')",
-    "}",
     "s0 <- search()",
     "suppressPackageStartupMessages(library(data.table))",
     "s <- search()",
@@ -41,6 +53,12 @@ test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
     "stopifnot(sum(s == 'package:nlmixr2save') == 1L)",
     "stopifnot(identical(s, c('.GlobalEnv', 'package:nlmixr2save',",
     "  'package:data.table', setdiff(s0, c('.GlobalEnv', 'package:nlmixr2save')))))",
+    # attaching data.table again with nlmixr2save already in front of it
+    # leaves the order alone
+    "detach('package:data.table')",
+    "suppressPackageStartupMessages(library(data.table))",
+    "stopifnot(identical(search(), s))",
+    "stopifnot(environmentName(environment(`:=`)) == 'nlmixr2save')",
     # a later detach of either package behaves normally
     "detach('package:nlmixr2save')",
     "stopifnot(environmentName(environment(`:=`)) == 'data.table')",
@@ -54,21 +72,17 @@ test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
   .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
                                    c("--vanilla", shQuote(.script)),
                                    stdout=TRUE, stderr=TRUE))
-  skip_if(identical(tail(.out, 1), "stale"),
-          "the installed nlmixr2save predates this fix")
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
 
 test_that("nlmixr2save moves in front of data.table attached lower down", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  .skipIfNotInstalledBuild()
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
   writeLines(c(
     "suppressPackageStartupMessages({library(nlmixr2save); library(tools)})",
-    "if (!exists('.nlmixr2saveReattach', asNamespace('nlmixr2save'))) {",
-    "  cat('stale'); quit(save='no')",
-    "}",
     "s0 <- search()",
     "stopifnot(identical(s0[2:3], c('package:tools', 'package:nlmixr2save')))",
     # data.table lands below tools but above nlmixr2save
@@ -81,14 +95,13 @@ test_that("nlmixr2save moves in front of data.table attached lower down", {
   .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
                                    c("--vanilla", shQuote(.script)),
                                    stdout=TRUE, stderr=TRUE))
-  skip_if(identical(tail(.out, 1), "stale"),
-          "the installed nlmixr2save predates this fix")
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })
 
 test_that("a package that Depends on nlmixr2save does not block the move", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  .skipIfNotInstalledBuild()
   # detach() refuses to detach a package another attached package Depends on
   .dir <- tempfile()
   on.exit(unlink(.dir, recursive=TRUE), add=TRUE)
@@ -113,9 +126,6 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
   writeLines(c(
     sprintf(".libPaths(c(%s, .libPaths()))", deparse(.lib)),
     "suppressPackageStartupMessages(library(nlmixr2saveDep))",
-    "if (!exists('.nlmixr2saveReattach', asNamespace('nlmixr2save'))) {",
-    "  cat('stale'); quit(save='no')",
-    "}",
     "w <- NULL",
     "withCallingHandlers(suppressPackageStartupMessages(library(data.table)),",
     "  warning=function(e) {w <<- c(w, conditionMessage(e));",
@@ -130,7 +140,30 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
   .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
                                    c("--vanilla", shQuote(.script)),
                                    stdout=TRUE, stderr=TRUE))
-  skip_if(identical(tail(.out, 1), "stale"),
-          "the installed nlmixr2save predates this fix")
+  expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
+})
+
+test_that("a strict conflicts.policy is left for library() to resolve", {
+  skip_on_cran()
+  skip_if_not_installed("data.table")
+  .skipIfNotInstalledBuild()
+  .script <- tempfile(fileext=".R")
+  on.exit(unlink(.script), add=TRUE)
+  writeLines(c(
+    "suppressPackageStartupMessages(library(nlmixr2save))",
+    "options(conflicts.policy=list(error=TRUE))",
+    # library() rolls back the failed attach; that must remove data.table,
+    # not nlmixr2save
+    "try(suppressPackageStartupMessages(library(data.table)), silent=TRUE)",
+    "stopifnot('package:nlmixr2save' %in% search())",
+    "stopifnot(!('package:data.table' %in% search()))",
+    "options(conflicts.policy='strict')",
+    "try(suppressPackageStartupMessages(library(data.table)), silent=TRUE)",
+    "stopifnot('package:nlmixr2save' %in% search())",
+    "stopifnot(!('package:data.table' %in% search()))",
+    "cat('ok')"), .script)
+  .out <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
+                                   c("--vanilla", shQuote(.script)),
+                                   stdout=TRUE, stderr=TRUE))
   expect_equal(tail(.out, 1), "ok", info=paste(.out, collapse="\n"))
 })

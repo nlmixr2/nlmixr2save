@@ -21,7 +21,8 @@
   .search <- search()
   .us <- match("package:nlmixr2save", .search)
   .dt <- match("package:data.table", .search)
-  if (is.na(.us) || is.na(.dt) || .us < .dt) {
+  if (is.na(.us) || is.na(.dt) || .us < .dt ||
+        .nlmixr2saveConflictsError()) {
     return(invisible(FALSE))
   }
   # force: an attached package that Depends on nlmixr2save makes detach()
@@ -53,6 +54,23 @@
     return(invisible(TRUE))
   }
   invisible(FALSE)
+}
+
+#' Whether `library()` turns masking conflicts into errors
+#'
+#' With `options(conflicts.policy="strict")` or `list(error=TRUE)`,
+#' `library(data.table)` checks conflicts after the attach hooks have run and,
+#' on a conflict, detaches whatever sits at the position it attached
+#' data.table to.  Once nlmixr2save has moved into that position, that would
+#' be nlmixr2save, leaving data.table attached; so under this policy the
+#' search path is left for `library()` to resolve.
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveConflictsError <- function() {
+  .p <- getOption("conflicts.policy")
+  if (is.character(.p)) return(identical(.p, "strict"))
+  is.list(.p) && isTRUE(.p$error)
 }
 
 .onLoad <- function(libname, pkgname) {
