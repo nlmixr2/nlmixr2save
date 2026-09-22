@@ -1290,7 +1290,7 @@ nlmixr2saveInvalidate <- function() {
 #' re-attaches its own `:=` (as the search-path entry `"nlmixr2save:assign"`)
 #' in front of data.table's, so `fit := nlmixr2(...)` keeps working.
 #' data.table's own `DT[, a := b]` is unaffected, since data.table handles
-#' `:=` inside `[.data.table` rather than looking it up.  `nlmixr2save::`:=``
+#' `:=` inside `[.data.table` rather than looking it up.  `` nlmixr2save::`:=` ``
 #' works regardless of the search path.
 #'
 #' @param x the name of the object to assign the value to

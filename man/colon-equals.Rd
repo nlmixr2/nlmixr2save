@@ -62,7 +62,7 @@ example \code{library(nlmixr2)} followed by \code{library(data.table)}), nlmixr2
 re-attaches its own \verb{:=} (as the search-path entry \code{"nlmixr2save:assign"})
 in front of data.table's, so \code{fit := nlmixr2(...)} keeps working.
 data.table's own \code{DT[, a := b]} is unaffected, since data.table handles
-\verb{:=} inside \verb{[.data.table} rather than looking it up.  \verb{nlmixr2save::}:=``
+\verb{:=} inside \verb{[.data.table} rather than looking it up.  \code{nlmixr2save::`:=`}
 works regardless of the search path.
 }
 
