@@ -22,6 +22,11 @@
   `path_model/` wherever that happened, and the loader only worked from the
   directory it was saved from.
 
+* New vignette, "Keeping fits in a models directory", on sending `:=` caches
+  to a directory with `nlmixr2save.dir` (and naming them with
+  `nlmixr2save.prefix`), setting that for a whole project, saving and loading
+  by path, and committing the directory to version control.
+
 * `loadFit()` (and therefore `:=`) no longer depends on the installed lotri
   to read a cache.  A fit's matrices (`cov`, `omega`, `R`, `phiC`, ...) are
   stored as `lotri({...})` blocks with one row per statement; `loadFit()` now
