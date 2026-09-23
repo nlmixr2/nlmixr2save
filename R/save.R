@@ -755,9 +755,11 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .str <- character(0)
   # a loaded fit keeps its compiled model lists as unforced promises, with
   # their script text; write that back rather than force (compile) them
-  .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
   .item <- setdiff(.item, "..nlmixr2saveLazy..")
   for (.i in .item) {
+    # re-read each time: saving an earlier item can build a lazy one, which
+    # drops its kept text
+    .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
     # only while the binding is still the loader's promise and unbuilt (a
     # promise drops its kept text when it is built): a value assigned since
     # loading, or one changed in place after building, must be saved
@@ -784,7 +786,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     .minfo(paste0("saving fit item: ", .i))
     .obj <- get(.i, envir=fit$env)
     if (is.raw(.obj)) {
-      .obj <- eval(str2lang(paste0("fit$", .i))) # decompresses object
+      # decompresses object; a call, not parsed text, so any item name works
+      .obj <- eval(call("$", quote(fit), as.name(.i)))
     }
     if (!saveFitItem(.obj, .i, file)) {
       if (.i %in% c("phiC", "phiH")) {
