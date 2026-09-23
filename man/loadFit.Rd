@@ -7,7 +7,11 @@
 loadFit(file, checkVersion = .nlmixr2saveCheckVersion())
 }
 \arguments{
-\item{file}{the base name of the files to load the fit from.}
+\item{file}{the fit to load: the base name of the files it was saved to
+(\code{"fit"} loads \code{fit.zip}, or \code{fit.R} for a fit saved with \code{zip=FALSE}),
+or the path of that \code{.zip} or \code{.R} file itself.  It may include a
+directory, e.g. \code{"path/to/fit"} or \code{"path/to/fit.zip"}; the working
+directory is not changed and nothing is extracted into it.}
 
 \item{checkVersion}{when \code{TRUE}, warn if the fit was produced with a
 different nlmixr2est/rxode2 version (or remote sha) than the one currently

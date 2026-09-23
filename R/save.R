@@ -841,9 +841,95 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   invisible(fit)
 }
 
+#' Name the loader script assigns the fit to
+#'
+#' The loader starts with `` `<name>` <- function() { `` (older caches omit the
+#' backticks), where `<name>` is the `file` argument `saveFit()` was given --
+#' which can include a directory, e.g. `path/to/fit`.
+#' @param r path to the loader script
+#' @param default returned when the name cannot be read
+#' @return the name
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoaderName <- function(r, default) {
+  .l <- readLines(r, n=1L, warn=FALSE)
+  .m <- regmatches(.l, regexec("^`?(.*?)`? <- function\\(\\) \\{", .l))[[1]]
+  if (length(.m) == 2L && nzchar(.m[2])) return(.m[2])
+  default # nocov
+}
+
+#' Find the loader script in an extracted fit archive
+#'
+#' A loader `<name>.R` always has a `<name>-env.R` beside it.  The archive can
+#' hold them under a directory (a fit saved as `saveFit(fit, "path/to/fit")`
+#' stores `path/to/fit.R`), or under another base name when the `.zip` was
+#' renamed after saving.
+#' @param dir directory the archive was extracted to
+#' @param base base name the user asked for
+#' @return path of the loader, relative to `dir`, or `NULL`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveFindLoader <- function(dir, base) {
+  .all <- list.files(dir, recursive=TRUE, all.files=TRUE)
+  .r <- .all[endsWith(.all, ".R") & !endsWith(.all, "-env.R")]
+  .r <- .r[paste0(substr(.r, 1L, nchar(.r) - 2L), "-env.R") %in% .all]
+  .exact <- .r[basename(.r) == paste0(base, ".R")]
+  if (length(.exact) == 1L) return(.exact)
+  if (length(.r) == 1L) return(.r)
+  NULL
+}
+
+#' Source a fit's loader script and return the fit
+#'
+#' Runs with the working directory set to the loader's directory, since the
+#' loader reads its component files by name.  The names it reads are the
+#' `file` argument `saveFit()` was given; when that held a directory
+#' (`path/to/fit`) they are rewritten to the bare base name so the fit loads
+#' from wherever the files now are, rather than only from the directory it was
+#' saved from.
+#' @param r path to the loader script
+#' @param checkVersion passed from [loadFit()]
+#' @return the fit
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveSourceLoader <- function(r, checkVersion) {
+  .base <- substr(basename(r), 1L, nchar(basename(r)) - 2L)
+  .name <- .nlmixr2saveLoaderName(r, .base)
+  .owd <- setwd(dirname(r))
+  on.exit(setwd(.owd), add=TRUE)
+  .env <- new.env(parent=environment())
+  .r <- basename(r)
+  .file <- .name
+  if (!identical(.name, .base)) {
+    # quoted file names in the loader are `'<name>-<item>.<ext>'` and
+    # `'<name>.csv'`; the files themselves sit next to the loader
+    .lines <- readLines(.r, warn=FALSE)
+    .lines <- gsub(paste0("'", .name, "-"), paste0("'", .base, "-"), .lines,
+                   fixed=TRUE)
+    .lines <- gsub(paste0("'", .name, ".csv'"), paste0("'", .base, ".csv'"),
+                   .lines, fixed=TRUE)
+    eval(parse(text=.lines, keep.source=FALSE), envir=.env)
+    .file <- .base
+  } else {
+    source(.r, local=.env)
+  }
+  ret <- get(.name, envir=.env, inherits=FALSE)
+  ret <- .nlmixr2saveRestoreIdFactor(ret)
+  # must run while the component files still exist; it reads the csv
+  .nlmixr2saveRestoreParHistType(ret, .file)
+  if (isTRUE(checkVersion)) {
+    .nlmixr2saveWarnVersion(ret)
+  }
+  ret
+}
+
 #' Load a fitted model object from a file
 #'
-#' @param file the base name of the files to load the fit from.
+#' @param file the fit to load: the base name of the files it was saved to
+#'   (`"fit"` loads `fit.zip`, or `fit.R` for a fit saved with `zip=FALSE`),
+#'   or the path of that `.zip` or `.R` file itself.  It may include a
+#'   directory, e.g. `"path/to/fit"` or `"path/to/fit.zip"`; the working
+#'   directory is not changed and nothing is extracted into it.
 #'
 #' @param checkVersion when `TRUE`, warn if the fit was produced with a
 #'   different nlmixr2est/rxode2 version (or remote sha) than the one currently
@@ -861,32 +947,42 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
   } else {
     file <- .file
   }
-  .zip <- paste0(file, ".zip")
-  .r <-  paste0(file, ".R")
-  .didUnzip <- FALSE
-  if (file.exists(.zip)) {
-    zip::unzip(.zip)
-    .didUnzip <- TRUE
-  }
-  if (file.exists(.r)) {
-    .minfo(paste0("loading fit from ", .r))
-    source(.r, local=TRUE)
-    ret <- get(file)
-    ret <- .nlmixr2saveRestoreIdFactor(ret)
-    # must run before the unzipped files are removed below; it reads the csv
-    .nlmixr2saveRestoreParHistType(ret, file)
-    if (isTRUE(checkVersion)) {
-      .nlmixr2saveWarnVersion(ret)
-    }
-    if (.didUnzip) {
-      .files <- .nlmixr2saveFitFiles(file)
-      .minfo("removing unzipped fit files")
-      lapply(.files, unlink)
-    }
-    return(ret)
+  # accept the archive or loader path itself as well as the base name
+  if (grepl("[.]zip$", file, ignore.case=TRUE) && file.exists(file)) {
+    .zip <- file
+    .r <- NA_character_
+  } else if (grepl("[.]R$", file) && file.exists(file)) {
+    .zip <- NA_character_
+    .r <- file
   } else {
-    stop("cannot find fit file ", file, " or ", .r, " or ", .zip, call.=FALSE) # nocov
+    .zip <- paste0(file, ".zip")
+    .r <-  paste0(file, ".R")
   }
+  .base <- sub("[.](zip|R)$", "", basename(if (is.na(.zip)) .r else .zip),
+               ignore.case=TRUE)
+  if (!is.na(.zip) && file.exists(.zip)) {
+    # extract to a private directory: extracting into the working directory
+    # only found the loader when that was the zip's own directory, and it
+    # overwrote (then deleted) same-named files that were already there
+    .exdir <- tempfile("nlmixr2save-")
+    dir.create(.exdir)
+    on.exit(unlink(.exdir, recursive=TRUE, force=TRUE), add=TRUE)
+    zip::unzip(.zip, exdir=.exdir)
+    .loader <- .nlmixr2saveFindLoader(.exdir, .base)
+    if (is.null(.loader)) {
+      stop("cannot find the fit loader script inside ", .zip, call.=FALSE)
+    }
+    .minfo(paste0("loading fit from ", .zip))
+    return(.nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion))
+  }
+  if (!is.na(.r) && file.exists(.r)) {
+    .minfo(paste0("loading fit from ", .r))
+    return(.nlmixr2saveSourceLoader(.r, checkVersion))
+  }
+  stop("cannot find fit file ", file,
+       if (!is.na(.zip)) paste0(" or ", .zip),
+       if (!is.na(.r)) paste0(" or ", .r),
+       call.=FALSE)
 }
 
 #' This returns or assigns the environment used in the `:=` operator

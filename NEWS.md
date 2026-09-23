@@ -1,3 +1,19 @@
+# nlmixr2save (development version)
+
+* `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
+  `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`
+  both work from any working directory.  It used to append `.zip` to whatever
+  it was given, so a path ending in `.zip` looked for `fit.zip.zip` and failed
+  with "cannot find fit file" even though the file existed.  It also extracted
+  the archive into the working directory rather than beside the `.zip`, so a
+  fit in another directory was never found, and a same-named file already in
+  the working directory was overwritten and then deleted.  The archive is now
+  extracted to a temporary directory instead.
+
+* `loadFit()` also loads a fit saved under a directory
+  (`saveFit(fit, "path/to/fit")`) after it has been moved, or loaded from a
+  different working directory, and a `.zip` that was renamed after saving.
+
 # nlmixr2save 0.2.0
 
 * `loadFit()` (and therefore `:=`) now restores the fit table's `ID` column as a

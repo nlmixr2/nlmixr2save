@@ -12,6 +12,91 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
+# A stand-in for saveFit()'s output: a loader `<name>.R` that sources
+# `<name>-env.R` and reads `<name>-tab.csv` by the name it was saved under,
+# exactly as the real loader does.  `name` can hold a directory, as the `file`
+# argument to saveFit() can.
+.fakeSavedFit <- function(name, zip=TRUE) {
+  writeLines("env <- list(val=42)\nenv <- list2env(env)\n",
+             paste0(name, "-env.R"))
+  utils::write.csv(data.frame(a=1:2), paste0(name, "-tab.csv"), row.names=FALSE)
+  writeLines(paste0("`", name, "` <- function() {\n",
+                    "source('", name, "-env.R', local=TRUE)\n",
+                    "env$tab <- read.csv('", name, "-tab.csv')\n",
+                    "env\n",
+                    "}\n",
+                    "`", name, "` <- `", name, "`()\n"),
+             paste0(name, ".R"))
+  if (zip) {
+    .files <- .nlmixr2saveFitFiles(name)
+    zip::zip(paste0(name, ".zip"), files=.files)
+    unlink(.files)
+  }
+}
+
+.expectFakeFit <- function(ret) {
+  expect_true(is.environment(ret))
+  expect_equal(ret$val, 42)
+  expect_equal(ret$tab$a, 1:2)
+}
+
+test_that("loadFit() loads a fit from another directory by path", {
+  withr::with_tempdir({
+    dir.create("sub")
+    withr::with_dir("sub", .fakeSavedFit("fit"))
+    # a same-named file in the working directory must survive the load
+    writeLines("keep me", "fit.R")
+    .before <- list.files(all.files=TRUE, recursive=TRUE)
+    .wd <- getwd()
+
+    .expectFakeFit(loadFit("sub/fit.zip", checkVersion=FALSE))
+    .expectFakeFit(loadFit("sub/fit", checkVersion=FALSE))
+    .expectFakeFit(loadFit(file.path(getwd(), "sub", "fit.zip"),
+                           checkVersion=FALSE))
+
+    expect_equal(getwd(), .wd)
+    expect_equal(list.files(all.files=TRUE, recursive=TRUE), .before)
+    expect_equal(readLines("fit.R"), "keep me")
+  })
+})
+
+test_that("loadFit() loads a fit that was saved under a directory", {
+  withr::with_tempdir({
+    dir.create("a/b", recursive=TRUE)
+    # saveFit(fit, "a/b/fit") names every file, and the loader's references to
+    # them, "a/b/fit-..."; the archive holds them under a/b/
+    .fakeSavedFit("a/b/fit")
+    .expectFakeFit(loadFit("a/b/fit.zip", checkVersion=FALSE))
+    # and it still loads once the archive is moved and renamed
+    dir.create("moved")
+    file.rename("a/b/fit.zip", "moved/run1.zip")
+    .expectFakeFit(loadFit("moved/run1.zip", checkVersion=FALSE))
+    .expectFakeFit(loadFit("moved/run1", checkVersion=FALSE))
+
+    # unzipped (saveFit(zip=FALSE)), loaded from another working directory
+    .fakeSavedFit("a/b/plain", zip=FALSE)
+    dir.create("elsewhere")
+    withr::with_dir("elsewhere", {
+      .expectFakeFit(loadFit("../a/b/plain", checkVersion=FALSE))
+      .expectFakeFit(loadFit("../a/b/plain.R", checkVersion=FALSE))
+    })
+    # the unzipped files are the user's; loading leaves them in place
+    expect_true(all(file.exists(c("a/b/plain.R", "a/b/plain-env.R",
+                                  "a/b/plain-tab.csv"))))
+  })
+})
+
+test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
+  withr::with_tempdir({
+    expect_error(loadFit("nope.zip", checkVersion=FALSE), "cannot find fit file")
+    expect_error(loadFit("nope", checkVersion=FALSE), "cannot find fit file")
+    writeLines("x", "readme.txt")
+    zip::zip("other.zip", files="readme.txt")
+    expect_error(loadFit("other.zip", checkVersion=FALSE),
+                 "cannot find the fit loader script")
+  })
+})
+
 test_that(".nlmixr2saveFitFiles matches one fit's files and no others", {
   # what comes back is zipped and then unlinked, so matching one file too many
   # destroys another cache and one too few leaves an unloadable one
