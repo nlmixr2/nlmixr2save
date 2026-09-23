@@ -97,6 +97,27 @@ test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
   })
 })
 
+test_that(".nlmixr2saveRestoreIniDf0Prior makes a logical prior character", {
+  # an all-NA prior reads back from the csv as logical; rxode2 keeps it
+  # character
+  .env <- new.env(parent=emptyenv())
+  assign("iniDf0", data.frame(name=c("a", "b"), prior=c(NA, NA)), envir=.env)
+  .nlmixr2saveRestoreIniDf0Prior(.env)
+  expect_identical(.env$iniDf0$prior, c(NA_character_, NA_character_))
+  # a non-NA prior is kept as it is
+  assign("iniDf0", data.frame(name="a", prior="dnorm(0, 1)"), envir=.env)
+  .nlmixr2saveRestoreIniDf0Prior(.env)
+  expect_identical(.env$iniDf0$prior, "dnorm(0, 1)")
+  # older rxode2 has no prior column; nothing is added
+  assign("iniDf0", data.frame(name="a"), envir=.env)
+  .nlmixr2saveRestoreIniDf0Prior(.env)
+  expect_null(.env$iniDf0$prior)
+  # and a fit without iniDf0 is left alone
+  .noIni <- new.env()
+  expect_identical(.nlmixr2saveRestoreIniDf0Prior(.noIni), .noIni)
+  expect_false(exists("iniDf0", envir=.noIni, inherits=FALSE))
+})
+
 test_that(".nlmixr2saveFitFiles matches one fit's files and no others", {
   # what comes back is zipped and then unlinked, so matching one file too many
   # destroys another cache and one too few leaves an unloadable one

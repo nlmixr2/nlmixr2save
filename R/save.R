@@ -641,6 +641,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
                                        "env$iniDf0$label <- as.character(env$iniDf0$label)\n",
                                        "env$iniDf0$backTransform <- as.character(env$iniDf0$backTransform)\n",
                                        "env$iniDf0$condition <- as.character(env$iniDf0$condition)\n",
+                                       # newer rxode2 only; an all-NA column
+                                       # reads back from the csv as logical
+                                       "if (!is.null(env$iniDf0$prior)) env$iniDf0$prior <- as.character(env$iniDf0$prior)\n",
                                        "env$iniDf0$err <- as.character(env$iniDf0$err)\n")
                        }
                      } else {
@@ -791,6 +794,27 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   fit
 }
 
+#' Repair an `iniDf0$prior` column a cache's own restore script left logical
+#'
+#' rxode2 keeps `prior` as a character column.  It is usually all `NA`, which
+#' `read.csv()` reads back as logical, and restore scripts written before this
+#' was coerced leave it that way.
+#' @param fit restored object
+#' @return `fit`, invisibly; `iniDf0` is repaired in the fit environment
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveRestoreIniDf0Prior <- function(fit) {
+  .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
+  if (!is.environment(.env)) return(invisible(fit))
+  if (!exists("iniDf0", envir=.env, inherits=FALSE)) return(invisible(fit))
+  .ini <- get("iniDf0", envir=.env, inherits=FALSE)
+  if (is.data.frame(.ini) && is.logical(.ini$prior)) {
+    .ini$prior <- as.character(.ini$prior)
+    assign("iniDf0", .ini, envir=.env)
+  }
+  invisible(fit)
+}
+
 #' Repair `parHistData$type` levels a cache's own restore script dropped
 #'
 #' The factor levels for `parHistData$type` are applied by the restore script
@@ -915,6 +939,7 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   }
   ret <- get(.name, envir=.env, inherits=FALSE)
   ret <- .nlmixr2saveRestoreIdFactor(ret)
+  .nlmixr2saveRestoreIniDf0Prior(ret)
   # must run while the component files still exist; it reads the csv
   .nlmixr2saveRestoreParHistType(ret, .file)
   if (isTRUE(checkVersion)) {
