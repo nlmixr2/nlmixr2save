@@ -3,18 +3,20 @@
 # Under devtools::test() that can be an older build than the source being
 # tested, so only run those tests when the loaded namespace is the installed
 # one (always true under R CMD check).
-# Child R processes see the same library paths as this one (they do not
-# inherit a runtime .libPaths() change), so they load the same nlmixr2save
-# build.
-.rLibsEnv <- function() {
-  paste0("R_LIBS=", shQuote(paste(.libPaths(), collapse=.Platform$path.sep)))
+# Run a command in a child R process that sees the same library paths as this
+# one (a runtime .libPaths() change is not inherited), so it loads the same
+# nlmixr2save build.  R_LIBS is set in this process rather than through
+# system2(env=), which only works on Unix.
+.withLibs <- function(cmd, args) {
+  withr::with_envvar(
+    c(R_LIBS=paste(.libPaths(), collapse=.Platform$path.sep)),
+    suppressWarnings(system2(cmd, args, stdout=TRUE, stderr=TRUE)))
 }
 
 # Run an R script in a fresh session
 .runScript <- function(script) {
-  suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-                           c("--vanilla", shQuote(script)),
-                           stdout=TRUE, stderr=TRUE, env=.rLibsEnv()))
+  .withLibs(file.path(R.home("bin"), "Rscript"),
+            c("--vanilla", shQuote(script)))
 }
 
 .skipIfNotInstalledBuild <- function() {
@@ -46,8 +48,8 @@ test_that("the data.table attach hook is registered once", {
 test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
   skip_on_cran()
   skip_if_not_installed("data.table")
-  .skipIfNotInstalledBuild()
   skip_if_not_installed("withr")
+  .skipIfNotInstalledBuild()
   # needs a fresh session, since data.table may already be attached here
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
@@ -90,6 +92,7 @@ test_that("`:=` works after data.table is attached after nlmixr2save (#8)", {
 test_that("nlmixr2save moves in front of data.table attached lower down", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  skip_if_not_installed("withr")
   .skipIfNotInstalledBuild()
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
@@ -111,6 +114,7 @@ test_that("nlmixr2save moves in front of data.table attached lower down", {
 test_that("a package that Depends on nlmixr2save does not block the move", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  skip_if_not_installed("withr")
   .skipIfNotInstalledBuild()
   # detach() refuses to detach a package another attached package Depends on
   .dir <- tempfile()
@@ -126,11 +130,8 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
              file.path(.pkg, "DESCRIPTION"))
   writeLines("depFun <- function() 1", file.path(.pkg, "R", "f.R"))
   writeLines("export(depFun)", file.path(.pkg, "NAMESPACE"))
-  .inst <- suppressWarnings(system2(file.path(R.home("bin"), "R"),
-                                    c("CMD", "INSTALL", "-l", shQuote(.lib),
-                                      shQuote(.pkg)),
-                                    stdout=TRUE, stderr=TRUE,
-                                    env=.rLibsEnv()))
+  .inst <- .withLibs(file.path(R.home("bin"), "R"),
+                     c("CMD", "INSTALL", "-l", shQuote(.lib), shQuote(.pkg)))
   skip_if_not(dir.exists(file.path(.lib, "nlmixr2saveDep")),
               paste(c("could not install the test package:",
                       utils::tail(.inst, 5)), collapse="\n"))
@@ -158,6 +159,7 @@ test_that("a package that Depends on nlmixr2save does not block the move", {
 test_that("a strict conflicts.policy is left for library() to resolve", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  skip_if_not_installed("withr")
   .skipIfNotInstalledBuild()
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
@@ -183,6 +185,7 @@ test_that("a strict conflicts.policy is left for library() to resolve", {
 test_that("a selective attach of nlmixr2save is re-attached as it was", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  skip_if_not_installed("withr")
   .skipIfNotInstalledBuild()
   .script <- tempfile(fileext=".R")
   on.exit(unlink(.script), add=TRUE)
@@ -210,6 +213,7 @@ test_that("a selective attach of nlmixr2save is re-attached as it was", {
 test_that("a load_all() attach is left alone rather than lost", {
   skip_on_cran()
   skip_if_not_installed("data.table")
+  skip_if_not_installed("withr")
   skip_if_not_installed("pkgload")
   # only from a source checkout (devtools::test()), not an installed package
   .src <- normalizePath(test_path("..", ".."), mustWork=FALSE)
