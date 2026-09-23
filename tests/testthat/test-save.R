@@ -297,6 +297,54 @@ test_that("the lotri blocks saveFit() writes are read without lotri", {
   }
 })
 
+test_that("loadFit() refuses a name that means two saved fits", {
+  withr::with_tempdir({
+    # fits saved as `my` and `my.zip`: my.zip is one's archive and the other's
+    # base name
+    .fakeSavedFit("my", val=2)
+    .fakeSavedFit("my.zip", val=1)
+    expect_error(loadFit("my.zip", checkVersion=FALSE), "ambiguous")
+    .expectFakeFit(loadFit("my", checkVersion=FALSE), val=2)
+    .expectFakeFit(loadFit("my.zip.zip", checkVersion=FALSE), val=1)
+  })
+})
+
+test_that("a regenerated loader reads exactly the files the original one did", {
+  withr::with_tempdir({
+    dir.create("a/b", recursive=TRUE)
+    .fakeSavedFit("a/b/x", zip=FALSE)
+    # a stray file that only matches the name is never run
+    writeLines('stop("a stray script was run")', "a/b/x-extra.R")
+    .ret <- loadFit("a/b/x", checkVersion=FALSE)
+    .expectFakeFit(.ret)
+    # a file the loader reads, but that is gone, is an error -- not an item
+    # silently missing from the fit
+    unlink("a/b/x-tab.csv")
+    expect_error(loadFit("a/b/x", checkVersion=FALSE),
+                 "reads files that are missing: x-tab.csv")
+  })
+})
+
+test_that("nlmixr2saveInvalidate() clears a hidden prefix, and only that", {
+  withr::with_tempdir({
+    dir.create("models")
+    file.create(c("models/.pk-fit.zip", "models/.pk-sim.rds", "models/.gitignore",
+                  "models/fit.zip"))
+    withr::with_options(list(nlmixr2save.dir="models", nlmixr2save.prefix=".pk-",
+                             nlmixr2save.quiet=TRUE), {
+      nlmixr2saveInvalidate()
+    })
+    expect_equal(sort(list.files("models", all.files=TRUE, no..=TRUE)),
+                 c(".gitignore", "fit.zip"))
+    # an empty prefix clears the caches but not the directory's hidden files
+    withr::with_options(list(nlmixr2save.dir="models", nlmixr2save.prefix="",
+                             nlmixr2save.quiet=TRUE), {
+      nlmixr2saveInvalidate()
+    })
+    expect_equal(list.files("models", all.files=TRUE, no..=TRUE), ".gitignore")
+  })
+})
+
 test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
   withr::with_tempdir({
     expect_error(loadFit("nope.zip", checkVersion=FALSE), "cannot find fit file")

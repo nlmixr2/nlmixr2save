@@ -1119,7 +1119,21 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (file.exists(paste0(.base, "-env.R")) &&
         !.nlmixr2saveLoaderUsable(.lines, .base)) {
     .minfo("the fit's loader script refers to the path it was saved under; regenerating it")
-    .files <- setdiff(.nlmixr2saveFitFiles(.base), .r)
+    # only the files the original loader reads: a stray `<base>-*` file (or
+    # another fit's, swept into the archive) must not be run, and a missing
+    # one must not silently drop out of the fit
+    .ref <- unlist(regmatches(.lines, gregexpr("'[^']*'", .lines)))
+    .ref <- unique(basename(gsub("\\\\", "/", substr(.ref, 2L, nchar(.ref) - 1L))))
+    .ref <- .ref[.ref != .r & (startsWith(.ref, paste0(.base, "-")) |
+                                 .ref == paste0(.base, ".csv"))]
+    # every loader names `<base>.csv`, but reads it only for a fit with a data
+    # table; the per-item files it always reads
+    .missing <- .ref[!file.exists(.ref) & .ref != paste0(.base, ".csv")]
+    if (length(.missing)) {
+      stop("'", r, "' reads files that are missing: ",
+           paste(.missing, collapse=", "), call.=FALSE)
+    }
+    .files <- .ref
     # the one thing not recoverable from the file names; it is written into
     # the loader, and FALSE only for fits from newer nlmixr2est
     .named <- !any(grepl("named=FALSE", .lines, fixed=TRUE))
@@ -1141,6 +1155,41 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
     .nlmixr2saveWarnVersion(ret)
   }
   ret
+}
+
+#' Load a fit from its `.zip` archive
+#'
+#' @param zip path of the archive
+#' @param checkVersion passed on
+#' @return the fit
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoadZip <- function(zip, checkVersion) {
+  .zip <- zip
+  .base <- sub("[.]zip$", "", basename(.zip), ignore.case=TRUE)
+  # extract to a private directory: extracting into the working directory
+  # only found the loader when that was the zip's own directory, and it
+  # overwrote (then deleted) same-named files that were already there
+  .exdir <- tempfile("nlmixr2save-")
+  dir.create(.exdir)
+  on.exit(unlink(.exdir, recursive=TRUE, force=TRUE), add=TRUE)
+  # flat: an archive written by an older saveFit() given a path stores its
+  # files under that whole path (e.g. home/me/models/fit.R)
+  .entries <- zip::zip_list(.zip)$filename
+  .entries <- .entries[!endsWith(.entries, "/")]
+  .dup <- unique(basename(.entries)[duplicated(basename(.entries))])
+  if (length(.dup)) {
+    stop(.zip, " holds more than one file named ",
+         paste(.dup, collapse=", "), " in different directories",
+         call.=FALSE)
+  }
+  zip::unzip(.zip, exdir=.exdir, junkpaths=TRUE)
+  .loader <- .nlmixr2saveFindLoader(.exdir, .base)
+  if (is.null(.loader)) {
+    stop("cannot find the fit loader script inside ", .zip, call.=FALSE)
+  }
+  .minfo(paste0("loading fit from ", .zip))
+  return(.nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion))
 }
 
 #' Load a fitted model object from a file
@@ -1167,7 +1216,18 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
   } else {
     file <- .file
   }
-  # accept the archive or loader path itself as well as the base name
+  # accept the archive or loader path itself as well as the base name; when
+  # both readings name an existing file (fits saved as `my` and `my.zip`, so
+  # my.zip and my.zip.zip), neither can be assumed
+  if (grepl("[.](zip|R)$", file, ignore.case=TRUE) && file.exists(file) &&
+        (file.exists(paste0(file, ".zip")) || file.exists(paste0(file, ".R")))) {
+    stop("'", file, "' is ambiguous: it is a saved fit's file, and also the base ",
+         "name of another saved fit (",
+         paste(c(paste0(file, ".zip"), paste0(file, ".R"))[
+           file.exists(c(paste0(file, ".zip"), paste0(file, ".R")))],
+           collapse=", "),
+         "); pass that file's own name instead", call.=FALSE)
+  }
   if (grepl("[.]zip$", file, ignore.case=TRUE) && file.exists(file)) {
     .zip <- file
     .r <- NA_character_
@@ -1181,29 +1241,7 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
   .base <- sub("[.](zip|R)$", "", basename(if (is.na(.zip)) .r else .zip),
                ignore.case=TRUE)
   if (!is.na(.zip) && file.exists(.zip)) {
-    # extract to a private directory: extracting into the working directory
-    # only found the loader when that was the zip's own directory, and it
-    # overwrote (then deleted) same-named files that were already there
-    .exdir <- tempfile("nlmixr2save-")
-    dir.create(.exdir)
-    on.exit(unlink(.exdir, recursive=TRUE, force=TRUE), add=TRUE)
-    # flat: an archive written by an older saveFit() given a path stores its
-    # files under that whole path (e.g. home/me/models/fit.R)
-    .entries <- zip::zip_list(.zip)$filename
-    .entries <- .entries[!endsWith(.entries, "/")]
-    .dup <- unique(basename(.entries)[duplicated(basename(.entries))])
-    if (length(.dup)) {
-      stop(.zip, " holds more than one file named ",
-           paste(.dup, collapse=", "), " in different directories",
-           call.=FALSE)
-    }
-    zip::unzip(.zip, exdir=.exdir, junkpaths=TRUE)
-    .loader <- .nlmixr2saveFindLoader(.exdir, .base)
-    if (is.null(.loader)) {
-      stop("cannot find the fit loader script inside ", .zip, call.=FALSE)
-    }
-    .minfo(paste0("loading fit from ", .zip))
-    return(.nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion))
+    return(.nlmixr2saveLoadZip(.zip, checkVersion))
   }
   if (!is.na(.r) && file.exists(.r)) {
     .minfo(paste0("loading fit from ", .r))
@@ -1334,10 +1372,10 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
               file.rename(paste0(x, ".zip"), paste0(.base, ".zip")),
             add=TRUE)
   }
-  # the `:=` caller performs its own version check/rerun handling.  Pass the
-  # archive itself: a variable can be named `fit.zip`, and `loadFit("fit.zip")`
-  # would take a `fit.zip` of another fit over this `fit.zip.zip`
-  loadFit(paste0(x, ".zip"), checkVersion=FALSE)
+  # the `:=` caller performs its own version check/rerun handling.  Load the
+  # archive itself rather than resolving a name: a variable can be named
+  # `fit.zip`, whose cache fit.zip.zip sits beside a `fit`'s fit.zip
+  .nlmixr2saveLoadZip(paste0(x, ".zip"), checkVersion=FALSE)
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {
@@ -1563,7 +1601,9 @@ nlmixr2saveInvalidate <- function() {
   .dir <- .nlmixr2saveDir()
   .prefix <- .nlmixr2savePrefix()
   if (!dir.exists(.dir)) return(invisible(character(0)))
-  .all <- list.files(.dir)
+  # a prefix starting with "." names hidden files; otherwise leave them (with
+  # an empty prefix, a directory's .gitignore is not a cache file)
+  .all <- list.files(.dir, all.files=startsWith(.prefix, "."), no..=TRUE)
   # a literal prefix match (the prefix may contain regex metacharacters); an
   # empty prefix matches everything in the directory
   .keep <- if (nzchar(.prefix)) startsWith(.all, .prefix) else rep(TRUE, length(.all))
