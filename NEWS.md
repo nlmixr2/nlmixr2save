@@ -14,6 +14,15 @@
   (`saveFit(fit, "path/to/fit")`) after it has been moved, or loaded from a
   different working directory, and a `.zip` that was renamed after saving.
 
+* `saveFit(fit, "path_model/fit")` now writes the files inside `path_model/`
+  under the bare name `fit`, creating the directory if needed.  The files, and
+  the loader's references to them, used to be named `path_model/fit-...`, so
+  the archive stored a `path_model/` folder: unzipping it (including by
+  `loadFit()`, which unzipped into the working directory) recreated
+  `path_model/` wherever that happened, and the loader only worked from the
+  directory it was saved from.  A trailing `.zip` on `file` is now ignored
+  rather than producing `fit.zip.zip`.
+
 * `loadFit()` now brings a restored `iniDf0` in line with the installed
   rxode2's `iniDf`.  It takes the columns and types from the fit's own `ui`,
   which the installed rxode2 rebuilds on load, rather than from a version

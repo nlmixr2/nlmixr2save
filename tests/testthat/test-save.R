@@ -146,6 +146,26 @@ test_that(".nlmixr2saveRestoreIniDf0 matches iniDf0 to the installed rxode2", {
   .i <- .withIni(data.frame(name="a"), ui=NULL)
   expect_equal(names(.i), "name")
 
+  # a real ui, compressed as the loader leaves it, works as the template
+  .f <- function() {
+    ini({
+      tka <- 0.45
+      add.sd <- 0.7
+    })
+    model({
+      ka <- exp(tka)
+      ka ~ add(add.sd)
+    })
+  }
+  .ui <- rxode2::rxUiCompress(rxode2::rxode2(.f))
+  .real <- rxode2::rxUiDecompress(.ui)$iniDf
+  .old <- .real[, setdiff(names(.real), "prior"), drop=FALSE]
+  .i <- .withIni(.old, ui=.ui)
+  expect_equal(names(.i), names(.real))
+  if (!is.null(.real$prior)) {
+    expect_identical(.i$prior, rep(NA_character_, nrow(.real)))
+  }
+
   # a fit without iniDf0 is left alone
   .noIni <- new.env()
   expect_identical(.nlmixr2saveRestoreIniDf0(.noIni), .noIni)
@@ -719,6 +739,35 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
 
         expect_error(suppressMessages(saveFit(fitIS)), NA)
         expect_true(file.exists("fitIS.zip"))
+      })
+
+      test_that("saveFit() to a path writes a flat archive there", {
+        # the files used to be named, and the loader to read them, as
+        # "path_model/fitP-...", so the archive carried a path_model/ folder
+        # and unzipping it recreated one wherever that happened
+        .wd <- getwd()
+        .before <- list.files(all.files=TRUE)
+        suppressMessages(saveFit(fitF, "path_model/fitP"))
+        expect_equal(getwd(), .wd)
+        expect_true(file.exists("path_model/fitP.zip"))
+        # nothing but the new directory appears here, and no loose files there
+        expect_equal(setdiff(list.files(all.files=TRUE), .before), "path_model")
+        expect_equal(list.files("path_model", all.files=TRUE, no..=TRUE),
+                     "fitP.zip")
+        .entries <- zip::zip_list("path_model/fitP.zip")$filename
+        expect_true(all(c("fitP.R", "fitP-env.R", "fitP.csv") %in% .entries))
+        expect_false(any(grepl("/", .entries, fixed=TRUE)))
+        # and the loader reads its components by the bare name
+        .exdir <- withr::local_tempdir()
+        zip::unzip("path_model/fitP.zip", files="fitP.R", exdir=.exdir)
+        .loader <- readLines(file.path(.exdir, "fitP.R"))
+        expect_false(any(grepl("path_model", .loader, fixed=TRUE)))
+
+        # a trailing .zip names the archive, not a fit called "fitP2.zip"
+        suppressMessages(saveFit(fitF, "path_model/fitP2.zip"))
+        expect_true(file.exists("path_model/fitP2.zip"))
+        expect_false(file.exists("path_model/fitP2.zip.zip"))
+        unlink("path_model", recursive=TRUE)
       })
 
       fit2F <- suppressMessages(loadFit("fitF"))

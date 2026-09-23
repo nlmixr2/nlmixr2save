@@ -449,7 +449,11 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' Save a fitted model object to a series of files
 #'
 #' @param fit the fitted model object
-#' @param file the base name of the files to save the fit to.
+#' @param file the base name of the files to save the fit to.  It may include
+#'   a directory, e.g. `"path/to/fit"`: the files are written there (the
+#'   directory is created if needed) and the archive `path/to/fit.zip` holds
+#'   them under the bare name `fit`, so it can be moved and loaded from
+#'   anywhere.  A trailing `.zip` is ignored.
 #' @param zip Boolean indicating if the files should be zipped.
 #' @param data Boolean indicating whether the original dataset (`origData`) is
 #'   stored in the saved fit.  When `FALSE` it is omitted, producing a fit that
@@ -501,12 +505,37 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   UseMethod("saveFit")
 }
 
+#' Split a `saveFit()` target into the directory to save in and a base name
+#'
+#' Every component file, and every reference the loader script makes to one,
+#' is named from the `file` argument.  Given `path_model/fit`, those names
+#' carried the directory, so the archive stored a `path_model/` folder and
+#' the loader only worked from the directory it was saved from; unzipping it
+#' recreated `path_model/` wherever it was unzipped.  Saving from inside the
+#' directory under the bare name keeps the archive flat and relocatable.
+#' A trailing `.zip` is dropped, since the archive name is `<base>.zip`.
+#' @param file the `file` argument given to `saveFit()`
+#' @return list with `dir` (the directory to save in, created if needed) and
+#'   `file` (the bare base name)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveSaveTarget <- function(file) {
+  file <- sub("[.]zip$", "", file, ignore.case=TRUE)
+  .dir <- dirname(file)
+  if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE)
+  list(dir=.dir, file=basename(file))
+}
+
 #' @rdname saveFit
 #' @export
 saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
+  .target <- .nlmixr2saveSaveTarget(file)
+  file <- .target$file
+  .owd <- setwd(.target$dir)
+  on.exit(setwd(.owd), add=TRUE)
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
   for (.i in .item) {
@@ -731,6 +760,10 @@ saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
+  .target <- .nlmixr2saveSaveTarget(file)
+  file <- .target$file
+  .owd <- setwd(.target$dir)
+  on.exit(setwd(.owd), add=TRUE)
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
   saveFit.nlmixr2FitCore(fit, file, zip=zip, data=data)
 }
