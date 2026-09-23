@@ -10,9 +10,17 @@
   the working directory was overwritten and then deleted.  The archive is now
   extracted to a temporary directory instead.
 
-* `loadFit()` also loads a fit saved under a directory
-  (`saveFit(fit, "path/to/fit")`) after it has been moved, or loaded from a
-  different working directory, and a `.zip` that was renamed after saving.
+* `loadFit()` also loads a fit that an earlier version saved under a path --
+  `saveFit(fit, "models/fit")`, `saveFit(fit, "/home/me/models/fit")` or
+  `saveFit(fit, "~/models/fit")` -- from anywhere, including on another
+  user's machine.  Those versions wrote the path into the loader script
+  inside the archive: it named the fit after the path and read every file
+  from it, so loading elsewhere failed with "cannot open file" or
+  "Permission denied" for the original location.  A `~` path also garbled
+  the names the items were restored under.  The archive is now extracted
+  flat, and a loader tied to a path is regenerated from the files in it; the
+  restored fit matches one saved without a path.  A `.zip` renamed after
+  saving loads too.
 
 * `saveFit(fit, "path_model/fit")` now writes the files inside `path_model/`
   under the bare name `fit`, creating the directory if needed.  The files, and

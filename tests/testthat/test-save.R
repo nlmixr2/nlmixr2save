@@ -12,23 +12,47 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
-# A stand-in for saveFit()'s output: a loader `<name>.R` that sources
-# `<name>-env.R` and reads `<name>-tab.csv` and the fit table `<name>.csv` by
-# the name it was saved under, exactly as the real loader does.  `name` can
-# hold a directory, as the `file` argument to saveFit() can.
-.fakeSavedFit <- function(name, zip=TRUE, val=42) {
-  writeLines(paste0("env <- list(val=", val, ")\nenv <- list2env(env)\n"),
+# A stand-in for saveFit()'s output, written with the real item writers and
+# the real loader generator, so it has exactly the shape of a saved fit: a
+# small ui, a data frame item, an env script, and the `<name>.R` loader.  The
+# files are created as `<name>-...`; the loader is written as if saveFit() had
+# been given `savedAs`, with its component files listed under `filesAs` --
+# which is how older versions produced loaders tied to a path:
+#   savedAs = "a/b/fit"               saveFit(fit, "a/b/fit")
+#   savedAs = "/abs/a/b/fit"          saveFit(fit, "/abs/a/b/fit")
+#   savedAs = "~/a/b/fit",            saveFit(fit, "~/a/b/fit"): the files
+#     filesAs = "/home/me/a/b"        were listed with ~ expanded
+.fakeUi <- local({
+  .ui <- NULL
+  function() {
+    if (is.null(.ui)) {
+      .f <- function() {
+        ini({
+          tka <- 0.45
+          add.sd <- 0.7
+        })
+        model({
+          ka <- exp(tka)
+          ka ~ add(add.sd)
+        })
+      }
+      .ui <<- rxode2::rxode2(.f)
+    }
+    .ui
+  }
+})
+.fakeSavedFit <- function(name, zip=TRUE, val=42, savedAs=name,
+                          filesAs=dirname(savedAs)) {
+  writeLines(paste0("env <- list(val = ", val,
+                    ", ..class.. = \"nlmixr2saveFake\"",
+                    ", ..id.level.. = NULL, ..parHistType.level.. = NULL)\n",
+                    "env <- list2env(env)\n"),
              paste0(name, "-env.R"))
   utils::write.csv(data.frame(a=1:2), paste0(name, "-tab.csv"), row.names=FALSE)
-  utils::write.csv(data.frame(b=3:4), paste0(name, ".csv"), row.names=FALSE)
-  writeLines(paste0("`", name, "` <- function() {\n",
-                    "source('", name, "-env.R', local=TRUE)\n",
-                    "env$tab <- read.csv('", name, "-tab.csv')\n",
-                    "env$fitTable <- read.csv('", name, ".csv')\n",
-                    "env\n",
-                    "}\n",
-                    "`", name, "` <- `", name, "`()\n"),
-             paste0(name, ".R"))
+  saveFitItem(.fakeUi(), "ui", name)
+  .files <- basename(.nlmixr2saveFitFiles(name))
+  if (filesAs != ".") .files <- file.path(filesAs, .files)
+  writeLines(.nlmixr2saveLoaderText(savedAs, .files), paste0(name, ".R"))
   if (zip) {
     .files <- .nlmixr2saveFitFiles(name)
     zip::zip(paste0(name, ".zip"), files=.files)
@@ -36,11 +60,13 @@ test_that(".assignParent errors on non-environment", {
   }
 }
 
-.expectFakeFit <- function(ret) {
-  expect_true(is.environment(ret))
-  expect_equal(ret$val, 42)
+.expectFakeFit <- function(ret, val=42) {
+  expect_true(inherits(ret, "nlmixr2saveFake"))
+  expect_equal(ret$val, val)
   expect_equal(ret$tab$a, 1:2)
-  expect_equal(ret$fitTable$b, 3:4)
+  expect_true(inherits(ret$ui, "rxUi"))
+  # restored under the item names, not names cut from a path
+  expect_setequal(ls(ret, all.names=TRUE), c("val", "tab", "ui", "model"))
 }
 
 test_that("loadFit() loads a fit from another directory by path", {
@@ -110,6 +136,34 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     })
     expect_equal(list.files(all.files=TRUE, recursive=TRUE), .before)
 
+    # saved with ~ (the user's report): the loader reads some files as
+    # '~/...' and lists the rest with ~ expanded, and its item names were cut
+    # from those by the length of the ~ form, so they are garbage
+    dir.create("tilde/Desktop/model", recursive=TRUE)
+    withr::with_dir("tilde/Desktop/model", {
+      .fakeSavedFit("fit", zip=FALSE, savedAs="~/Desktop/model/fit",
+                    filesAs="/home/someoneelse/Desktop/model")
+    })
+    .ldr <- readLines("tilde/Desktop/model/fit.R")
+    expect_true(any(grepl("source('~/Desktop/model/fit-env.R'", .ldr, fixed=TRUE)))
+    expect_true(any(grepl("/home/someoneelse/Desktop/model/fit-tab.csv", .ldr,
+                          fixed=TRUE)))
+    expect_false(any(grepl("env$`tab`", .ldr, fixed=TRUE))) # garbled
+    withr::with_dir("tilde", {
+      zip::zip("fit.zip", files=list.files("Desktop", recursive=TRUE,
+                                           full.names=TRUE))
+    })
+    .expectFakeFit(loadFit("tilde/fit.zip", checkVersion=FALSE))
+    .expectFakeFit(loadFit("tilde/Desktop/model/fit", checkVersion=FALSE))
+
+    # a loader tied to no path is used as it is, not regenerated
+    .fakeSavedFit("own", zip=FALSE)
+    .own <- readLines("own.R")
+    .own <- append(.own, "env$marker <- TRUE",
+                   after=grep("^env\\$model <- ", .own))
+    writeLines(.own, "own.R")
+    expect_true(isTRUE(loadFit("own", checkVersion=FALSE)$marker))
+
     # a fit named like an env script: its loader is `my-env.R`
     .fakeSavedFit("my-env")
     .expectFakeFit(loadFit("my-env.zip", checkVersion=FALSE))
@@ -122,8 +176,34 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     })
     # the unzipped files are the user's; loading leaves them in place
     expect_true(all(file.exists(c("a/b/plain.R", "a/b/plain-env.R",
-                                  "a/b/plain-tab.csv", "a/b/plain.csv"))))
+                                  "a/b/plain-tab.csv", "a/b/plain-ui.R"))))
+    # and the loader there is not rewritten
+    expect_true(any(grepl("a/b/plain-env.R", readLines("a/b/plain.R"), fixed=TRUE)))
   })
+})
+
+test_that(".nlmixr2saveLoaderUsable accepts only a loader tied to no path", {
+  .ok <- c("`fit` <- function() {", "source('fit-env.R', local=TRUE)",
+           "env$`tab` <- read.csv('fit-tab.csv', check.names=FALSE)",
+           "env", "}", "`fit` <- `fit`()")
+  expect_true(.nlmixr2saveLoaderUsable(.ok, "fit"))
+  # the pre-backtick form of older versions
+  .old <- sub("`fit`", "fit", .ok, fixed=TRUE)
+  .old <- gsub("`fit`", "fit", .old, fixed=TRUE)
+  expect_true(.nlmixr2saveLoaderUsable(.old, "fit"))
+  # another name than the file's (renamed, or saved under a path)
+  expect_false(.nlmixr2saveLoaderUsable(.ok, "run1"))
+  .p <- gsub("fit", "/home/me/models/fit", .ok, fixed=TRUE)
+  expect_false(.nlmixr2saveLoaderUsable(.p, "fit"))
+  # the right name, but a file read from a path (relative, ~, or Windows)
+  for (.d in c("models/", "~/models/", "/home/me/", "C:\\\\Users\\\\me\\\\")) {
+    expect_false(.nlmixr2saveLoaderUsable(
+      sub("'fit-env.R'", paste0("'", .d, "fit-env.R'"), .ok, fixed=TRUE), "fit"))
+  }
+  # not a loader at all
+  expect_false(.nlmixr2saveLoaderUsable(character(0), "fit"))
+  expect_false(.nlmixr2saveLoaderUsable("x <- 1", "fit"))
+  expect_false(.nlmixr2saveLoaderUsable("x <- (", "fit"))
 })
 
 test_that("the := loader takes the archive of a variable named like a zip", {
@@ -133,8 +213,8 @@ test_that("the := loader takes the archive of a variable named like a zip", {
     .fakeSavedFit("my.zip", val=1)
     .fakeSavedFit("my", val=2)
     expect_true(all(file.exists(c("my.zip.zip", "my.zip"))))
-    expect_equal(.loadFitZipPlain("my.zip")$val, 1)
-    expect_equal(.loadFitZipPlain("my")$val, 2)
+    .expectFakeFit(.loadFitZipPlain("my.zip"), val=1)
+    .expectFakeFit(.loadFitZipPlain("my"), val=2)
   })
 })
 

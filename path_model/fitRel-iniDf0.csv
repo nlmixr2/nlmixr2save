@@ -1,0 +1,8 @@
+"","ntheta","neta1","neta2","name","lower","est","upper","fix","label","backTransform","condition","prior","err"
+"1",1,NA,NA,"tka",-Inf,0.45,Inf,FALSE,NA,NA,NA,NA,NA
+"2",2,NA,NA,"tcl",-Inf,0.993251773010283,4.60517018598809,FALSE,NA,NA,NA,NA,NA
+"3",3,NA,NA,"tv",-Inf,3.45,Inf,FALSE,NA,NA,NA,NA,NA
+"4",4,NA,NA,"add.sd",0,0.7,Inf,FALSE,NA,NA,"rxLinCmt",NA,"add"
+"5",NA,1,1,"eta.ka",-Inf,0.6,Inf,FALSE,NA,NA,"id",NA,NA
+"6",NA,2,2,"eta.cl",-Inf,0.3,Inf,FALSE,NA,NA,"id",NA,NA
+"7",NA,3,3,"eta.v",-Inf,0.1,Inf,FALSE,NA,NA,"id",NA,NA
