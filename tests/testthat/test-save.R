@@ -73,6 +73,10 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     .expectFakeFit(loadFit("moved/run1.zip", checkVersion=FALSE))
     .expectFakeFit(loadFit("moved/run1", checkVersion=FALSE))
 
+    # a fit named like an env script: its loader is `my-env.R`
+    .fakeSavedFit("my-env")
+    .expectFakeFit(loadFit("my-env.zip", checkVersion=FALSE))
+
     # unzipped (saveFit(zip=FALSE)), loaded from another working directory
     .fakeSavedFit("a/b/plain", zip=FALSE)
     dir.create("elsewhere")

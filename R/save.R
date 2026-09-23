@@ -895,7 +895,9 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' @author Matthew L. Fidler
 .nlmixr2saveFindLoader <- function(dir, base) {
   .all <- list.files(dir, recursive=TRUE, all.files=TRUE)
-  .r <- .all[endsWith(.all, ".R") & !endsWith(.all, "-env.R")]
+  # the `-env.R` companion alone tells a loader from its env script; do not
+  # drop names ending in "-env.R", since a fit can itself be named `my-env`
+  .r <- .all[endsWith(.all, ".R")]
   .r <- .r[paste0(substr(.r, 1L, nchar(.r) - 2L), "-env.R") %in% .all]
   .exact <- .r[basename(.r) == paste0(base, ".R")]
   if (length(.exact) == 1L) return(.exact)
