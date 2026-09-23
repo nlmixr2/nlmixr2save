@@ -20,8 +20,17 @@
   the archive stored a `path_model/` folder: unzipping it (including by
   `loadFit()`, which unzipped into the working directory) recreated
   `path_model/` wherever that happened, and the loader only worked from the
-  directory it was saved from.  A trailing `.zip` on `file` is now ignored
-  rather than producing `fit.zip.zip`.
+  directory it was saved from.
+
+* `loadFit()` (and therefore `:=`) no longer depends on the installed lotri
+  to read a cache.  A fit's matrices (`cov`, `omega`, `R`, `phiC`, ...) are
+  stored as `lotri({...})` blocks with one row per statement; `loadFit()` now
+  reads that form itself and passes anything else to lotri.  Some development
+  versions of lotri rejected the named rows `saveFit()` writes ("matrix
+  expression should be 'name ~ c(lower-tri)'"), which is what broke the
+  `:=` example on the package website, and a cache could not be loaded at all
+  without nlmixr2est attached, since the scripts call `lotri()` unqualified.
+  Existing caches benefit without being re-saved.
 
 * `loadFit()` now brings a restored `iniDf0` in line with the installed
   rxode2's `iniDf`.  It takes the columns and types from the fit's own `ui`,

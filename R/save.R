@@ -453,7 +453,7 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #'   a directory, e.g. `"path/to/fit"`: the files are written there (the
 #'   directory is created if needed) and the archive `path/to/fit.zip` holds
 #'   them under the bare name `fit`, so it can be moved and loaded from
-#'   anywhere.  A trailing `.zip` is ignored.
+#'   anywhere.
 #' @param zip Boolean indicating if the files should be zipped.
 #' @param data Boolean indicating whether the original dataset (`origData`) is
 #'   stored in the saved fit.  When `FALSE` it is omitted, producing a fit that
@@ -513,14 +513,14 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' the loader only worked from the directory it was saved from; unzipping it
 #' recreated `path_model/` wherever it was unzipped.  Saving from inside the
 #' directory under the bare name keeps the archive flat and relocatable.
-#' A trailing `.zip` is dropped, since the archive name is `<base>.zip`.
+#' A trailing `.zip` is kept: `fit.zip` is a valid variable name, and the
+#' `:=` cache saves under the variable name and expects `<name>.zip` back.
 #' @param file the `file` argument given to `saveFit()`
 #' @return list with `dir` (the directory to save in, created if needed) and
 #'   `file` (the bare base name)
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveSaveTarget <- function(file) {
-  file <- sub("[.]zip$", "", file, ignore.case=TRUE)
   .dir <- dirname(file)
   if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE)
   list(dir=.dir, file=basename(file))
@@ -970,6 +970,97 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   NULL
 }
 
+#' Is `e` a plain number as `deparse()` writes one?
+#'
+#' A literal, `-`/`+` applied to one, or `Inf`/`NaN`/`NA`.  Nothing else is
+#' allowed, so evaluating an accepted expression runs no user code.
+#' @param e expression
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveIsNum <- function(e) {
+  if (is.numeric(e) && length(e) == 1L) return(TRUE)
+  if (is.logical(e) && length(e) == 1L && is.na(e)) return(TRUE)
+  if (is.name(e)) return(as.character(e) %in% c("Inf", "NaN", "NA_real_"))
+  if (is.call(e) && length(e) == 2L && is.name(e[[1]]) &&
+        as.character(e[[1]]) %in% c("-", "+")) {
+    return(.nlmixr2saveIsNum(e[[2]]))
+  }
+  FALSE
+}
+
+#' Build a matrix from the row-per-statement `lotri({...})` blocks `saveFit()` writes
+#'
+#' Each statement declares one row and its lower triangle, as lotri reads it:
+#' a single value (`name ~ value`, or `name ~ c(name = value)`) starts a new
+#' block, and `name ~ c(v1, ..., vk)` extends the current block of `k - 1`
+#' rows; the values may be named after the block's columns.  This is all the
+#' syntax `rxode2::rxUiDeparse()` produces for a fit's matrices (`cov`,
+#' `omega`, `R`, `phiC`, ...), and it is simple enough to read without lotri,
+#' so a cache does not depend on which lotri is installed -- some development
+#' versions of lotri reject the named rows outright.
+#' @param e the argument of the `lotri()` call, unevaluated
+#' @return the symmetric matrix with dimnames, or `NULL` when `e` is not
+#'   exactly that form (the caller then hands it to lotri)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLotriRows <- function(e) {
+  if (!is.call(e) || !identical(e[[1]], as.name("{")) || length(e) < 2L) {
+    return(NULL)
+  }
+  .rows <- as.list(e)[-1]
+  .n <- length(.rows)
+  .names <- character(.n)
+  .m <- matrix(0, .n, .n)
+  .start <- 1L # first row of the current block
+  for (.i in seq_len(.n)) {
+    .r <- .rows[[.i]]
+    if (!is.call(.r) || !identical(.r[[1]], as.name("~")) || length(.r) != 3L ||
+          !is.name(.r[[2]])) {
+      return(NULL)
+    }
+    .names[.i] <- as.character(.r[[2]])
+    .rhs <- .r[[3]]
+    if (.nlmixr2saveIsNum(.rhs)) {
+      .vals <- list(.rhs)
+    } else if (is.call(.rhs) && identical(.rhs[[1]], as.name("c"))) {
+      .vals <- as.list(.rhs)[-1]
+    } else {
+      return(NULL)
+    }
+    if (length(.vals) == 1L) .start <- .i
+    .cols <- seq.int(.start, .i)
+    if (length(.vals) != length(.cols)) return(NULL)
+    .vn <- names(.vals)
+    if (!is.null(.vn) && !identical(.vn, .names[.cols])) return(NULL)
+    for (.v in .vals) if (!.nlmixr2saveIsNum(.v)) return(NULL)
+    .m[.i, .cols] <- vapply(.vals, function(v) as.double(eval(v, baseenv())),
+                            double(1), USE.NAMES=FALSE)
+  }
+  if (anyDuplicated(.names)) return(NULL)
+  .m[upper.tri(.m)] <- t(.m)[upper.tri(.m)]
+  dimnames(.m) <- list(.names, .names)
+  .m
+}
+
+#' `lotri()` as seen by a cache's scripts while `loadFit()` sources them
+#'
+#' Reads the row form `saveFit()` writes itself, and hands anything else to
+#' lotri.
+#' @param x,... as for `lotri::lotri()`
+#' @return the matrix
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLotri <- function(x, ...) {
+  if (...length() == 0L) {
+    .m <- .nlmixr2saveLotriRows(substitute(x))
+    if (!is.null(.m)) return(.m)
+  }
+  .call <- sys.call()
+  .call[[1]] <- quote(rxode2::lotri)
+  eval(.call, parent.frame())
+}
+
 #' Source a fit's loader script and return the fit
 #'
 #' Runs with the working directory set to the loader's directory, since the
@@ -989,6 +1080,9 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   .owd <- setwd(dirname(r))
   on.exit(setwd(.owd), add=TRUE)
   .env <- new.env(parent=environment())
+  # the scripts call `lotri(...)` unqualified; read the blocks saveFit()
+  # writes without depending on the installed lotri
+  assign("lotri", .nlmixr2saveLotri, envir=.env)
   .r <- basename(r)
   .file <- .name
   if (!identical(.name, .base)) {
@@ -1196,8 +1290,10 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
               file.rename(paste0(x, ".zip"), paste0(.base, ".zip")),
             add=TRUE)
   }
-  # the `:=` caller performs its own version check/rerun handling
-  loadFit(x, checkVersion=FALSE)
+  # the `:=` caller performs its own version check/rerun handling.  Pass the
+  # archive itself: a variable can be named `fit.zip`, and `loadFit("fit.zip")`
+  # would take a `fit.zip` of another fit over this `fit.zip.zip`
+  loadFit(paste0(x, ".zip"), checkVersion=FALSE)
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {

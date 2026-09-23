@@ -16,8 +16,8 @@ test_that(".assignParent errors on non-environment", {
 # `<name>-env.R` and reads `<name>-tab.csv` and the fit table `<name>.csv` by
 # the name it was saved under, exactly as the real loader does.  `name` can
 # hold a directory, as the `file` argument to saveFit() can.
-.fakeSavedFit <- function(name, zip=TRUE) {
-  writeLines("env <- list(val=42)\nenv <- list2env(env)\n",
+.fakeSavedFit <- function(name, zip=TRUE, val=42) {
+  writeLines(paste0("env <- list(val=", val, ")\nenv <- list2env(env)\n"),
              paste0(name, "-env.R"))
   utils::write.csv(data.frame(a=1:2), paste0(name, "-tab.csv"), row.names=FALSE)
   utils::write.csv(data.frame(b=3:4), paste0(name, ".csv"), row.names=FALSE)
@@ -91,6 +91,87 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     expect_true(all(file.exists(c("a/b/plain.R", "a/b/plain-env.R",
                                   "a/b/plain-tab.csv", "a/b/plain.csv"))))
   })
+})
+
+test_that("the := loader takes the archive of a variable named like a zip", {
+  withr::with_tempdir({
+    # `my.zip` is a valid variable name, so its cache is my.zip.zip; a fit
+    # called `my` sits beside it as my.zip and must not be picked up instead
+    .fakeSavedFit("my.zip", val=1)
+    .fakeSavedFit("my", val=2)
+    expect_true(all(file.exists(c("my.zip.zip", "my.zip"))))
+    expect_equal(.loadFitZipPlain("my.zip")$val, 1)
+    expect_equal(.loadFitZipPlain("my")$val, 2)
+  })
+})
+
+test_that("the lotri blocks saveFit() writes are read without lotri", {
+  # the block from the pkgdown site's failing `:=` example: a development
+  # lotri rejected its named, wrapped rows
+  .site <- quote({
+    tka ~ c(tka = 0.0367813010669496)
+    tcl ~ c(tka = -0.000782456725690811, tcl = 0.0069543545026029)
+    tv ~ c(tka = 0.000952366834165392, tcl = -0.000489959598361193,
+           tv = 0.00218330787936497)
+    add.sd ~ c(tka = -6.41258631708858e-05, tcl = -5.67004131128066e-05,
+               tv = 3.82936894597721e-05, add.sd = 0.00243929995816957)
+    om.eta.ka ~ c(tka = 0.000146993075376898, tcl = 0.000126165231341427,
+                  tv = -0.000127191366433412, add.sd = -0.000541130240379496,
+                  om.eta.ka = 0.0353763038424305)
+  })
+  # unnamed rows (R, S, phiC, ...) and a diagonal-only block (omega)
+  .unnamed <- quote({
+    tka ~ 22.5656297333401
+    tcl ~ c(-7.59115223994971, 159.478624702269)
+    tv ~ c(-30.7802054115303, 26.7036854081949, 603.566773588088)
+  })
+  .diag <- quote({
+    eta.ka ~ 0.39790253245538
+    eta.cl ~ 0.0702730989050519
+  })
+  .one <- quote({
+    eta.ka ~ -Inf
+  })
+  # a single value starts a new block, as lotri reads it
+  .blocks <- quote({
+    a ~ 1
+    b ~ c(0.5, 2)
+    c ~ c(c = 3)
+    d ~ c(c = 0.25, d = 4)
+  })
+  for (.b in list(.site, .unnamed, .diag, .one, .blocks)) {
+    .m <- .nlmixr2saveLotriRows(.b)
+    expect_false(is.null(.m))
+    expect_identical(.m, eval(bquote(rxode2::lotri(.(.b)))))
+  }
+  # and through the lotri() the scripts see
+  expect_identical(.nlmixr2saveLotri({
+    eta.ka ~ 0.39790253245538
+    eta.cl ~ c(0.1, 0.0702730989050519)
+  }), rxode2::lotri({
+    eta.ka ~ 0.39790253245538
+    eta.cl ~ c(0.1, 0.0702730989050519)
+  }))
+
+  # anything else goes to lotri: a joint block, fix()
+  expect_null(.nlmixr2saveLotriRows(quote({a + b ~ c(1, 0.5, 1)})))
+  expect_identical(.nlmixr2saveLotri({a + b ~ c(1, 0.5, 1)}),
+                   rxode2::lotri({a + b ~ c(1, 0.5, 1)}))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ fix(1)})))
+  # and extra arguments always do
+  expect_identical(.nlmixr2saveLotri({a ~ 1}, cov=TRUE),
+                   rxode2::lotri({a ~ 1}, cov=TRUE))
+
+  # names that disagree with the rows, or a wrong row length, are not the
+  # row form either
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(x = 0.1, b = 1)})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(0.1, 1, 2)})))
+  # a row as long as the whole matrix, but not its block, is not lotri's form
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ 2; c ~ c(0.1, 0.2, 3)})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; a ~ c(0.1, 1)})))
+  # only numbers are ever evaluated
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ c(a = stop("evaluated"))})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ log(2)})))
 })
 
 test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
@@ -762,11 +843,6 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         zip::unzip("path_model/fitP.zip", files="fitP.R", exdir=.exdir)
         .loader <- readLines(file.path(.exdir, "fitP.R"))
         expect_false(any(grepl("path_model", .loader, fixed=TRUE)))
-
-        # a trailing .zip names the archive, not a fit called "fitP2.zip"
-        suppressMessages(saveFit(fitF, "path_model/fitP2.zip"))
-        expect_true(file.exists("path_model/fitP2.zip"))
-        expect_false(file.exists("path_model/fitP2.zip.zip"))
         unlink("path_model", recursive=TRUE)
       })
 
