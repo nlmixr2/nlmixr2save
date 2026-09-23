@@ -72,6 +72,7 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     .expectFakeFit(loadFit("a/b/fit.zip", checkVersion=FALSE))
     # and it still loads once the archive is moved and renamed
     dir.create("moved")
+    dir.create("elsewhere")
     file.rename("a/b/fit.zip", "moved/run1.zip")
     .expectFakeFit(loadFit("moved/run1.zip", checkVersion=FALSE))
     .expectFakeFit(loadFit("moved/run1", checkVersion=FALSE))
@@ -90,13 +91,31 @@ test_that("loadFit() loads a fit that was saved under a directory", {
       })
     }
 
+    # saved with the FULL path, e.g. saveFit(fit, "/home/me/proj/models/fit"):
+    # every entry carries the whole path (zip drops the leading "/"), and the
+    # loader names its object and reads its files by the absolute path, which
+    # no longer exists once the archive has moved
+    dir.create("proj/models", recursive=TRUE)
+    .abs <- file.path(normalizePath("proj/models"), "fitAbs")
+    suppressWarnings(.fakeSavedFit(.abs))
+    .entries <- zip::zip_list(paste0(.abs, ".zip"))$filename
+    expect_true(any(endsWith(.entries, "proj/models/fitAbs.R")))
+    expect_true(all(grepl("/", .entries, fixed=TRUE)))
+    file.rename(paste0(.abs, ".zip"), "moved/fitAbs.zip")
+    unlink("proj", recursive=TRUE) # the original location is gone
+    .before <- list.files(all.files=TRUE, recursive=TRUE)
+    .expectFakeFit(loadFit("moved/fitAbs.zip", checkVersion=FALSE))
+    withr::with_dir("elsewhere", {
+      .expectFakeFit(loadFit("../moved/fitAbs", checkVersion=FALSE))
+    })
+    expect_equal(list.files(all.files=TRUE, recursive=TRUE), .before)
+
     # a fit named like an env script: its loader is `my-env.R`
     .fakeSavedFit("my-env")
     .expectFakeFit(loadFit("my-env.zip", checkVersion=FALSE))
 
     # unzipped (saveFit(zip=FALSE)), loaded from another working directory
     .fakeSavedFit("a/b/plain", zip=FALSE)
-    dir.create("elsewhere")
     withr::with_dir("elsewhere", {
       .expectFakeFit(loadFit("../a/b/plain", checkVersion=FALSE))
       .expectFakeFit(loadFit("../a/b/plain.R", checkVersion=FALSE))
@@ -874,6 +893,16 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         zip::unzip("path_model/fitP.zip", files="fitP.R", exdir=.exdir)
         .loader <- readLines(file.path(.exdir, "fitP.R"))
         expect_false(any(grepl("path_model", .loader, fixed=TRUE)))
+
+        # the full path: the archive is still flat and the loader holds no path
+        suppressMessages(saveFit(fitF, file.path(getwd(), "path_model", "fitA")))
+        expect_equal(getwd(), .wd)
+        .entries <- zip::zip_list("path_model/fitA.zip")$filename
+        expect_true("fitA.R" %in% .entries)
+        expect_false(any(grepl("/", .entries, fixed=TRUE)))
+        zip::unzip("path_model/fitA.zip", files="fitA.R", exdir=.exdir)
+        expect_false(any(grepl(getwd(), readLines(file.path(.exdir, "fitA.R")),
+                               fixed=TRUE)))
 
         # zip=FALSE leaves the loose files in the directory, by the bare name
         suppressMessages(saveFit(fitF, "path_model/fitQ", zip=FALSE))
