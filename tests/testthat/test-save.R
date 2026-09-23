@@ -172,6 +172,16 @@ test_that("the lotri blocks saveFit() writes are read without lotri", {
   # only numbers are ever evaluated
   expect_null(.nlmixr2saveLotriRows(quote({a ~ c(a = stop("evaluated"))})))
   expect_null(.nlmixr2saveLotriRows(quote({a ~ log(2)})))
+  # lotri rejects NA, so the reader leaves it to lotri as well
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ NA})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(NA_real_, 2)})))
+  # while the forms it does read match lotri exactly
+  for (.b in list(quote({a ~ 1L}), quote({`a b` ~ 1; c ~ c(0.1, 2)}),
+                  quote({a ~ 1; b ~ c(Inf, 2)}),
+                  quote({a ~ -0; b ~ c(-1e-300, +2)}))) {
+    expect_identical(.nlmixr2saveLotriRows(.b),
+                     eval(bquote(rxode2::lotri(.(.b)))))
+  }
 })
 
 test_that("loadFit() errors clearly on a missing fit or a foreign zip", {

@@ -972,16 +972,17 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 
 #' Is `e` a plain number as `deparse()` writes one?
 #'
-#' A literal, `-`/`+` applied to one, or `Inf`/`NaN`/`NA`.  Nothing else is
-#' allowed, so evaluating an accepted expression runs no user code.
+#' A literal, `Inf`, or `-`/`+` applied to one.  Nothing else is allowed, so
+#' evaluating an accepted expression runs no user code.  `NA` is left out on
+#' purpose: lotri rejects it, and rxode2 never writes a matrix holding one as
+#' a `lotri()` block, so accepting it would only read what lotri would not.
 #' @param e expression
 #' @return boolean
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveIsNum <- function(e) {
-  if (is.numeric(e) && length(e) == 1L) return(TRUE)
-  if (is.logical(e) && length(e) == 1L && is.na(e)) return(TRUE)
-  if (is.name(e)) return(as.character(e) %in% c("Inf", "NaN", "NA_real_"))
+  if (is.numeric(e) && length(e) == 1L && !is.na(e)) return(TRUE)
+  if (is.name(e)) return(identical(as.character(e), "Inf"))
   if (is.call(e) && length(e) == 2L && is.name(e[[1]]) &&
         as.character(e[[1]]) %in% c("-", "+")) {
     return(.nlmixr2saveIsNum(e[[2]]))
