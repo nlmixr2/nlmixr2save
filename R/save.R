@@ -1,5 +1,7 @@
 .saveFitEnv <- new.env(parent = emptyenv())
 .saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed", "iniDf0")
+# model lists the loader compiles only on first use (see .nlmixr2saveLoaderText)
+.saveFitEnv$lazy <- c("foceiModel", "saemModel")
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData")
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
@@ -530,6 +532,24 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
                    }
                    if (grepl(".R$", f)) {
                      val <- substr(f, nchar(file)+2, nchar(f)-2)
+                     if (val %in% .saveFitEnv$lazy) {
+                       # a compiled model list: every model in it is rebuilt
+                       # with rxode2::rxode2(), which for a large model is a
+                       # long C compilation.  Read the script now (the files
+                       # are gone by the time it is used), compile on first
+                       # use, and keep the text so saveFit() can write it
+                       # back without compiling.
+                       return(paste0("local({\n",
+                                     "  .txt <- readLines('", f, "', warn=FALSE)\n",
+                                     "  .lazy <- env$`..nlmixr2saveLazy..`\n",
+                                     "  .lazy$`", val, "` <- .txt\n",
+                                     "  env$`..nlmixr2saveLazy..` <- .lazy\n",
+                                     "  delayedAssign('", val, "', local({\n",
+                                     "    eval(parse(text=.txt, keep.source=FALSE))\n",
+                                     "    `", val, "`\n",
+                                     "  }), assign.env=env)\n",
+                                     "})\n"))
+                     }
                      return(paste0("source('", f, "', local=TRUE)\n",
                                    "env$`", val, "` <- ", val, "\n"))
                    }
@@ -670,7 +690,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   on.exit(setwd(.owd), add=TRUE)
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
+  # a loaded fit keeps its compiled model lists as unforced promises, with
+  # their script text; write that back rather than force (compile) them
+  .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
+  .item <- setdiff(.item, "..nlmixr2saveLazy..")
   for (.i in .item) {
+    if (is.list(.lazy) && is.character(.lazy[[.i]])) {
+      .minfo(paste0("saving fit item: ", .i))
+      writeLines(.lazy[[.i]], con = paste0(file, "-", .i, ".R"))
+      next
+    }
     # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
     if (.i == ".nlmixr2saveMeta") next
     # when data=FALSE the original dataset is left out of the zip entirely

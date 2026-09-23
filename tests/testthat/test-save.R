@@ -358,6 +358,28 @@ test_that("a fit saved under a path with an apostrophe loads", {
   })
 })
 
+test_that("a fit's compiled model lists are built only when first used", {
+  withr::with_tempdir({
+    # the model list's script is evaluated (compiled) only on access; here it
+    # would fail loudly, so a load that touched it could not pass
+    .fakeSavedFit("lz", zip=FALSE)
+    writeLines('foceiModel <- stop("compiled while loading")', "lz-foceiModel.R")
+    writeLines(.nlmixr2saveLoaderText("lz", setdiff(.nlmixr2saveFitFiles("lz"), "lz.R")),
+               "lz.R")
+    zip::zip("lz.zip", files=.nlmixr2saveFitFiles("lz"))
+    unlink(.nlmixr2saveFitFiles("lz"))
+    .ret <- loadFit("lz.zip", checkVersion=FALSE)
+    expect_equal(.ret$val, 42)
+    # an unforced promise still holds its expression
+    expect_true(is.call(eval(call("substitute", quote(foceiModel), .ret))))
+    # its script was read while the files existed, and is kept for saveFit()
+    expect_equal(.ret$`..nlmixr2saveLazy..`$foceiModel,
+                 'foceiModel <- stop("compiled while loading")')
+    # the extracted files are gone, yet first use still evaluates it
+    expect_error(.ret$foceiModel, "compiled while loading")
+  })
+})
+
 test_that("nlmixr2saveInvalidate() clears a hidden prefix, and only that", {
   withr::with_tempdir({
     dir.create("models")
@@ -1079,6 +1101,17 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
 
       fit2F <- suppressMessages(loadFit("fitF"))
       fit2S <- suppressMessages(loadFit(fitS))
+
+      test_that("a loaded fit compiles its model lists only on first use", {
+        .unforced <- function(fit, n) is.call(eval(call("substitute", as.name(n), fit$env)))
+        expect_true(.unforced(fit2F, "foceiModel"))
+        expect_true(.unforced(fit2S, "saemModel"))
+        # re-saving writes the kept script back instead of compiling it
+        .d <- withr::local_tempdir()
+        suppressMessages(saveFit(fit2F, file.path(.d, "resaved")))
+        expect_true(.unforced(fit2F, "foceiModel"))
+        # fitEquals() below forces them, and compares them to the originals
+      })
 
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)

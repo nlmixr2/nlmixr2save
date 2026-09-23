@@ -35,6 +35,15 @@
   `nlmixr2save.prefix`), setting that for a whole project, saving and loading
   by path, and committing the directory to version control.
 
+* `loadFit()` no longer recompiles a fit's estimation models while loading.
+  A saved fit stores its compiled model lists (`foceiModel`, `saemModel`) as
+  `rxode2::rxode2()` calls, and every one was rebuilt on load -- for a large
+  model, several long C compilations that looked like a hang.  They are now
+  compiled only when something first uses them, and re-saving a loaded fit
+  (e.g. `nlmixr2saveShare()`) writes them back without compiling.  Fits saved
+  under a path by an earlier version get this too, since their loader is
+  regenerated.
+
 * `loadFit()` (and therefore `:=`) no longer depends on the installed lotri
   to read a cache.  A fit's matrices (`cov`, `omega`, `R`, `phiC`, ...) are
   stored as `lotri({...})` blocks with one row per statement; `loadFit()` now
