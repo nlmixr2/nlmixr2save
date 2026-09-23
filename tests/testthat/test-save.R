@@ -101,24 +101,51 @@ test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
   })
 })
 
-test_that(".nlmixr2saveRestoreIniDf0Prior makes a logical prior character", {
-  # an all-NA prior reads back from the csv as logical; rxode2 keeps it
-  # character
-  .env <- new.env(parent=emptyenv())
-  assign("iniDf0", data.frame(name=c("a", "b"), prior=c(NA, NA)), envir=.env)
-  .nlmixr2saveRestoreIniDf0Prior(.env)
-  expect_identical(.env$iniDf0$prior, c(NA_character_, NA_character_))
-  # a non-NA prior is kept as it is
-  assign("iniDf0", data.frame(name="a", prior="dnorm(0, 1)"), envir=.env)
-  .nlmixr2saveRestoreIniDf0Prior(.env)
-  expect_identical(.env$iniDf0$prior, "dnorm(0, 1)")
-  # older rxode2 has no prior column; nothing is added
-  assign("iniDf0", data.frame(name="a"), envir=.env)
-  .nlmixr2saveRestoreIniDf0Prior(.env)
-  expect_null(.env$iniDf0$prior)
-  # and a fit without iniDf0 is left alone
+test_that(".nlmixr2saveRestoreIniDf0 matches iniDf0 to the installed rxode2", {
+  # the loaded fit's ui is rebuilt by the installed rxode2, so its iniDf is the
+  # template; a list stands in for it here, since `$` is all that is used
+  .tmpl <- data.frame(name=character(0), est=double(0), prior=character(0),
+                      err=character(0))
+  .withIni <- function(ini, ui=list(iniDf=.tmpl)) {
+    .env <- new.env(parent=emptyenv())
+    assign("iniDf0", ini, envir=.env)
+    if (!is.null(ui)) assign("ui", ui, envir=.env)
+    .nlmixr2saveRestoreIniDf0(.env)
+    .env$iniDf0
+  }
+
+  # a cache from before rxode2 had `prior` gains it, typed and in place
+  .i <- .withIni(data.frame(name=c("a", "b"), est=c(1, 2), err=c(NA, "add")))
+  expect_equal(names(.i), c("name", "est", "prior", "err"))
+  expect_identical(.i$prior, c(NA_character_, NA_character_))
+  expect_equal(.i$err, c(NA, "add"))
+
+  # an all-NA prior read back from the csv as logical is made character
+  .i <- .withIni(data.frame(name="a", est=1, prior=NA, err="add"))
+  expect_identical(.i$prior, NA_character_)
+  # and a real prior is kept as it is
+  .i <- .withIni(data.frame(name="a", est=1, prior="dnorm(0, 1)", err="add"))
+  expect_identical(.i$prior, "dnorm(0, 1)")
+
+  # an older rxode2 without `prior` keeps the cache's column, after its own
+  .i <- .withIni(data.frame(name="a", est=1, prior="dnorm(0, 1)", err="add"),
+                 ui=list(iniDf=.tmpl[, c("name", "est", "err")]))
+  expect_equal(names(.i), c("name", "est", "err", "prior"))
+
+  # row names survive (iniDf0 is read with row.names=1)
+  .i <- .withIni(data.frame(name="a", est=1, err="add", row.names="7"))
+  expect_equal(row.names(.i), "7")
+
+  # with no ui to compare against, only prior is retyped and nothing added
+  .i <- .withIni(data.frame(name="a", prior=NA), ui=NULL)
+  expect_identical(.i$prior, NA_character_)
+  expect_equal(names(.i), c("name", "prior"))
+  .i <- .withIni(data.frame(name="a"), ui=NULL)
+  expect_equal(names(.i), "name")
+
+  # a fit without iniDf0 is left alone
   .noIni <- new.env()
-  expect_identical(.nlmixr2saveRestoreIniDf0Prior(.noIni), .noIni)
+  expect_identical(.nlmixr2saveRestoreIniDf0(.noIni), .noIni)
   expect_false(exists("iniDf0", envir=.noIni, inherits=FALSE))
 })
 

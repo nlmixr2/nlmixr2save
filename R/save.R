@@ -794,24 +794,56 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   fit
 }
 
-#' Repair an `iniDf0$prior` column a cache's own restore script left logical
+#' Bring a restored `iniDf0` in line with the installed rxode2's `iniDf`
 #'
-#' rxode2 keeps `prior` as a character column.  It is usually all `NA`, which
-#' `read.csv()` reads back as logical, and restore scripts written before this
-#' was coerced leave it that way.
+#' The restore script coerces a fixed list of `iniDf0` columns, so two things
+#' slip through:
+#'
+#' * a column the cache predates.  rxode2 added `prior`; a cache written before
+#'   that has no such column, while the installed rxode2 expects one.
+#' * a column whose values are all `NA`.  `read.csv()` reads it back as
+#'   logical, but rxode2 keeps `prior` (for one) as character.
+#'
+#' The fit's `ui` is rebuilt by the installed rxode2 when the fit is loaded, so
+#' its `iniDf` is a template of exactly the columns and types this rxode2 uses
+#' -- no version check needed.  Missing columns are added as typed `NA`s in
+#' the template's order, and all-`NA` logical columns take the template's
+#' type.  Columns the installed rxode2 does not know are kept, after the
+#' others.  Without a `ui` to compare against, only `prior` is retyped.
 #' @param fit restored object
 #' @return `fit`, invisibly; `iniDf0` is repaired in the fit environment
 #' @noRd
 #' @author Matthew L. Fidler
-.nlmixr2saveRestoreIniDf0Prior <- function(fit) {
+.nlmixr2saveRestoreIniDf0 <- function(fit) {
   .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
   if (!is.environment(.env)) return(invisible(fit))
   if (!exists("iniDf0", envir=.env, inherits=FALSE)) return(invisible(fit))
   .ini <- get("iniDf0", envir=.env, inherits=FALSE)
-  if (is.data.frame(.ini) && is.logical(.ini$prior)) {
-    .ini$prior <- as.character(.ini$prior)
-    assign("iniDf0", .ini, envir=.env)
+  if (!is.data.frame(.ini)) return(invisible(fit))
+  .tmpl <- NULL
+  if (exists("ui", envir=.env, inherits=FALSE)) {
+    # `$` decompresses a compressed ui
+    .tmpl <- try(get("ui", envir=.env, inherits=FALSE)$iniDf, silent=TRUE)
+    if (!is.data.frame(.tmpl)) .tmpl <- NULL
   }
+  if (is.null(.tmpl)) {
+    if (is.logical(.ini$prior)) .ini$prior <- as.character(.ini$prior)
+  } else {
+    .na <- rep(NA_integer_, nrow(.ini))
+    for (.c in names(.tmpl)) {
+      # indexing a zero-length column by NA gives NAs of the column's type
+      .proto <- .tmpl[[.c]][0]
+      if (is.null(.ini[[.c]])) {
+        .ini[[.c]] <- .proto[.na]
+      } else if (is.logical(.ini[[.c]]) && !is.logical(.proto) &&
+                   all(is.na(.ini[[.c]]))) {
+        .ini[[.c]] <- .proto[.na]
+      }
+    }
+    .ini <- .ini[, c(names(.tmpl), setdiff(names(.ini), names(.tmpl))),
+                 drop=FALSE]
+  }
+  assign("iniDf0", .ini, envir=.env)
   invisible(fit)
 }
 
@@ -941,7 +973,7 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   }
   ret <- get(.name, envir=.env, inherits=FALSE)
   ret <- .nlmixr2saveRestoreIdFactor(ret)
-  .nlmixr2saveRestoreIniDf0Prior(ret)
+  .nlmixr2saveRestoreIniDf0(ret)
   # must run while the component files still exist; it reads the csv
   .nlmixr2saveRestoreParHistType(ret, .file)
   if (isTRUE(checkVersion)) {

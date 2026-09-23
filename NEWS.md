@@ -14,11 +14,13 @@
   (`saveFit(fit, "path/to/fit")`) after it has been moved, or loaded from a
   different working directory, and a `.zip` that was renamed after saving.
 
-* `loadFit()` now restores `iniDf0$prior` as character, as rxode2 keeps it.
-  The column is usually all `NA`, which reads back from the `.csv` as logical,
-  so a reloaded fit's `iniDf0` no longer matched the original.  New caches
-  coerce it in their restore script, and `loadFit()` repairs caches written
-  before that.
+* `loadFit()` now brings a restored `iniDf0` in line with the installed
+  rxode2's `iniDf`.  It takes the columns and types from the fit's own `ui`,
+  which the installed rxode2 rebuilds on load, rather than from a version
+  check.  A cache written before rxode2 added `prior` gains the column (as
+  `NA`), and an all-`NA` `prior` -- which reads back from the `.csv` as
+  logical -- is character again, as rxode2 keeps it.  The reloaded fit's
+  `iniDf0` now matches the original.
 
 # nlmixr2save 0.2.0
 
