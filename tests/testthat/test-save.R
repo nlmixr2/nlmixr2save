@@ -76,6 +76,20 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     .expectFakeFit(loadFit("moved/run1.zip", checkVersion=FALSE))
     .expectFakeFit(loadFit("moved/run1", checkVersion=FALSE))
 
+    # a hidden name (`.fit` is an ordinary R name) and regexp metacharacters,
+    # zipped and not, flat and saved under a directory (the rewrite path)
+    for (.nm in c(".hidden", "my+fit(1)", "a/b/.hidden", "a/b/my+fit(1)")) {
+      .fakeSavedFit(.nm)
+      .expectFakeFit(loadFit(paste0(.nm, ".zip"), checkVersion=FALSE))
+      .expectFakeFit(loadFit(.nm, checkVersion=FALSE))
+      file.rename(paste0(.nm, ".zip"), file.path("moved", basename(paste0(.nm, ".zip"))))
+      .expectFakeFit(loadFit(file.path("moved", basename(.nm)), checkVersion=FALSE))
+      .fakeSavedFit(.nm, zip=FALSE)
+      withr::with_dir("moved", {
+        .expectFakeFit(loadFit(file.path("..", paste0(.nm, ".R")), checkVersion=FALSE))
+      })
+    }
+
     # a fit named like an env script: its loader is `my-env.R`
     .fakeSavedFit("my-env")
     .expectFakeFit(loadFit("my-env.zip", checkVersion=FALSE))
