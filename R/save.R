@@ -509,6 +509,21 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   UseMethod("saveFit")
 }
 
+#' Is `name` in `env` bound to a promise (forced or not)?
+#'
+#' `substitute()` returns a promise's expression rather than its value, so a
+#' binding the loader made with `delayedAssign()` -- whose expressions are all
+#' calls -- still yields a call until a value is assigned over it.
+#' @param name item name
+#' @param env environment
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveIsPromise <- function(name, env) {
+  exists(name, envir=env, inherits=FALSE) &&
+    is.call(eval(call("substitute", as.name(name), env)))
+}
+
 #' Text of the loader script `<file>.R` that restores a saved fit
 #'
 #' `saveFit()` writes it next to the component files; `loadFit()` also
@@ -698,9 +713,17 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
   .item <- setdiff(.item, "..nlmixr2saveLazy..")
   for (.i in .item) {
-    if (is.list(.lazy) && is.character(.lazy[[.i]])) {
+    # only while the binding is still the loader's promise: a value the user
+    # assigned since loading must be saved, not the script it replaced
+    if (is.list(.lazy) && !is.null(.lazy[[.i]]) &&
+          .nlmixr2saveIsPromise(.i, fit$env)) {
       .minfo(paste0("saving fit item: ", .i))
-      writeLines(.lazy[[.i]], con = paste0(file, "-", .i, ".R"))
+      if (is.data.frame(.lazy[[.i]])) {
+        # iniDf0 as read; loading repairs it again, without building the ui now
+        saveFitItem(.lazy[[.i]], .i, file)
+      } else {
+        writeLines(.lazy[[.i]], con = paste0(file, "-", .i, ".R"))
+      }
       next
     }
     # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
@@ -908,7 +931,12 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
     return(invisible(fit))
   }
   # the template is the ui, which the loader builds only when first used;
-  # repair iniDf0 when it is first used too, rather than build the ui now
+  # repair iniDf0 when it is first used too, rather than build the ui now.
+  # Keep it as read, so saveFit() can write it back without the ui.
+  .lazy <- get0("..nlmixr2saveLazy..", envir=.env, inherits=FALSE)
+  if (!is.list(.lazy)) .lazy <- list()
+  .lazy$iniDf0 <- .ini
+  assign("..nlmixr2saveLazy..", .lazy, envir=.env)
   rm("iniDf0", envir=.env)
   delayedAssign("iniDf0",
                 .nlmixr2saveIniDf0Fix(.ini, get("ui", envir=.env, inherits=FALSE)),
@@ -1256,7 +1284,7 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
     stop("cannot find the fit loader script inside ", .zip, call.=FALSE)
   }
   .minfo(paste0("loading fit from ", .zip))
-  return(.nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion))
+  .nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion)
 }
 
 #' Load a fitted model object from a file

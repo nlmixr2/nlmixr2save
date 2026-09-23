@@ -359,6 +359,18 @@ test_that("a fit saved under a path with an apostrophe loads", {
   })
 })
 
+test_that(".nlmixr2saveIsPromise tells a loader's promise from an assigned value", {
+  .e <- new.env()
+  delayedAssign("p", stop("never forced here"), assign.env = .e)
+  expect_true(.nlmixr2saveIsPromise("p", .e))
+  delayedAssign("q", identity(1), assign.env = .e) # the loader's are all calls
+  force(.e$q)
+  expect_true(.nlmixr2saveIsPromise("q", .e)) # forced, but still the promise
+  assign("q", 2, envir = .e)
+  expect_false(.nlmixr2saveIsPromise("q", .e)) # replaced by a value
+  expect_false(.nlmixr2saveIsPromise("missing", .e))
+})
+
 test_that("a fit's compiled model lists are built only when first used", {
   withr::with_tempdir({
     # the model list's script is evaluated (compiled) only on access; here it
@@ -1122,11 +1134,19 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         # the model list is compiled on first use
         expect_gt(.built(.f$foceiModel), 0L)
         expect_gt(.built(.s$saemModel), 0L)
-        # re-saving writes the kept scripts back: the model lists are not built
-        # (only the ui is, for iniDf0's repair)
+        # re-saving writes the kept scripts (and iniDf0 as read) back: nothing
+        # is built
         .g <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
         .d <- withr::local_tempdir()
-        expect_lte(.built(suppressMessages(saveFit(.g, file.path(.d, "resaved")))), 1L)
+        expect_equal(.built(suppressMessages(saveFit(.g, file.path(.d, "resaved")))), 0L)
+        .r <- suppressMessages(loadFit(file.path(.d, "resaved.zip"), checkVersion=FALSE))
+        expect_equal(.r$iniDf0, fitF$iniDf0, ignore_attr = TRUE)
+        # but a value assigned over a lazy item since loading is what is saved
+        .h <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
+        assign("foceiModel", "replaced after loading", envir = .h$env)
+        suppressMessages(saveFit(.h, file.path(.d, "changed")))
+        .c <- suppressMessages(loadFit(file.path(.d, "changed.zip"), checkVersion=FALSE))
+        expect_identical(get("foceiModel", envir = .c$env), "replaced after loading")
         # fitEquals() below compares every item, built, to the originals
       })
 
