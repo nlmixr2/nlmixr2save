@@ -66,7 +66,8 @@ test_that(".assignParent errors on non-environment", {
   expect_equal(ret$tab$a, 1:2)
   expect_true(inherits(ret$ui, "rxUi"))
   # restored under the item names, not names cut from a path
-  expect_setequal(ls(ret, all.names=TRUE), c("val", "tab", "ui", "model"))
+  expect_setequal(setdiff(ls(ret, all.names=TRUE), "..nlmixr2saveLazy.."),
+                  c("val", "tab", "ui", "model"))
 }
 
 test_that("loadFit() loads a fit from another directory by path", {
@@ -160,7 +161,7 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     .fakeSavedFit("own", zip=FALSE)
     .own <- readLines("own.R")
     .own <- append(.own, "env$marker <- TRUE",
-                   after=grep("^env\\$model <- ", .own))
+                   after=grep("^delayedAssign\\('model'", .own))
     writeLines(.own, "own.R")
     expect_true(isTRUE(loadFit("own", checkVersion=FALSE)$marker))
 
@@ -370,8 +371,6 @@ test_that("a fit's compiled model lists are built only when first used", {
     unlink(.nlmixr2saveFitFiles("lz"))
     .ret <- loadFit("lz.zip", checkVersion=FALSE)
     expect_equal(.ret$val, 42)
-    # an unforced promise still holds its expression
-    expect_true(is.call(eval(call("substitute", quote(foceiModel), .ret))))
     # its script was read while the files existed, and is kept for saveFit()
     expect_equal(.ret$`..nlmixr2saveLazy..`$foceiModel,
                  'foceiModel <- stop("compiled while loading")')
@@ -1102,15 +1101,33 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
       fit2F <- suppressMessages(loadFit("fitF"))
       fit2S <- suppressMessages(loadFit(fitS))
 
-      test_that("a loaded fit compiles its model lists only on first use", {
-        .unforced <- function(fit, n) is.call(eval(call("substitute", as.name(n), fit$env)))
-        expect_true(.unforced(fit2F, "foceiModel"))
-        expect_true(.unforced(fit2S, "saemModel"))
-        # re-saving writes the kept script back instead of compiling it
+      test_that("a loaded fit builds its ui and model lists only on first use", {
+        # every model, and the ui, is built by rxode2::rxode2(); count calls
+        .cnt <- new.env()
+        .cnt$n <- 0L
+        suppressMessages(trace("rxode2",
+                               tracer = bquote(assign("n", get("n", envir = .(.cnt)) + 1L,
+                                                      envir = .(.cnt))),
+                               where = asNamespace("rxode2"), print = FALSE))
+        on.exit(suppressMessages(untrace("rxode2", where = asNamespace("rxode2"))),
+                add = TRUE)
+        .built <- function(expr) {
+          .n0 <- .cnt$n
+          force(expr)
+          .cnt$n - .n0
+        }
+        expect_equal(.built(.f <- suppressMessages(loadFit("fitF", checkVersion=FALSE))), 0L)
+        expect_equal(.built(.s <- suppressMessages(loadFit("fitS", checkVersion=FALSE))), 0L)
+        expect_equal(.built(list(.f$objf, .f$parFixed, .f$omega, head(as.data.frame(.f)))), 0L)
+        # the model list is compiled on first use
+        expect_gt(.built(.f$foceiModel), 0L)
+        expect_gt(.built(.s$saemModel), 0L)
+        # re-saving writes the kept scripts back: the model lists are not built
+        # (only the ui is, for iniDf0's repair)
+        .g <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
         .d <- withr::local_tempdir()
-        suppressMessages(saveFit(fit2F, file.path(.d, "resaved")))
-        expect_true(.unforced(fit2F, "foceiModel"))
-        # fitEquals() below forces them, and compares them to the originals
+        expect_lte(.built(suppressMessages(saveFit(.g, file.path(.d, "resaved")))), 1L)
+        # fitEquals() below compares every item, built, to the originals
       })
 
       fitEquals(fitF, fit2F)

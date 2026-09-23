@@ -1,7 +1,9 @@
 .saveFitEnv <- new.env(parent = emptyenv())
 .saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed", "iniDf0")
-# model lists the loader compiles only on first use (see .nlmixr2saveLoaderText)
-.saveFitEnv$lazy <- c("foceiModel", "saemModel")
+# items the loader builds only on first use (see .nlmixr2saveLoaderText): the
+# model lists, which compile every model, and the ui, whose rebuild from the
+# model function parses the whole model
+.saveFitEnv$lazy <- c("foceiModel", "saemModel", "ui")
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData")
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
@@ -533,12 +535,12 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
                    if (grepl(".R$", f)) {
                      val <- substr(f, nchar(file)+2, nchar(f)-2)
                      if (val %in% .saveFitEnv$lazy) {
-                       # a compiled model list: every model in it is rebuilt
-                       # with rxode2::rxode2(), which for a large model is a
-                       # long C compilation.  Read the script now (the files
-                       # are gone by the time it is used), compile on first
-                       # use, and keep the text so saveFit() can write it
-                       # back without compiling.
+                       # built with rxode2::rxode2(): a compiled model list
+                       # (a long C compilation per model, for a large model)
+                       # or the ui (a parse of the whole model).  Read the
+                       # script now (the files are gone by the time it is
+                       # used), build it on first use, and keep the text so
+                       # saveFit() can write it back without building it.
                        return(paste0("local({\n",
                                      "  .txt <- readLines('", f, "', warn=FALSE)\n",
                                      "  .lazy <- env$`..nlmixr2saveLazy..`\n",
@@ -613,7 +615,8 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
                     "rm('..id.level..', envir=env)\n",
                     "if (exists('..parHistType.level..', env)) rm('..parHistType.level..', envir=env)\n",
                     .r,
-                    "env$model <- rxode2::model(env$ui)\n",
+                    # derived from the ui, so built with it, when first used
+                    "delayedAssign('model', rxode2::model(env$ui), assign.env=env)\n",
                     "if (!is.null(.id.level)) {\n",
                     "  if (!is.null(env$ranef$ID)) {\n",
                     "    env$ranef$ID <- factor(env$ranef$ID, levels=.id.level)\n",
@@ -900,31 +903,48 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (!exists("iniDf0", envir=.env, inherits=FALSE)) return(invisible(fit))
   .ini <- get("iniDf0", envir=.env, inherits=FALSE)
   if (!is.data.frame(.ini)) return(invisible(fit))
+  if (!exists("ui", envir=.env, inherits=FALSE)) {
+    assign("iniDf0", .nlmixr2saveIniDf0Fix(.ini, NULL), envir=.env)
+    return(invisible(fit))
+  }
+  # the template is the ui, which the loader builds only when first used;
+  # repair iniDf0 when it is first used too, rather than build the ui now
+  rm("iniDf0", envir=.env)
+  delayedAssign("iniDf0",
+                .nlmixr2saveIniDf0Fix(.ini, get("ui", envir=.env, inherits=FALSE)),
+                assign.env=.env)
+  invisible(fit)
+}
+
+#' @describeIn dot-nlmixr2saveRestoreIniDf0 the repair itself
+#' @param ini the restored `iniDf0`
+#' @param ui the fit's ui, or `NULL`
+#' @return the repaired `iniDf0`
+#' @noRd
+.nlmixr2saveIniDf0Fix <- function(ini, ui) {
+  .ini <- ini
   .tmpl <- NULL
-  if (exists("ui", envir=.env, inherits=FALSE)) {
+  if (!is.null(ui)) {
     # `$` decompresses a compressed ui
-    .tmpl <- try(get("ui", envir=.env, inherits=FALSE)$iniDf, silent=TRUE)
+    .tmpl <- try(ui$iniDf, silent=TRUE)
     if (!is.data.frame(.tmpl)) .tmpl <- NULL
   }
   if (is.null(.tmpl)) {
     if (is.logical(.ini$prior)) .ini$prior <- as.character(.ini$prior)
-  } else {
-    .na <- rep(NA_integer_, nrow(.ini))
-    for (.c in names(.tmpl)) {
-      # indexing a zero-length column by NA gives NAs of the column's type
-      .proto <- .tmpl[[.c]][0]
-      if (is.null(.ini[[.c]])) {
-        .ini[[.c]] <- .proto[.na]
-      } else if (is.logical(.ini[[.c]]) && !is.logical(.proto) &&
-                   all(is.na(.ini[[.c]]))) {
-        .ini[[.c]] <- .proto[.na]
-      }
-    }
-    .ini <- .ini[, c(names(.tmpl), setdiff(names(.ini), names(.tmpl))),
-                 drop=FALSE]
+    return(.ini)
   }
-  assign("iniDf0", .ini, envir=.env)
-  invisible(fit)
+  .na <- rep(NA_integer_, nrow(.ini))
+  for (.c in names(.tmpl)) {
+    # indexing a zero-length column by NA gives NAs of the column's type
+    .proto <- .tmpl[[.c]][0]
+    if (is.null(.ini[[.c]])) {
+      .ini[[.c]] <- .proto[.na]
+    } else if (is.logical(.ini[[.c]]) && !is.logical(.proto) &&
+                 all(is.na(.ini[[.c]]))) {
+      .ini[[.c]] <- .proto[.na]
+    }
+  }
+  .ini[, c(names(.tmpl), setdiff(names(.ini), names(.tmpl))), drop=FALSE]
 }
 
 #' Repair `parHistData$type` levels a cache's own restore script dropped
