@@ -1408,12 +1408,13 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
   # my.zip and my.zip.zip), neither can be assumed
   if (grepl("[.](zip|R)$", file, ignore.case=TRUE) && file.exists(file) &&
         (file.exists(paste0(file, ".zip")) || file.exists(paste0(file, ".R")))) {
-    stop("'", file, "' is ambiguous: it is a saved fit's file, and also the base ",
-         "name of another saved fit (",
-         paste(c(paste0(file, ".zip"), paste0(file, ".R"))[
-           file.exists(c(paste0(file, ".zip"), paste0(file, ".R")))],
-           collapse=", "),
-         "); pass that file's own name instead", call.=FALSE)
+    .other <- c(paste0(file, ".zip"), paste0(file, ".R"))
+    .other <- .other[file.exists(.other)]
+    .own <- sub("[.](zip|R)$", "", file, ignore.case=TRUE)
+    stop("'", file, "' names two saved fits: the file '", file, "' itself, and ",
+         "the fit saved as '", file, "' ('", .other[1], "'); use loadFit(\"",
+         .own, "\") for the first or loadFit(\"", .other[1],
+         "\") for the second", call.=FALSE)
   }
   if (grepl("[.]zip$", file, ignore.case=TRUE) && file.exists(file)) {
     .zip <- file

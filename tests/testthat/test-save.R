@@ -304,7 +304,8 @@ test_that("loadFit() refuses a name that means two saved fits", {
     # base name
     .fakeSavedFit("my", val=2)
     .fakeSavedFit("my.zip", val=1)
-    expect_error(loadFit("my.zip", checkVersion=FALSE), "ambiguous")
+    expect_error(loadFit("my.zip", checkVersion=FALSE),
+                 'names two saved fits.*loadFit\\("my"\\).*loadFit\\("my.zip.zip"\\)')
     .expectFakeFit(loadFit("my", checkVersion=FALSE), val=2)
     .expectFakeFit(loadFit("my.zip.zip", checkVersion=FALSE), val=1)
   })
