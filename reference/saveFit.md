@@ -120,8 +120,10 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: convergence
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covList
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
+#> ℹ saving fit item: covOptions
 #> ℹ saving fit item: covR
 #> ℹ saving fit item: covRS
 #> ℹ saving fit item: covS
@@ -143,7 +145,10 @@ Matthew L. Fidler
 #> ℹ saving fit item: method
 #> ℹ saving fit item: mixIdx
 #> ℹ saving fit item: nAGQ
+#> ℹ saving fit item: nConditionalInnerHessian
 #> ℹ saving fit item: nEstOmega
+#> ℹ saving fit item: nInnerRerank
+#> ℹ saving fit item: nTrustInner
 #> ℹ saving fit item: nobs
 #> ℹ saving fit item: nsub
 #> ℹ saving fit item: objDf
@@ -172,26 +177,76 @@ Matthew L. Fidler
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
 #> ℹ loading fit from fit.R
-#> lotri syntax error:
-#> =================================================================================
-#> :001: tka ~ c(tka = 0.0367813010669496)
-#> :002: tcl ~ c(tka = -0.000782456725690811, tcl = 0.0069543545026029)
-#> :003: tv ~ c(tka = 0.000952366834165392, tcl = -0.000489959598361193, tv = 0.00218330787936497)
-#> :004: add.sd ~ c(tka = -6.41258631708858e-05, tcl = -5.67004131128066e-05, tv = 3.82936894597721e-05, add.sd = 0.00243929995816957)
-#> lotri error:
-#>    matrix expression should be 'name ~ c(lower-tri)'
-#> :005: om.eta.ka ~ c(tka = 0.000146993075376898, tcl = 0.000126165231341427, tv = -0.000127191366433412, add.sd = -0.000541130240379496, om.eta.ka = 0.0353763038424305)
-#> lotri error:
-#>    number named variables and lower triangular matrix size do not match
-#>      did you mean something like:
-#>      'om.eta.cl + varName2 + varName3 ~ c(-0.000117433625253258, 
-#>                                           0.000125380229779247, -6.81577112109223e-05, 
-#>                                           9.82139979915425e-06, -0.00012172625636792, 0.00118026544368931)
-#> :006: om.eta.cl ~ c(tka = -0.000117433625253258, tcl = 0.000125380229779247, tv = -6.81577112109223e-05, add.sd = 9.82139979915425e-06, om.eta.ka = -0.00012172625636792, om.eta.cl = 0.00118026544368931)
-#> lotri error:
-#>    matrix expression should be 'name ~ c(lower-tri)'
-#> :007: om.eta.v ~ c(tka = 7.85881365155322e-05, tcl = -3.00853221214718e-05, tv = 5.01075513373757e-05, add.sd = -2.91997524119011e-05, om.eta.ka = 0.000117120738078429, om.eta.cl = -8.31373925204361e-05, om.eta.v = 0.000124134785919267)
-#> =================================================================================
-#> Error: lotri syntax errors above
+#>  
+#>  
+#>  
+#>  
+#>  
+#>  
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
+#> ℹ removing unzipped fit files
+#> ── nlmixr² FOCEi (outer: bobyqa) ──
+#> 
+#>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
+#> FOCEi 116.8076 373.4073 393.587      -179.7037        538873.5        3771.305
+#> 
+#> ── Time (sec $time): ──
+#> 
+#>             setup  optimize covariance preprocess postprocess table compress
+#> elapsed 0.2363176 0.1944412  0.2814882      0.027       0.024 0.043    0.001
+#>            other
+#> elapsed 0.130753
+#> 
+#> ── Population Parameters ($parFixed or $parFixedDf): ──
+#> 
+#>         Est.      SE  %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
+#> tka    0.472   0.208  44.1       1.60 (1.07, 2.41)     69.9       1.34 
+#> tcl     1.01 0.00728 0.719       2.75 (2.71, 2.79)     27.0       4.41 
+#> tv      3.46  0.0460  1.33       31.8 (29.1, 34.8)     13.9       10.4 
+#> add.sd 0.695  0.0940  13.5    0.695 (0.511, 0.880)                     
+#>  
+#>   Covariance Type ($covMethod): r,s (full)
+#>     other calculated covs (setCov()): r; s; r,s; r (full); s (full)
+#>   Some strong fixed parameter correlations exist ($cor) :
+#>                 cor:tcl,tka              cor:tv,tka          cor:add.sd,tka 
+#>                  0.316                   0.288                   -0.177   
+#>       cor:om.eta.ka,tka       cor:om.eta.cl,tka        cor:om.eta.v,tka 
+#>                  0.735                  -0.163                   -0.220   
+#>              cor:tv,tcl          cor:add.sd,tcl       cor:om.eta.ka,tcl 
+#>                 -0.296                   -0.281                    0.260   
+#>       cor:om.eta.cl,tcl        cor:om.eta.v,tcl           cor:add.sd,tv 
+#>                -0.0127                    0.178                   -0.381  
+#>        cor:om.eta.ka,tv        cor:om.eta.cl,tv         cor:om.eta.v,tv 
+#>                  0.274                   -0.102                  -0.0694   
+#>    cor:om.eta.ka,add.sd    cor:om.eta.cl,add.sd     cor:om.eta.v,add.sd 
+#>                 -0.411                 -0.0705                   -0.595  
+#> cor:om.eta.cl,om.eta.ka  cor:om.eta.v,om.eta.ka  cor:om.eta.v,om.eta.cl 
+#>                 -0.276                    0.452                 -0.0799   
+#>  
+#> 
+#>   No correlations in between subject variability (BSV) matrix
+#>   Full BSV covariance ($omega) or correlation ($omegaR; diagonals=SDs) 
+#>   Distribution stats (mean/skewness/kurtosis/p-value) available in $shrink 
+#>   Information about run found ($runInfo):
+#>    • gradient problems with covariance; see $scaleInfo 
+#>    • last objective function was not at minimum, possible problems in optimization 
+#>    • ETAs were reset to zero during optimization; (Can control by foceiControl(resetEtaP=.)) 
+#>   Censoring ($censInformation): No censoring
+#>   Minimization message ($message):  
+#>     Normal exit from bobyqa 
+#> 
+#> ── Fit Data (object is a modified tibble): ──
+#> # A tibble: 132 × 22
+#>   ID     TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES
+#>   <fct> <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>
+#> 1 1      0     0.74  0     0.74   1.06   0     0.74   1.06   0     0.74   1.06 
+#> 2 1      0.25  2.84  3.28 -0.445 -0.237  3.85 -1.01  -1.45   3.24 -0.404 -0.190
+#> 3 1      0.57  6.57  5.86  0.711  0.287  6.79 -0.216 -0.310  5.81  0.763  0.278
+#> # ℹ 129 more rows
+#> # ℹ 10 more variables: eta.ka <dbl>, eta.cl <dbl>, eta.v <dbl>, depot <dbl>,
+#> #   central <dbl>, ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <int>
 # }
 ```

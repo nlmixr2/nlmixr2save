@@ -4,6 +4,22 @@
 
 CRAN release: 2026-08-04
 
+- `fit := nlmixr2(...)` no longer fails when data.table is attached
+  after nlmixr2save
+  (e.g. [`library(nlmixr2); library(data.table)`](https://nlmixr2.org/)).
+  data.table’s exported `:=` masked nlmixr2save’s and errored with
+  “Check that is.data.table(DT) == TRUE”. nlmixr2save now re-attaches
+  itself in front of data.table when data.table is attached;
+  data.table’s `DT[, a := b]` is unaffected
+  ([\#8](https://github.com/nlmixr2/nlmixr2save/issues/8)).
+
+- [`saveFit()`](../reference/saveFit.md) now restores every `iniDf0`
+  column with the type it had when saved, rather than a fixed list of
+  columns. rxode2’s newer character `prior` column is all `NA` for fits
+  without priors, which
+  [`read.csv()`](https://rdrr.io/r/utils/read.table.html) read back as
+  logical, so a loaded fit’s `iniDf0` no longer matched the original.
+
 - [`loadFit()`](../reference/loadFit.md) (and therefore `:=`) now
   restores the fit table’s `ID` column as a factor. The table
   round-trips through a plain `.csv`, so `ID` came back as an integer
