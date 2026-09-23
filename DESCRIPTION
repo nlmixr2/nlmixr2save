@@ -27,6 +27,7 @@ Imports:
     zip
 Suggests:
     babelmixr2,
+    data.table,
     dplyr,
     knitr,
     nlmixr2data,

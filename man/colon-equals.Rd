@@ -53,6 +53,21 @@ Otherwise, the default s3 method would be \verb{:=.class} where \code{class}
 instead. Unlike the un-evaluated function dispach there is no way
 to check the arguments for a cache, so loading from cache is not possible.
 }
+\section{data.table}{
+
+
+data.table also exports a \verb{:=}, which only works inside \code{DT[...]} and
+errors anywhere else.  When data.table is attached after nlmixr2save (for
+example \code{library(nlmixr2)} followed by \code{library(data.table)}), nlmixr2save
+re-attaches itself in front of data.table, so \code{fit := nlmixr2(...)} keeps
+working.  data.table's own \code{DT[, a := b]} is unaffected, since data.table
+handles \verb{:=} inside \verb{[.data.table} rather than looking it up.
+\code{nlmixr2save::`:=`} works regardless of the search path.  Under
+a \code{conflicts.policy} that makes conflicts errors (\code{"strict"},
+\code{"depends.ok"} or \code{list(error=TRUE)}, see \code{\link[base:library]{base::library()}}) nlmixr2save
+stays where it is and \code{library()} reports the conflict as usual.
+}
+
 \examples{
 
 \donttest{

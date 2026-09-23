@@ -22,7 +22,7 @@ saveFit(fit, file, zip = TRUE, data = .nlmixr2saveData())
 a directory, e.g. \code{"path/to/fit"}: the files are written there (the
 directory is created if needed) and the archive \code{path/to/fit.zip} holds
 them under the bare name \code{fit}, so it can be moved and loaded from
-anywhere.  A trailing \code{.zip} is ignored.}
+anywhere.}
 
 \item{zip}{Boolean indicating if the files should be zipped.}
 
