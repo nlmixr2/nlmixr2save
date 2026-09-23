@@ -133,6 +133,42 @@
        sha=.sha)
 }
 
+#' Restore-script lines that give `iniDf0`'s columns back their types
+#'
+#' `read.csv()` infers each column's type, so an all-`NA` column comes back
+#' logical and a character column of numbers comes back numeric.  The types
+#' are taken from the fit being saved, so a column rxode2 adds later (such as
+#' the character `prior` column) keeps its type too; a fit without an
+#' `iniDf0` data frame falls back to the columns rxode2 has always had.
+#'
+#' @param fit the fit being saved
+#' @return a string of R code, one assignment per column
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveIniDf0Types <- function(fit) {
+  .ini <- if (exists("iniDf0", envir=fit$env, inherits=FALSE)) {
+    get("iniDf0", envir=fit$env)
+  }
+  .types <- if (is.data.frame(.ini)) {
+    vapply(.ini, function(x) {
+      if (is.integer(x)) "integer"
+      else if (is.double(x)) "double"
+      else if (is.logical(x)) "logical"
+      else if (is.character(x)) "character"
+      else NA_character_
+    }, character(1))
+  } else {
+    c(ntheta="integer", neta1="double", neta2="double", name="character",
+      lower="double", upper="double", est="double", fix="logical",
+      label="character", backTransform="character", condition="character",
+      err="character")
+  }
+  .types <- .types[!is.na(.types)]
+  .col <- paste0("env$iniDf0[[", vapply(names(.types), deparse1, character(1)),
+                 "]]")
+  paste0(.col, " <- as.", .types, "(", .col, ")\n", collapse="")
+}
+
 #' Metadata stored alongside a saved fit
 #'
 #' Deterministic (no timestamps) so a committed cache stays byte-stable.
@@ -629,19 +665,7 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
                                        "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`, named=",
                                        deparse1(.parFixedDfNamed), ")\n")
                        } else if (val == "iniDf0") {
-                         ret <- paste0(ret,
-                                       "env$iniDf0$ntheta <- as.integer(env$iniDf0$ntheta)\n",
-                                       "env$iniDf0$neta1 <- as.double(env$iniDf0$neta1)\n",
-                                       "env$iniDf0$neta2 <- as.double(env$iniDf0$neta2)\n",
-                                       "env$iniDf0$name <- as.character(env$iniDf0$name)\n",
-                                       "env$iniDf0$lower <- as.double(env$iniDf0$lower)\n",
-                                       "env$iniDf0$upper <- as.double(env$iniDf0$upper)\n",
-                                       "env$iniDf0$est <- as.double(env$iniDf0$est)\n",
-                                       "env$iniDf0$fix <- as.logical(env$iniDf0$fix)\n",
-                                       "env$iniDf0$label <- as.character(env$iniDf0$label)\n",
-                                       "env$iniDf0$backTransform <- as.character(env$iniDf0$backTransform)\n",
-                                       "env$iniDf0$condition <- as.character(env$iniDf0$condition)\n",
-                                       "env$iniDf0$err <- as.character(env$iniDf0$err)\n")
+                         ret <- paste0(ret, .nlmixr2saveIniDf0Types(fit))
                        }
                      } else {
                        ret <- paste0("env$`", val, "` <- read.csv('", f, "', check.names=FALSE)\n")
