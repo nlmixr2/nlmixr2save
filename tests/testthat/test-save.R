@@ -192,6 +192,13 @@ test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
     zip::zip("other.zip", files="readme.txt")
     expect_error(loadFit("other.zip", checkVersion=FALSE),
                  "cannot find the fit loader script")
+    # an empty or unrelated .R, e.g. from an interrupted save
+    file.create("empty.R")
+    expect_error(loadFit("empty.R", checkVersion=FALSE),
+                 "is not a fit loader script")
+    writeLines("x <- 1", "notfit.R")
+    expect_error(loadFit("notfit", checkVersion=FALSE),
+                 "is not a fit loader script")
   })
 })
 

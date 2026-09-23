@@ -942,6 +942,7 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' @author Matthew L. Fidler
 .nlmixr2saveLoaderName <- function(r, default) {
   .l <- readLines(r, n=1L, warn=FALSE)
+  if (length(.l) == 0L) return(default)
   .m <- regmatches(.l, regexec("^`?(.*?)`? <- function\\(\\) \\{", .l))[[1]]
   if (length(.m) == 2L && nzchar(.m[2])) return(.m[2])
   default # nocov
@@ -1098,6 +1099,10 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
     .file <- .base
   } else {
     source(.r, local=.env)
+  }
+  if (!exists(.name, envir=.env, inherits=FALSE)) {
+    stop("'", r, "' is not a fit loader script: it does not define `", .name,
+         "`", call.=FALSE)
   }
   ret <- get(.name, envir=.env, inherits=FALSE)
   ret <- .nlmixr2saveRestoreIdFactor(ret)
