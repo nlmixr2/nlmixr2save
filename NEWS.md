@@ -22,6 +22,10 @@
   restored fit matches one saved without a path.  A `.zip` renamed after
   saving loads too.
 
+* `loadFit(myfit)` with a bare symbol loads `myfit.zip` again when no object
+  `myfit` exists; it looked for a file named after the "object not found"
+  error instead.
+
 * `saveFit(fit, "path_model/fit")` now writes the files inside `path_model/`
   under the bare name `fit`, creating the directory if needed.  The files, and
   the loader's references to them, used to be named `path_model/fit-...`, so

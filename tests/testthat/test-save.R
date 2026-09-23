@@ -411,6 +411,14 @@ test_that("nlmixr2saveInvalidate() clears a hidden prefix, and only that", {
   })
 })
 
+test_that("loadFit() takes a bare symbol naming a saved fit", {
+  withr::with_tempdir({
+    .fakeSavedFit("myfit")
+    expect_false(exists("myfit", inherits = FALSE))
+    .expectFakeFit(loadFit(myfit, checkVersion=FALSE))
+  })
+})
+
 test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
   withr::with_tempdir({
     expect_error(loadFit("nope.zip", checkVersion=FALSE), "cannot find fit file")
@@ -1147,6 +1155,15 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         suppressMessages(saveFit(.h, file.path(.d, "changed")))
         .c <- suppressMessages(loadFit(file.path(.d, "changed.zip"), checkVersion=FALSE))
         expect_identical(get("foceiModel", envir = .c$env), "replaced after loading")
+        # and once an item is built, the object itself is saved, so a change
+        # made to it in place is kept
+        .k <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
+        .m <- .k$foceiModel # built now
+        expect_null(.k$env$`..nlmixr2saveLazy..`$foceiModel)
+        .u <- .k$ui
+        expect_null(.k$env$`..nlmixr2saveLazy..`$ui)
+        invisible(.k$iniDf0)
+        expect_null(.k$env$`..nlmixr2saveLazy..`$iniDf0)
         # fitEquals() below compares every item, built, to the originals
       })
 

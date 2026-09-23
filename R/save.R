@@ -563,6 +563,12 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
                                      "  env$`..nlmixr2saveLazy..` <- .lazy\n",
                                      "  delayedAssign('", val, "', local({\n",
                                      "    eval(parse(text=.txt, keep.source=FALSE))\n",
+                                     # once built, the object itself is saved
+                                     # (with any changes made to it), not
+                                     # the script it was built from
+                                     "    .lazy <- env$`..nlmixr2saveLazy..`\n",
+                                     "    .lazy$`", val, "` <- NULL\n",
+                                     "    env$`..nlmixr2saveLazy..` <- .lazy\n",
                                      "    `", val, "`\n",
                                      "  }), assign.env=env)\n",
                                      "})\n"))
@@ -713,8 +719,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
   .item <- setdiff(.item, "..nlmixr2saveLazy..")
   for (.i in .item) {
-    # only while the binding is still the loader's promise: a value the user
-    # assigned since loading must be saved, not the script it replaced
+    # only while the binding is still the loader's promise and unbuilt (a
+    # promise drops its kept text when it is built): a value assigned since
+    # loading, or one changed in place after building, must be saved
     if (is.list(.lazy) && !is.null(.lazy[[.i]]) &&
           .nlmixr2saveIsPromise(.i, fit$env)) {
       .minfo(paste0("saving fit item: ", .i))
@@ -938,9 +945,14 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   .lazy$iniDf0 <- .ini
   assign("..nlmixr2saveLazy..", .lazy, envir=.env)
   rm("iniDf0", envir=.env)
-  delayedAssign("iniDf0",
-                .nlmixr2saveIniDf0Fix(.ini, get("ui", envir=.env, inherits=FALSE)),
-                assign.env=.env)
+  delayedAssign("iniDf0", {
+    .fixed <- .nlmixr2saveIniDf0Fix(.ini, get("ui", envir=.env, inherits=FALSE))
+    # once repaired, save the repaired table (with any changes made to it)
+    .lazy <- get0("..nlmixr2saveLazy..", envir=.env, inherits=FALSE)
+    .lazy$iniDf0 <- NULL
+    assign("..nlmixr2saveLazy..", .lazy, envir=.env)
+    .fixed
+  }, assign.env=.env)
   invisible(fit)
 }
 
@@ -1306,7 +1318,9 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
 
   .file <- as.character(substitute(file))
   .tmp <- try(force(file), silent=TRUE)
-  if (is.character(.tmp) && length(.tmp) == 1) {
+  # a try-error is itself a character string: an undefined bare symbol would
+  # otherwise be taken for a file named after its error message
+  if (!inherits(.tmp, "try-error") && is.character(.tmp) && length(.tmp) == 1) {
     file <- .tmp
   } else {
     file <- .file
