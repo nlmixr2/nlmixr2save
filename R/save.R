@@ -156,9 +156,12 @@
     # a loaded fit's iniDf0 not yet used is a promise whose repair builds the
     # ui; do not force it to read its types -- it is saved as read, and the
     # loader repairs it again
-    if (!(is.list(.lazy) && !is.null(.lazy$iniDf0) &&
+    if (!(is.list(.lazy) && !is.null(.lazy[["iniDf0"]]) &&
             .nlmixr2saveIsPromise("iniDf0", fit$env))) {
       .ini <- get("iniDf0", envir=fit$env)
+    } else if (is.character(.lazy[["typesOfIniDf0"]])) {
+      # the exact coercion the loaded cache used
+      return(.lazy[["typesOfIniDf0"]])
     }
   }
   .types <- if (is.data.frame(.ini)) {
@@ -562,16 +565,21 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' Is `name` in `env` bound to a promise (forced or not)?
 #'
 #' `substitute()` returns a promise's expression rather than its value, so a
-#' binding the loader made with `delayedAssign()` -- whose expressions are all
-#' calls -- still yields a call until a value is assigned over it.
+#' binding the loader made with `delayedAssign()` -- whose expressions all
+#' refer to `..nlmixr2saveLazy..` -- still yields that expression until a
+#' value is assigned over it.
 #' @param name item name
 #' @param env environment
 #' @return boolean
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveIsPromise <- function(name, env) {
-  exists(name, envir=env, inherits=FALSE) &&
-    is.call(eval(call("substitute", as.name(name), env)))
+  if (!exists(name, envir=env, inherits=FALSE)) return(FALSE)
+  .e <- eval(call("substitute", as.name(name), env))
+  # the loader's promises all refer to ..nlmixr2saveLazy..; a call a user
+  # assigned (e.g. a quoted expression) does not
+  is.call(.e) &&
+    any(grepl("..nlmixr2saveLazy..", deparse(.e), fixed=TRUE))
 }
 
 #' Text of the loader script `<file>.R` that restores a saved fit
@@ -950,6 +958,32 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   fit
 }
 
+#' Keep the loader's `iniDf0` column-type lines for re-saving an unused fit
+#'
+#' While a loaded fit's `iniDf0` is still the unrepaired table (see
+#' [.nlmixr2saveRestoreIniDf0()]), its types cannot be read off it without
+#' repairing it, which builds the ui.  The loader already holds the exact
+#' coercion `saveFit()` wrote from the original fit's column types, so keep
+#' those lines for [.nlmixr2saveIniDf0Types()] to write back.
+#' @param fit the loaded fit
+#' @param lines the loader script's lines
+#' @return `fit`, invisibly
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveKeepIniDf0Types <- function(fit, lines) {
+  .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
+  if (!is.environment(.env)) return(invisible(fit))
+  .lazy <- get0("..nlmixr2saveLazy..", envir=.env, inherits=FALSE)
+  if (!is.list(.lazy) || is.null(.lazy[["iniDf0"]])) return(invisible(fit))
+  # the coercions, not the read.csv() that reads it (written env$`iniDf0`)
+  .l <- lines[grepl("env$iniDf0", lines, fixed=TRUE)]
+  if (length(.l)) {
+    .lazy[["typesOfIniDf0"]] <- paste0(.l, "\n", collapse="")
+    assign("..nlmixr2saveLazy..", .lazy, envir=.env)
+  }
+  invisible(fit)
+}
+
 #' Bring a restored `iniDf0` in line with the installed rxode2's `iniDf`
 #'
 #' The restore script coerces a fixed list of `iniDf0` columns, so two things
@@ -1299,6 +1333,7 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   ret <- get(.base, envir=.env, inherits=FALSE)
   ret <- .nlmixr2saveRestoreIdFactor(ret)
   .nlmixr2saveRestoreIniDf0(ret)
+  .nlmixr2saveKeepIniDf0Types(ret, .lines)
   # must run while the component files still exist; it reads the csv
   .nlmixr2saveRestoreParHistType(ret, .base)
   if (isTRUE(checkVersion)) {

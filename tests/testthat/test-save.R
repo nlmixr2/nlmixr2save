@@ -361,13 +361,25 @@ test_that("a fit saved under a path with an apostrophe loads", {
 
 test_that(".nlmixr2saveIsPromise tells a loader's promise from an assigned value", {
   .e <- new.env()
-  delayedAssign("p", stop("never forced here"), assign.env = .e)
+  .e$`..nlmixr2saveLazy..` <- list()
+  # the loader's promises all refer to ..nlmixr2saveLazy..
+  delayedAssign("p", {
+    `..nlmixr2saveLazy..`
+    stop("never forced here")
+  }, eval.env = .e, assign.env = .e)
   expect_true(.nlmixr2saveIsPromise("p", .e))
-  delayedAssign("q", identity(1), assign.env = .e) # the loader's are all calls
+  delayedAssign("q", {
+    `..nlmixr2saveLazy..`
+    1
+  }, eval.env = .e, assign.env = .e)
   force(.e$q)
   expect_true(.nlmixr2saveIsPromise("q", .e)) # forced, but still the promise
   assign("q", 2, envir = .e)
   expect_false(.nlmixr2saveIsPromise("q", .e)) # replaced by a value
+  assign("q", quote(f(x)), envir = .e)
+  expect_false(.nlmixr2saveIsPromise("q", .e)) # replaced by a call
+  delayedAssign("r", identity(1), assign.env = .e)
+  expect_false(.nlmixr2saveIsPromise("r", .e)) # someone else's promise
   expect_false(.nlmixr2saveIsPromise("missing", .e))
 })
 
@@ -1149,6 +1161,14 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(.built(suppressMessages(saveFit(.g, file.path(.d, "resaved")))), 0L)
         .r <- suppressMessages(loadFit(file.path(.d, "resaved.zip"), checkVersion=FALSE))
         expect_equal(.r$iniDf0, fitF$iniDf0, ignore_attr = TRUE)
+        # with the original save's exact iniDf0 column types, not a fallback
+        .ldr <- function(z) {
+          .x <- withr::local_tempdir()
+          zip::unzip(z, exdir = .x, junkpaths = TRUE)
+          .l <- readLines(list.files(.x, pattern = "^[^-]*[.]R$", full.names = TRUE)[1])
+          .l[grepl("env$iniDf0", .l, fixed = TRUE)]
+        }
+        expect_equal(.ldr(file.path(.d, "resaved.zip")), .ldr("fitF.zip"))
         # but a value assigned over a lazy item since loading is what is saved
         .h <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
         assign("foceiModel", "replaced after loading", envir = .h$env)
@@ -1159,11 +1179,11 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         # made to it in place is kept
         .k <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
         .m <- .k$foceiModel # built now
-        expect_null(.k$env$`..nlmixr2saveLazy..`$foceiModel)
+        expect_null(.k$env$`..nlmixr2saveLazy..`[["foceiModel"]])
         .u <- .k$ui
-        expect_null(.k$env$`..nlmixr2saveLazy..`$ui)
+        expect_null(.k$env$`..nlmixr2saveLazy..`[["ui"]])
         invisible(.k$iniDf0)
-        expect_null(.k$env$`..nlmixr2saveLazy..`$iniDf0)
+        expect_null(.k$env$`..nlmixr2saveLazy..`[["iniDf0"]])
         # fitEquals() below compares every item, built, to the originals
       })
 
