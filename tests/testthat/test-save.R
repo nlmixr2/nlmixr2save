@@ -874,6 +874,16 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         zip::unzip("path_model/fitP.zip", files="fitP.R", exdir=.exdir)
         .loader <- readLines(file.path(.exdir, "fitP.R"))
         expect_false(any(grepl("path_model", .loader, fixed=TRUE)))
+
+        # zip=FALSE leaves the loose files in the directory, by the bare name
+        suppressMessages(saveFit(fitF, "path_model/fitQ", zip=FALSE))
+        expect_equal(getwd(), .wd)
+        expect_true(all(file.exists(file.path("path_model",
+                                              c("fitQ.R", "fitQ-env.R", "fitQ.csv")))))
+        expect_false(file.exists("path_model/fitQ.zip"))
+        expect_false(dir.exists("path_model/path_model"))
+        expect_false(any(grepl("path_model", readLines("path_model/fitQ.R"),
+                               fixed=TRUE)))
         unlink("path_model", recursive=TRUE)
       })
 
