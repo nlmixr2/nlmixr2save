@@ -13,16 +13,18 @@ test_that(".assignParent errors on non-environment", {
 })
 
 # A stand-in for saveFit()'s output: a loader `<name>.R` that sources
-# `<name>-env.R` and reads `<name>-tab.csv` by the name it was saved under,
-# exactly as the real loader does.  `name` can hold a directory, as the `file`
-# argument to saveFit() can.
+# `<name>-env.R` and reads `<name>-tab.csv` and the fit table `<name>.csv` by
+# the name it was saved under, exactly as the real loader does.  `name` can
+# hold a directory, as the `file` argument to saveFit() can.
 .fakeSavedFit <- function(name, zip=TRUE) {
   writeLines("env <- list(val=42)\nenv <- list2env(env)\n",
              paste0(name, "-env.R"))
   utils::write.csv(data.frame(a=1:2), paste0(name, "-tab.csv"), row.names=FALSE)
+  utils::write.csv(data.frame(b=3:4), paste0(name, ".csv"), row.names=FALSE)
   writeLines(paste0("`", name, "` <- function() {\n",
                     "source('", name, "-env.R', local=TRUE)\n",
                     "env$tab <- read.csv('", name, "-tab.csv')\n",
+                    "env$fitTable <- read.csv('", name, ".csv')\n",
                     "env\n",
                     "}\n",
                     "`", name, "` <- `", name, "`()\n"),
@@ -38,6 +40,7 @@ test_that(".assignParent errors on non-environment", {
   expect_true(is.environment(ret))
   expect_equal(ret$val, 42)
   expect_equal(ret$tab$a, 1:2)
+  expect_equal(ret$fitTable$b, 3:4)
 }
 
 test_that("loadFit() loads a fit from another directory by path", {
@@ -86,7 +89,7 @@ test_that("loadFit() loads a fit that was saved under a directory", {
     })
     # the unzipped files are the user's; loading leaves them in place
     expect_true(all(file.exists(c("a/b/plain.R", "a/b/plain-env.R",
-                                  "a/b/plain-tab.csv"))))
+                                  "a/b/plain-tab.csv", "a/b/plain.csv"))))
   })
 })
 
