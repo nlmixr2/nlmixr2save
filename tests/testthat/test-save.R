@@ -325,6 +325,39 @@ test_that("a regenerated loader reads exactly the files the original one did", {
   })
 })
 
+test_that(".nlmixr2saveLoaderRefs finds the files a loader reads, by their shape", {
+  .l <- c("source('O'Brien/fit-ui.R', local=TRUE)", # an apostrophe in the path
+          "env$`x` <- read.csv('/home/me/fit-tab.csv')",
+          "ret <- read.csv('C:\\\\Users\\\\me\\\\fit.csv')",
+          "source('fit-env.R', local=TRUE)",
+          "source('fitX-ui.R', local=TRUE)",   # another fit
+          "source('my.fit-ui.R', local=TRUE)", # another fit, `.` not a wildcard
+          # a garbled `~` loader: its item name is not a file name
+          "env$`012730/fit-tab` <- read.csv('/home/me/fit-tab.csv')")
+  expect_setequal(.nlmixr2saveLoaderRefs(.l, "fit"),
+                  c("fit-ui.R", "fit-tab.csv", "fit.csv", "fit-env.R"))
+  expect_equal(.nlmixr2saveLoaderRefs(.l, "my.fit"), "my.fit-ui.R")
+  expect_equal(.nlmixr2saveLoaderRefs("source('a/my+fit(1)-ui.R')", "my+fit(1)"),
+               "my+fit(1)-ui.R")
+})
+
+test_that("a fit saved under a path with an apostrophe loads", {
+  withr::with_tempdir({
+    # the loader older versions wrote for saveFit(fit, "O'Brien/fit") is not
+    # even valid R: 'O'Brien/fit-ui.R'
+    dir.create("O'Brien")
+    .fakeSavedFit("O'Brien/fit", zip=FALSE)
+    expect_error(parse("O'Brien/fit.R"))
+    .expectFakeFit(loadFit("O'Brien/fit", checkVersion=FALSE))
+    withr::with_dir("O'Brien", {
+      zip::zip("fit.zip", files=list.files(all.files=TRUE, no..=TRUE))
+    })
+    dir.create("moved")
+    file.rename("O'Brien/fit.zip", "moved/fit.zip")
+    .expectFakeFit(loadFit("moved/fit.zip", checkVersion=FALSE))
+  })
+})
+
 test_that("nlmixr2saveInvalidate() clears a hidden prefix, and only that", {
   withr::with_tempdir({
     dir.create("models")

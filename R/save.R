@@ -1093,6 +1093,27 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   eval(.call, parent.frame())
 }
 
+#' The component files a loader script reads
+#'
+#' Each is `<base>-<item>.<ext>` or `<base>.csv`, written in the loader as the
+#' end of a single-quoted string: `'<base>-ui.R'`, or behind the path it was
+#' saved under, `'/home/me/models/<base>-ui.R'`.  Found by that shape rather
+#' than by pairing quotes, since the path can itself hold one -- `O'Brien/fit`
+#' was written as `'O'Brien/fit-ui.R'`, which is not even valid R.
+#' @param lines the loader script's lines
+#' @param base the loader's base name
+#' @return the file names, without any directory
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoaderRefs <- function(lines, base) {
+  .b <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", base)
+  # a file name holds no quote, separator or backtick; the backtick keeps a
+  # garbled `~` loader's item name (`012730/fit-tab` <- read.csv('...'))
+  # from being read as one
+  .pat <- paste0("(?<=['/\\\\])", .b, "(?:-[^'/\\\\`]+|[.]csv)(?=')")
+  unique(unlist(regmatches(lines, gregexpr(.pat, lines, perl=TRUE))))
+}
+
 #' Source a fit's loader script and return the fit
 #'
 #' Runs with the working directory set to the loader's directory, since the
@@ -1122,10 +1143,7 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
     # only the files the original loader reads: a stray `<base>-*` file (or
     # another fit's, swept into the archive) must not be run, and a missing
     # one must not silently drop out of the fit
-    .ref <- unlist(regmatches(.lines, gregexpr("'[^']*'", .lines)))
-    .ref <- unique(basename(gsub("\\\\", "/", substr(.ref, 2L, nchar(.ref) - 1L))))
-    .ref <- .ref[.ref != .r & (startsWith(.ref, paste0(.base, "-")) |
-                                 .ref == paste0(.base, ".csv"))]
+    .ref <- .nlmixr2saveLoaderRefs(.lines, .base)
     # every loader names `<base>.csv`, but reads it only for a fit with a data
     # table; the per-item files it always reads
     .missing <- .ref[!file.exists(.ref) & .ref != paste0(.base, ".csv")]
