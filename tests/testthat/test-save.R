@@ -289,13 +289,18 @@ test_that("the lotri blocks saveFit() writes are read without lotri", {
   # lotri rejects NA, so the reader leaves it to lotri as well
   expect_null(.nlmixr2saveLotriRows(quote({a ~ NA})))
   expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(NA_real_, 2)})))
-  # while the forms it does read match lotri exactly
+  # while the forms it does read match lotri.  Compared with a tolerance:
+  # lotri's own parse of an extreme value is inexact on some platforms (on
+  # macOS arm64, -1e-300 comes back as -9.999999985e-301), where the reader
+  # evaluates the literal exactly
   for (.b in list(quote({a ~ 1L}), quote({`a b` ~ 1; c ~ c(0.1, 2)}),
                   quote({a ~ 1; b ~ c(Inf, 2)}),
                   quote({a ~ -0; b ~ c(-1e-300, +2)}))) {
-    expect_identical(.nlmixr2saveLotriRows(.b),
-                     eval(bquote(rxode2::lotri(.(.b)))))
+    expect_equal(.nlmixr2saveLotriRows(.b),
+                 eval(bquote(rxode2::lotri(.(.b)))))
   }
+  expect_identical(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(-1e-300, 2)}))[2, 1],
+                   -1e-300)
 })
 
 test_that("loadFit() refuses a name that means two saved fits", {
