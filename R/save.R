@@ -882,10 +882,13 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     zip::zip(zipfile = paste0(file, ".zip"),
              files = .files)
     .files <- paste0(file, ".zip")
-    # the loader of an earlier zip=FALSE save under this name (it has its
-    # `-env.R` beside it), which would load the old fit were the archive moved
-    if (file.exists(file.path(.outdir, paste0(file, "-env.R")))) {
-      unlink(file.path(.outdir, paste0(file, ".R")))
+    # the loader of an earlier zip=FALSE save under this name, which would
+    # load the old fit were the archive moved; only if it is one, as a script
+    # the user wrote under that name must be left alone
+    .old <- file.path(.outdir, paste0(file, ".R"))
+    if (file.exists(.old) && !dir.exists(.old) &&
+          .nlmixr2saveLoaderUsable(readLines(.old, warn=FALSE), file)) {
+      unlink(.old)
     }
   } else {
     # the loader is replaced last, and the one there now removed first: when
@@ -1573,8 +1576,10 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   saveFit(value, file.path(.stage, x), zip=TRUE, data=data)
   # a prefix can name a directory, e.g. "run1/"
   if (!dir.exists(dirname(.base))) dir.create(dirname(.base), recursive=TRUE)
-  if (!file.copy(file.path(.stage, paste0(x, ".zip")), paste0(.base, ".zip"),
-                 overwrite=TRUE)) {
+  # file.copy() onto a directory copies into it, and reports success
+  if (dir.exists(paste0(.base, ".zip")) ||
+        !file.copy(file.path(.stage, paste0(x, ".zip")), paste0(.base, ".zip"),
+                   overwrite=TRUE)) {
     stop("could not write '", .base, ".zip'", call.=FALSE)
   }
   invisible(value)

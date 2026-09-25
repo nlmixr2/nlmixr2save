@@ -1390,10 +1390,12 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
         expect_false(file.exists(file.path(.d, "fitV.R")))
         expect_true(file.exists(file.path(.d, "fitV.zip")))
-        # but not a script of that name that is no fit loader
-        writeLines("x <- 1", file.path(.d, "fitT.R"))
-        suppressMessages(saveFit(fitF, file.path(.d, "fitT")))
-        expect_equal(readLines(file.path(.d, "fitT.R")), "x <- 1")
+        # but not a script of that name that is no fit loader, even with an
+        # earlier zip=FALSE save's `-env.R` still beside it
+        writeLines("x <- 1", file.path(.d, "fitV.R"))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
+        expect_true(file.exists(file.path(.d, "fitV-env.R")))
+        expect_equal(readLines(file.path(.d, "fitV.R")), "x <- 1")
       })
 
       test_that("saveFit() fails cleanly when its files cannot be written (#10)", {
@@ -1432,6 +1434,11 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(tools::md5sum("fitW.zip"), .md5)
         expect_setequal(list.files(all.files=TRUE, no..=TRUE),
                         c("fitW.zip", "run1-fitW.zip"))
+        # a directory where the cache goes is an error, not copied into
+        dir.create("run1-fitD.zip")
+        expect_error(suppressMessages(.saveFitZipPlain(fitF, "fitD")),
+                     "could not write")
+        expect_length(list.files("run1-fitD.zip"), 0)
         # a prefix naming a directory that does not exist yet
         withr::local_options(list(nlmixr2save.prefix="run2/"))
         suppressMessages(.saveFitZipPlain(fitF, "fitW"))
