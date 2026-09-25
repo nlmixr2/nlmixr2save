@@ -13,6 +13,8 @@
   Likewise a `:=` cache under a `nlmixr2save.prefix` no longer overwrites
   an unrelated `<name>.zip` in the cache directory while writing or reading
   `<prefix><name>.zip`.
+  A `zip=FALSE` save now also removes an earlier `zip=TRUE` save's archive
+  under the same name, which `loadFit()` would otherwise have loaded instead.
 
 * `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
   `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`

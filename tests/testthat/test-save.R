@@ -1380,6 +1380,12 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
                                fixed=TRUE)))
         .z <- suppressMessages(loadFit(file.path(.d, "fitZ"), checkVersion=FALSE))
         expect_null(.z$origData)
+        # nor does an archive from an earlier zip=TRUE save shadow a zip=FALSE one
+        suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitV"), zip=FALSE, data=FALSE))
+        expect_false(file.exists(file.path(.d, "fitV.zip")))
+        .v <- suppressMessages(loadFit(file.path(.d, "fitV"), checkVersion=FALSE))
+        expect_null(.v$origData)
       })
 
       test_that("a prefixed := cache never touches the bare-name archive", {
