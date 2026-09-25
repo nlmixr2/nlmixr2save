@@ -18,7 +18,11 @@ saveFit(fit, file, zip = TRUE, data = .nlmixr2saveData())
 \arguments{
 \item{fit}{the fitted model object}
 
-\item{file}{the base name of the files to save the fit to.}
+\item{file}{the base name of the files to save the fit to.  It may include
+a directory, e.g. \code{"path/to/fit"}: the files are written there (the
+directory is created if needed) and the archive \code{path/to/fit.zip} holds
+them under the bare name \code{fit}, so it can be moved and loaded from
+anywhere.}
 
 \item{zip}{Boolean indicating if the files should be zipped.}
 

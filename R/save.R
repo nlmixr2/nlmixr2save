@@ -1,5 +1,9 @@
 .saveFitEnv <- new.env(parent = emptyenv())
 .saveFitEnv$rowDF <- c("parFixedDf", "shrink", "time", "objDf", "parFixed", "iniDf0")
+# items the loader builds only on first use (see .nlmixr2saveLoaderText): the
+# model lists, which compile every model, and the ui, whose rebuild from the
+# model function parses the whole model
+.saveFitEnv$lazy <- c("foceiModel", "saemModel", "ui")
 .saveFitEnv$DF <- c("ranef", "etaObf", "origData", "parHistData")
 .saveFitEnv$parent <- NULL
 .saveFitEnv$random <- c("rxSolve", "simulate", "sim", "mrgsim",
@@ -146,8 +150,19 @@
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveIniDf0Types <- function(fit) {
-  .ini <- if (exists("iniDf0", envir=fit$env, inherits=FALSE)) {
-    get("iniDf0", envir=fit$env)
+  .ini <- NULL
+  if (!is.null(fit) && exists("iniDf0", envir=fit$env, inherits=FALSE)) {
+    .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
+    # a loaded fit's iniDf0 not yet used is a promise whose repair builds the
+    # ui; do not force it to read its types -- it is saved as read, and the
+    # loader repairs it again
+    if (!(is.list(.lazy) && !is.null(.lazy[["iniDf0"]]) &&
+            .nlmixr2saveIsPromise("iniDf0", fit$env))) {
+      .ini <- get("iniDf0", envir=fit$env)
+    } else if (is.character(.lazy[["typesOfIniDf0"]])) {
+      # the exact coercion the loaded cache used
+      return(.lazy[["typesOfIniDf0"]])
+    }
   }
   .types <- if (is.data.frame(.ini)) {
     vapply(.ini, function(x) {
@@ -166,7 +181,13 @@
   .types <- .types[!is.na(.types)]
   .col <- paste0("env$iniDf0[[", vapply(names(.types), deparse1, character(1)),
                  "]]")
-  paste0(.col, " <- as.", .types, "(", .col, ")\n", collapse="")
+  .ret <- paste0(.col, " <- as.", .types, "(", .col, ")\n", collapse="")
+  if (!is.data.frame(.ini)) {
+    # newer rxode2 only; an all-NA column reads back from the csv as logical
+    .ret <- paste0(.ret, "if (!is.null(env$iniDf0$prior)) ",
+                   "env$iniDf0$prior <- as.character(env$iniDf0$prior)\n")
+  }
+  .ret
 }
 
 #' Metadata stored alongside a saved fit
@@ -485,7 +506,11 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #' Save a fitted model object to a series of files
 #'
 #' @param fit the fitted model object
-#' @param file the base name of the files to save the fit to.
+#' @param file the base name of the files to save the fit to.  It may include
+#'   a directory, e.g. `"path/to/fit"`: the files are written there (the
+#'   directory is created if needed) and the archive `path/to/fit.zip` holds
+#'   them under the bare name `fit`, so it can be moved and loaded from
+#'   anywhere.
 #' @param zip Boolean indicating if the files should be zipped.
 #' @param data Boolean indicating whether the original dataset (`origData`) is
 #'   stored in the saved fit.  When `FALSE` it is omitted, producing a fit that
@@ -537,15 +562,226 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   UseMethod("saveFit")
 }
 
+#' Is `name` in `env` bound to a promise (forced or not)?
+#'
+#' `substitute()` returns a promise's expression rather than its value, so a
+#' binding the loader made with `delayedAssign()` -- whose expressions all
+#' refer to `..nlmixr2saveLazy..` -- still yields that expression until a
+#' value is assigned over it.
+#' @param name item name
+#' @param env environment
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveIsPromise <- function(name, env) {
+  if (!exists(name, envir=env, inherits=FALSE)) return(FALSE)
+  .e <- eval(call("substitute", as.name(name), env))
+  # the loader's promises all refer to ..nlmixr2saveLazy..; a call a user
+  # assigned (e.g. a quoted expression) does not
+  is.call(.e) &&
+    any(grepl("..nlmixr2saveLazy..", deparse(.e), fixed=TRUE))
+}
+
+#' Text of the loader script `<file>.R` that restores a saved fit
+#'
+#' `saveFit()` writes it next to the component files; `loadFit()` also
+#' regenerates it from the files in a cache whose own loader cannot be used
+#' as-is (see `.nlmixr2saveSourceLoader()`).
+#' @param file base name of the fit (the loader's object and file prefix)
+#' @param files the fit's component files, named `<file>-<item>.<ext>` (plus
+#'   `<file>.csv` / `<file>-env.R`, which are handled separately)
+#' @param parFixedDfNamed whether `parFixedDf`'s Estimate/SE are named vectors
+#' @param iniDf0Types restore code giving `iniDf0`'s columns their types, from
+#'   [.nlmixr2saveIniDf0Types()]; without the fit (a regenerated loader), the
+#'   columns rxode2 has always had
+#' @return the script, as one string
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoaderText <- function(file, files, parFixedDfNamed=TRUE,
+                                   iniDf0Types=.nlmixr2saveIniDf0Types(NULL)) {
+  .files <- files
+  .parFixedDfNamed <- parFixedDfNamed
+  .r <- do.call(`c`,
+          lapply(.files,
+                 function(f) {
+                   if (f == paste0(file, "-env.R") ||
+                         f == paste0(file, ".R") ||
+                           f == paste0(file, ".csv")) {
+                     return(NULL)
+                   }
+                   if (grepl(".R$", f)) {
+                     val <- substr(f, nchar(file)+2, nchar(f)-2)
+                     if (val %in% .saveFitEnv$lazy) {
+                       # built with rxode2::rxode2(): a compiled model list
+                       # (a long C compilation per model, for a large model)
+                       # or the ui (a parse of the whole model).  Read the
+                       # script now (the files are gone by the time it is
+                       # used), build it on first use, and keep the text so
+                       # saveFit() can write it back without building it.
+                       return(paste0("local({\n",
+                                     "  .txt <- readLines('", f, "', warn=FALSE)\n",
+                                     "  .lazy <- env$`..nlmixr2saveLazy..`\n",
+                                     "  .lazy$`", val, "` <- .txt\n",
+                                     "  env$`..nlmixr2saveLazy..` <- .lazy\n",
+                                     "  delayedAssign('", val, "', local({\n",
+                                     "    eval(parse(text=.txt, keep.source=FALSE))\n",
+                                     # once built, the object itself is saved
+                                     # (with any changes made to it), not
+                                     # the script it was built from
+                                     "    .lazy <- env$`..nlmixr2saveLazy..`\n",
+                                     "    .lazy$`", val, "` <- NULL\n",
+                                     "    env$`..nlmixr2saveLazy..` <- .lazy\n",
+                                     "    `", val, "`\n",
+                                     "  }), assign.env=env)\n",
+                                     "})\n"))
+                     }
+                     return(paste0("source('", f, "', local=TRUE)\n",
+                                   "env$`", val, "` <- ", val, "\n"))
+                   }
+                   if (grepl(".csv$", f)) {
+                     val <- substr(f, nchar(file)+2, nchar(f)-4)
+                     if (val == "parFixed") {
+                       ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1, colClasses=\"character\")\nclass(env$`", val, "`) <- c('nlmixr2ParFixed', 'data.frame')\n")
+                     } else if (val == "objDf") {
+                       ret <- paste0("env$objDf <- read.csv('", f, "',check.names=FALSE, row.names=1)\n",
+                                     "env$objDf$OBJF <- as.double(env$objDf$OBJF)\n",
+                                     "env$objDf$AIC <- as.double(env$objDf$AIC)\n",
+                                     "env$objDf$BIC <- as.double(env$objDf$BIC)\n",
+                                     "env$objDf$`Log-likelihood` <- as.double(env$objDf$`Log-likelihood`)\n"
+                                     )
+                     } else if (val %in% .saveFitEnv$rowDF) {
+                       ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1)\n")
+                       if (val == "parFixedDf") {
+                         ret <- paste0(ret,
+                                       "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`, named=",
+                                       deparse1(.parFixedDfNamed), ")\n")
+                       } else if (val == "iniDf0") {
+                         ret <- paste0(ret, iniDf0Types)
+                       }
+                     } else {
+                       ret <- paste0("env$`", val, "` <- read.csv('", f, "', check.names=FALSE)\n")
+                     }
+                     return(ret)
+                   }
+                   if (grepl(".rds$", f)) {
+                     val <- substr(f, nchar(file)+2, nchar(f)-4)
+                     return(paste0("env$`", val, "` <- readRDS('", f, "')\n"))
+                   }
+                   NULL # nocov
+                 }))
+  .r <- paste0(.r, collapse="\n")
+  # the loader script assigns to a variable named after `file`; a
+  # nlmixr2save.prefix can make that a non-syntactic name (e.g. "modelPiping-fit"),
+  # so quote it with backticks.
+  .fq <- paste0("`", file, "`")
+  paste0(.fq, " <- function() {\n",
+                    "source('", paste0(file,"-env.R"), "', local=TRUE)\n",
+                    ".class <- env$`..class..`\n",
+                    ".id.level <- env$`..id.level..`\n",
+                    ".parHistType.level <- env$`..parHistType.level..`\n",
+                    "rm('..class..', envir=env)\n",
+                    "rm('..id.level..', envir=env)\n",
+                    "if (exists('..parHistType.level..', env)) rm('..parHistType.level..', envir=env)\n",
+                    .r,
+                    # derived from the ui, so built with it, when first used
+                    "delayedAssign('model', rxode2::model(env$ui), assign.env=env)\n",
+                    "if (!is.null(.id.level)) {\n",
+                    "  if (!is.null(env$ranef$ID)) {\n",
+                    "    env$ranef$ID <- factor(env$ranef$ID, levels=.id.level)\n",
+                    "  }\n",
+                    "  if (!is.null(env$etaObf$ID)) {\n",
+                    "    env$etaObf$ID <- factor(env$etaObf$ID, levels=.id.level)\n",
+                    "  }\n",
+                    "}\n",
+                    "if (!is.null(env$parHistData)) {\n",
+                    # use the levels recorded from the fit; fall back to the
+                    # known level set for fits saved before they were recorded
+                    "  .phLevels <- .parHistType.level\n",
+                    "  if (is.null(.phLevels)) {\n",
+                    "    .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
+                    # a fit saved before the levels were recorded can still use a
+                    # type this list predates; append it rather than drop it to NA
+                    "    .phLevels <- c(.phLevels, setdiff(unique(as.character(env$parHistData$type)), .phLevels))\n",
+                    "  }\n",
+                    "  env$parHistData$type <- factor(env$parHistData$type, levels=.phLevels)\n",
+                    "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
+                    "}\n",
+                    "if (exists('saemControl', env) && is.numeric(env$saemControl$mcmc$niter[1])) {\n",
+                    "    .parHistData <- env$parHistData\n",
+                    "    .cls <- class(.parHistData)\n",
+                    "    attr(.cls, 'niter') <- env$saemControl$mcmc$niter[1]\n",
+                    "    class(.parHistData) <- .cls\n",
+                    "    env$parHistData <- .parHistData\n",
+                    "}\n",
+                    "if (any(.class == 'nlmixr2FitData')) {\n",
+                    "  ret <- read.csv('", paste0(file,".csv"), "')\n",
+                    "  class(env) <- 'nlmixr2FitCoreSilent'\n",
+                    "  attr(.class, '.foceiEnv') <- env\n",
+                    "  class(ret) <- .class\n",
+                    "  return(ret)\n",
+                    "} else {\n",
+                    "  ret <- env\n",
+                    "  class(ret) <- .class\n",
+                    "  return(ret)\n",
+                    "}\n",
+                    "}\n",
+                    .fq, " <- ", .fq, "()\n")
+}
+
+#' Split a `saveFit()` target into the directory to save in and a base name
+#'
+#' Every component file, and every reference the loader script makes to one,
+#' is named from the `file` argument.  Given `path_model/fit`, those names
+#' carried the directory, so the archive stored a `path_model/` folder and
+#' the loader only worked from the directory it was saved from; unzipping it
+#' recreated `path_model/` wherever it was unzipped.  Saving from inside the
+#' directory under the bare name keeps the archive flat and relocatable.
+#' A trailing `.zip` is kept: `fit.zip` is a valid variable name, and the
+#' `:=` cache saves under the variable name and expects `<name>.zip` back.
+#' @param file the `file` argument given to `saveFit()`
+#' @return list with `dir` (the directory to save in, created if needed) and
+#'   `file` (the bare base name)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveSaveTarget <- function(file) {
+  .dir <- dirname(file)
+  if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE)
+  list(dir=.dir, file=basename(file))
+}
+
 #' @rdname saveFit
 #' @export
 saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
+  .target <- .nlmixr2saveSaveTarget(file)
+  file <- .target$file
+  .owd <- setwd(.target$dir)
+  on.exit(setwd(.owd), add=TRUE)
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
+  # a loaded fit keeps its compiled model lists as unforced promises, with
+  # their script text; write that back rather than force (compile) them
+  .item <- setdiff(.item, "..nlmixr2saveLazy..")
   for (.i in .item) {
+    # re-read each time: saving an earlier item can build a lazy one, which
+    # drops its kept text
+    .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
+    # only while the binding is still the loader's promise and unbuilt (a
+    # promise drops its kept text when it is built): a value assigned since
+    # loading, or one changed in place after building, must be saved
+    if (is.list(.lazy) && !is.null(.lazy[[.i]]) &&
+          .nlmixr2saveIsPromise(.i, fit$env)) {
+      .minfo(paste0("saving fit item: ", .i))
+      if (is.data.frame(.lazy[[.i]])) {
+        # iniDf0 as read; loading repairs it again, without building the ui now
+        saveFitItem(.lazy[[.i]], .i, file)
+      } else {
+        writeLines(.lazy[[.i]], con = paste0(file, "-", .i, ".R"))
+      }
+      next
+    }
     # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
     if (.i == ".nlmixr2saveMeta") next
     # when data=FALSE the original dataset is left out of the zip entirely
@@ -558,7 +794,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     .minfo(paste0("saving fit item: ", .i))
     .obj <- get(.i, envir=fit$env)
     if (is.raw(.obj)) {
-      .obj <- eval(str2lang(paste0("fit$", .i))) # decompresses object
+      # decompresses object; a call, not parsed text, so any item name works
+      .obj <- eval(call("$", quote(fit), as.name(.i)))
     }
     if (!saveFitItem(.obj, .i, file)) {
       if (.i %in% c("phiC", "phiH")) {
@@ -634,106 +871,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
       .parFixedDfNamed <- !is.null(names(.pfd$Estimate))
     }
   }
-  .r <- do.call(`c`,
-          lapply(.files,
-                 function(f) {
-                   if (f == paste0(file, "-env.R") ||
-                         f == paste0(file, ".R") ||
-                           f == paste0(file, ".csv")) {
-                     return(NULL)
-                   }
-                   if (grepl(".R$", f)) {
-                     val <- substr(f, nchar(file)+2, nchar(f)-2)
-                     return(paste0("source('", f, "', local=TRUE)\n",
-                                   "env$`", val, "` <- ", val, "\n"))
-                   }
-                   if (grepl(".csv$", f)) {
-                     val <- substr(f, nchar(file)+2, nchar(f)-4)
-                     if (val == "parFixed") {
-                       ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1, colClasses=\"character\")\nclass(env$`", val, "`) <- c('nlmixr2ParFixed', 'data.frame')\n")
-                     } else if (val == "objDf") {
-                       ret <- paste0("env$objDf <- read.csv('", f, "',check.names=FALSE, row.names=1)\n",
-                                     "env$objDf$OBJF <- as.double(env$objDf$OBJF)\n",
-                                     "env$objDf$AIC <- as.double(env$objDf$AIC)\n",
-                                     "env$objDf$BIC <- as.double(env$objDf$BIC)\n",
-                                     "env$objDf$`Log-likelihood` <- as.double(env$objDf$`Log-likelihood`)\n"
-                                     )
-                     } else if (val %in% .saveFitEnv$rowDF) {
-                       ret <- paste0("env$`", val, "` <- read.csv('", f, "',check.names=FALSE, row.names=1)\n")
-                       if (val == "parFixedDf") {
-                         ret <- paste0(ret,
-                                       "env$`parFixedDf` <- nlmixr2save::nlmixr2saveParFixedDf(env$`parFixedDf`, named=",
-                                       deparse1(.parFixedDfNamed), ")\n")
-                       } else if (val == "iniDf0") {
-                         ret <- paste0(ret, .nlmixr2saveIniDf0Types(fit))
-                       }
-                     } else {
-                       ret <- paste0("env$`", val, "` <- read.csv('", f, "', check.names=FALSE)\n")
-                     }
-                     return(ret)
-                   }
-                   if (grepl(".rds$", f)) {
-                     val <- substr(f, nchar(file)+2, nchar(f)-4)
-                     return(paste0("env$`", val, "` <- readRDS('", f, "')\n"))
-                   }
-                   NULL # nocov
-                 }))
-  .r <- paste0(.r, collapse="\n")
-  # the loader script assigns to a variable named after `file`; a
-  # nlmixr2save.prefix can make that a non-syntactic name (e.g. "modelPiping-fit"),
-  # so quote it with backticks.
-  .fq <- paste0("`", file, "`")
-  writeLines(paste0(.fq, " <- function() {\n",
-                    "source('", paste0(file,"-env.R"), "', local=TRUE)\n",
-                    ".class <- env$`..class..`\n",
-                    ".id.level <- env$`..id.level..`\n",
-                    ".parHistType.level <- env$`..parHistType.level..`\n",
-                    "rm('..class..', envir=env)\n",
-                    "rm('..id.level..', envir=env)\n",
-                    "if (exists('..parHistType.level..', env)) rm('..parHistType.level..', envir=env)\n",
-                    .r,
-                    "env$model <- rxode2::model(env$ui)\n",
-                    "if (!is.null(.id.level)) {\n",
-                    "  if (!is.null(env$ranef$ID)) {\n",
-                    "    env$ranef$ID <- factor(env$ranef$ID, levels=.id.level)\n",
-                    "  }\n",
-                    "  if (!is.null(env$etaObf$ID)) {\n",
-                    "    env$etaObf$ID <- factor(env$etaObf$ID, levels=.id.level)\n",
-                    "  }\n",
-                    "}\n",
-                    "if (!is.null(env$parHistData)) {\n",
-                    # use the levels recorded from the fit; fall back to the
-                    # known level set for fits saved before they were recorded
-                    "  .phLevels <- .parHistType.level\n",
-                    "  if (is.null(.phLevels)) {\n",
-                    "    .phLevels <- c(\"Gill83 Gradient\", \"Mixed Gradient\", \"Forward Difference\", \"Central Difference\", \"Scaled\", \"Unscaled\", \"Back-Transformed\", \"Forward Sensitivity\", \"Analytic Gradient\")\n",
-                    # a fit saved before the levels were recorded can still use a
-                    # type this list predates; append it rather than drop it to NA
-                    "    .phLevels <- c(.phLevels, setdiff(unique(as.character(env$parHistData$type)), .phLevels))\n",
-                    "  }\n",
-                    "  env$parHistData$type <- factor(env$parHistData$type, levels=.phLevels)\n",
-                    "  env$parHistData$iter <- as.integer(env$parHistData$iter)\n",
-                    "}\n",
-                    "if (exists('saemControl', env) && is.numeric(env$saemControl$mcmc$niter[1])) {\n",
-                    "    .parHistData <- env$parHistData\n",
-                    "    .cls <- class(.parHistData)\n",
-                    "    attr(.cls, 'niter') <- env$saemControl$mcmc$niter[1]\n",
-                    "    class(.parHistData) <- .cls\n",
-                    "    env$parHistData <- .parHistData\n",
-                    "}\n",
-                    "if (any(.class == 'nlmixr2FitData')) {\n",
-                    "  ret <- read.csv('", paste0(file,".csv"), "')\n",
-                    "  class(env) <- 'nlmixr2FitCoreSilent'\n",
-                    "  attr(.class, '.foceiEnv') <- env\n",
-                    "  class(ret) <- .class\n",
-                    "  return(ret)\n",
-                    "} else {\n",
-                    "  ret <- env\n",
-                    "  class(ret) <- .class\n",
-                    "  return(ret)\n",
-                    "}\n",
-                    "}\n",
-                    .fq, " <- ", .fq, "()\n"),
+  writeLines(.nlmixr2saveLoaderText(file, .files, .parFixedDfNamed,
+                                    .nlmixr2saveIniDf0Types(fit)),
              con = paste0(file,".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
@@ -752,6 +891,10 @@ saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
+  .target <- .nlmixr2saveSaveTarget(file)
+  file <- .target$file
+  .owd <- setwd(.target$dir)
+  on.exit(setwd(.owd), add=TRUE)
   utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
   saveFit.nlmixr2FitCore(fit, file, zip=zip, data=data)
 }
@@ -815,6 +958,112 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   fit
 }
 
+#' Keep the loader's `iniDf0` column-type lines for re-saving an unused fit
+#'
+#' While a loaded fit's `iniDf0` is still the unrepaired table (see
+#' [.nlmixr2saveRestoreIniDf0()]), its types cannot be read off it without
+#' repairing it, which builds the ui.  The loader already holds the exact
+#' coercion `saveFit()` wrote from the original fit's column types, so keep
+#' those lines for [.nlmixr2saveIniDf0Types()] to write back.
+#' @param fit the loaded fit
+#' @param lines the loader script's lines
+#' @return `fit`, invisibly
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveKeepIniDf0Types <- function(fit, lines) {
+  .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
+  if (!is.environment(.env)) return(invisible(fit))
+  .lazy <- get0("..nlmixr2saveLazy..", envir=.env, inherits=FALSE)
+  if (!is.list(.lazy) || is.null(.lazy[["iniDf0"]])) return(invisible(fit))
+  # the coercions, not the read.csv() that reads it (written env$`iniDf0`)
+  .l <- lines[grepl("env$iniDf0", lines, fixed=TRUE)]
+  if (length(.l)) {
+    .lazy[["typesOfIniDf0"]] <- paste0(.l, "\n", collapse="")
+    assign("..nlmixr2saveLazy..", .lazy, envir=.env)
+  }
+  invisible(fit)
+}
+
+#' Bring a restored `iniDf0` in line with the installed rxode2's `iniDf`
+#'
+#' The restore script coerces a fixed list of `iniDf0` columns, so two things
+#' slip through:
+#'
+#' * a column the cache predates.  rxode2 added `prior`; a cache written before
+#'   that has no such column, while the installed rxode2 expects one.
+#' * a column whose values are all `NA`.  `read.csv()` reads it back as
+#'   logical, but rxode2 keeps `prior` (for one) as character.
+#'
+#' The fit's `ui` is rebuilt by the installed rxode2 when the fit is loaded, so
+#' its `iniDf` is a template of exactly the columns and types this rxode2 uses
+#' -- no version check needed.  Missing columns are added as typed `NA`s in
+#' the template's order, and all-`NA` logical columns take the template's
+#' type.  Columns the installed rxode2 does not know are kept, after the
+#' others.  Without a `ui` to compare against, only `prior` is retyped.
+#' @param fit restored object
+#' @return `fit`, invisibly; `iniDf0` is repaired in the fit environment
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveRestoreIniDf0 <- function(fit) {
+  .env <- if (is.environment(fit)) fit else try(fit$env, silent=TRUE)
+  if (!is.environment(.env)) return(invisible(fit))
+  if (!exists("iniDf0", envir=.env, inherits=FALSE)) return(invisible(fit))
+  .ini <- get("iniDf0", envir=.env, inherits=FALSE)
+  if (!is.data.frame(.ini)) return(invisible(fit))
+  if (!exists("ui", envir=.env, inherits=FALSE)) {
+    assign("iniDf0", .nlmixr2saveIniDf0Fix(.ini, NULL), envir=.env)
+    return(invisible(fit))
+  }
+  # the template is the ui, which the loader builds only when first used;
+  # repair iniDf0 when it is first used too, rather than build the ui now.
+  # Keep it as read, so saveFit() can write it back without the ui.
+  .lazy <- get0("..nlmixr2saveLazy..", envir=.env, inherits=FALSE)
+  if (!is.list(.lazy)) .lazy <- list()
+  .lazy$iniDf0 <- .ini
+  assign("..nlmixr2saveLazy..", .lazy, envir=.env)
+  rm("iniDf0", envir=.env)
+  delayedAssign("iniDf0", {
+    .fixed <- .nlmixr2saveIniDf0Fix(.ini, get("ui", envir=.env, inherits=FALSE))
+    # once repaired, save the repaired table (with any changes made to it)
+    .lazy <- get0("..nlmixr2saveLazy..", envir=.env, inherits=FALSE)
+    .lazy$iniDf0 <- NULL
+    assign("..nlmixr2saveLazy..", .lazy, envir=.env)
+    .fixed
+  }, assign.env=.env)
+  invisible(fit)
+}
+
+#' @describeIn dot-nlmixr2saveRestoreIniDf0 the repair itself
+#' @param ini the restored `iniDf0`
+#' @param ui the fit's ui, or `NULL`
+#' @return the repaired `iniDf0`
+#' @noRd
+.nlmixr2saveIniDf0Fix <- function(ini, ui) {
+  .ini <- ini
+  .tmpl <- NULL
+  if (!is.null(ui)) {
+    # `$` decompresses a compressed ui
+    .tmpl <- try(ui$iniDf, silent=TRUE)
+    if (!is.data.frame(.tmpl)) .tmpl <- NULL
+  }
+  if (is.null(.tmpl)) {
+    if (is.logical(.ini$prior)) .ini$prior <- as.character(.ini$prior)
+    return(.ini)
+  }
+  .na <- rep(NA_integer_, nrow(.ini))
+  for (.c in names(.tmpl)) {
+    # indexing a zero-length column by NA gives NAs of the column's type
+    .proto <- .tmpl[[.c]][0]
+    if (is.null(.ini[[.c]])) {
+      .ini[[.c]] <- .proto[.na]
+    } else if (is.logical(.ini[[.c]]) && !is.logical(.proto) &&
+                 all(is.na(.ini[[.c]]))) {
+      .ini[[.c]] <- .proto[.na]
+    }
+  }
+  .ini[, c(names(.tmpl), setdiff(names(.ini), names(.tmpl))), drop=FALSE]
+}
+
 #' Repair `parHistData$type` levels a cache's own restore script dropped
 #'
 #' The factor levels for `parHistData$type` are applied by the restore script
@@ -865,9 +1114,276 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   invisible(fit)
 }
 
+#' Can a cache's own loader script be sourced as it is?
+#'
+#' Only when it names its fit, and reads every component file, by the bare
+#' base name.  Older versions of `saveFit()` wrote the `file` argument into
+#' the loader verbatim: given `path/to/fit`, `/home/me/models/fit` or
+#' `~/models/fit`, the loader named its object after that path and read its
+#' files from it, so it only worked where the fit was saved -- another user
+#' gets "Permission denied" or "cannot open file".  With `~` the loader was
+#' also garbled beyond its paths: the item names were cut from the file names
+#' by the length of `file`, which differs once `~` is expanded, so it
+#' restored items under nonsense names and skipped their type conversions.
+#' Such a loader is not patched; it is regenerated from the files instead.
+#' @param lines the loader script's lines
+#' @param base the loader's base name (its file name without `.R`)
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoaderUsable <- function(lines, base) {
+  .ex <- tryCatch(parse(text=lines, keep.source=FALSE), error=function(e) NULL)
+  if (length(.ex) == 0L) return(FALSE)
+  # it ends `<base> <- <base>()`
+  .last <- .ex[[length(.ex)]]
+  if (!is.call(.last) || length(.last) != 3L ||
+        !identical(.last[[1]], as.name("<-")) ||
+        !identical(.last[[2]], as.name(base))) {
+    return(FALSE)
+  }
+  # and no quoted file name carries a directory
+  .q <- unlist(regmatches(lines, gregexpr("'[^']*'", lines)))
+  !any(grepl("[/\\]", .q))
+}
+
+#' Find the loader script in an extracted fit archive
+#'
+#' A loader `<name>.R` always has a `<name>-env.R` beside it.  Its name can
+#' differ from the archive's when the `.zip` was renamed after saving.
+#' @param dir directory the archive was extracted (flat) to
+#' @param base base name the user asked for
+#' @return the loader's file name in `dir`, or `NULL`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveFindLoader <- function(dir, base) {
+  .all <- setdiff(list.files(dir, all.files=TRUE), c(".", ".."))
+  # the `-env.R` companion alone tells a loader from its env script; do not
+  # drop names ending in "-env.R", since a fit can itself be named `my-env`
+  .r <- .all[endsWith(.all, ".R")]
+  .r <- .r[paste0(substr(.r, 1L, nchar(.r) - 2L), "-env.R") %in% .all]
+  .exact <- .r[basename(.r) == paste0(base, ".R")]
+  if (length(.exact) == 1L) return(.exact)
+  if (length(.r) == 1L) return(.r)
+  NULL
+}
+
+#' Is `e` a plain number as `deparse()` writes one?
+#'
+#' A literal, `Inf`, or `-`/`+` applied to one.  Nothing else is allowed, so
+#' evaluating an accepted expression runs no user code.  `NA` is left out on
+#' purpose: lotri rejects it, and rxode2 never writes a matrix holding one as
+#' a `lotri()` block, so accepting it would only read what lotri would not.
+#' @param e expression
+#' @return boolean
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveIsNum <- function(e) {
+  if (is.numeric(e) && length(e) == 1L && !is.na(e)) return(TRUE)
+  if (is.name(e)) return(identical(as.character(e), "Inf"))
+  if (is.call(e) && length(e) == 2L && is.name(e[[1]]) &&
+        as.character(e[[1]]) %in% c("-", "+")) {
+    return(.nlmixr2saveIsNum(e[[2]]))
+  }
+  FALSE
+}
+
+#' Build a matrix from the row-per-statement `lotri({...})` blocks `saveFit()` writes
+#'
+#' Each statement declares one row and its lower triangle, as lotri reads it:
+#' a single value (`name ~ value`, or `name ~ c(name = value)`) starts a new
+#' block, and `name ~ c(v1, ..., vk)` extends the current block of `k - 1`
+#' rows; the values may be named after the block's columns.  This is all the
+#' syntax `rxode2::rxUiDeparse()` produces for a fit's matrices (`cov`,
+#' `omega`, `R`, `phiC`, ...), and it is simple enough to read without lotri,
+#' so a cache does not depend on which lotri is installed -- some development
+#' versions of lotri reject the named rows outright.
+#' @param e the argument of the `lotri()` call, unevaluated
+#' @return the symmetric matrix with dimnames, or `NULL` when `e` is not
+#'   exactly that form (the caller then hands it to lotri)
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLotriRows <- function(e) {
+  if (!is.call(e) || !identical(e[[1]], as.name("{")) || length(e) < 2L) {
+    return(NULL)
+  }
+  .rows <- as.list(e)[-1]
+  .n <- length(.rows)
+  .names <- character(.n)
+  .m <- matrix(0, .n, .n)
+  .start <- 1L # first row of the current block
+  for (.i in seq_len(.n)) {
+    .r <- .rows[[.i]]
+    if (!is.call(.r) || !identical(.r[[1]], as.name("~")) || length(.r) != 3L ||
+          !is.name(.r[[2]])) {
+      return(NULL)
+    }
+    .names[.i] <- as.character(.r[[2]])
+    .rhs <- .r[[3]]
+    if (.nlmixr2saveIsNum(.rhs)) {
+      .vals <- list(.rhs)
+    } else if (is.call(.rhs) && identical(.rhs[[1]], as.name("c"))) {
+      .vals <- as.list(.rhs)[-1]
+    } else {
+      return(NULL)
+    }
+    if (length(.vals) == 1L) .start <- .i
+    .cols <- seq.int(.start, .i)
+    if (length(.vals) != length(.cols)) return(NULL)
+    .vn <- names(.vals)
+    if (!is.null(.vn) && !identical(.vn, .names[.cols])) return(NULL)
+    for (.v in .vals) if (!.nlmixr2saveIsNum(.v)) return(NULL)
+    .m[.i, .cols] <- vapply(.vals, function(v) as.double(eval(v, baseenv())),
+                            double(1), USE.NAMES=FALSE)
+  }
+  if (anyDuplicated(.names)) return(NULL)
+  .m[upper.tri(.m)] <- t(.m)[upper.tri(.m)]
+  dimnames(.m) <- list(.names, .names)
+  .m
+}
+
+#' `lotri()` as seen by a cache's scripts while `loadFit()` sources them
+#'
+#' Reads the row form `saveFit()` writes itself, and hands anything else to
+#' lotri.
+#' @param x,... as for `lotri::lotri()`
+#' @return the matrix
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLotri <- function(x, ...) {
+  if (...length() == 0L) {
+    .m <- .nlmixr2saveLotriRows(substitute(x))
+    if (!is.null(.m)) return(.m)
+  }
+  .call <- sys.call()
+  .call[[1]] <- quote(rxode2::lotri)
+  eval(.call, parent.frame())
+}
+
+#' The component files a loader script reads
+#'
+#' Each is `<base>-<item>.<ext>` or `<base>.csv`, written in the loader as the
+#' end of a single-quoted string: `'<base>-ui.R'`, or behind the path it was
+#' saved under, `'/home/me/models/<base>-ui.R'`.  Found by that shape rather
+#' than by pairing quotes, since the path can itself hold one -- `O'Brien/fit`
+#' was written as `'O'Brien/fit-ui.R'`, which is not even valid R.
+#' @param lines the loader script's lines
+#' @param base the loader's base name
+#' @return the file names, without any directory
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoaderRefs <- function(lines, base) {
+  .b <- gsub("([][{}()+*^$|\\\\.?])", "\\\\\\1", base)
+  # a file name holds no quote, separator or backtick; the backtick keeps a
+  # garbled `~` loader's item name (`012730/fit-tab` <- read.csv('...'))
+  # from being read as one
+  .pat <- paste0("(?<=['/\\\\])", .b, "(?:-[^'/\\\\`]+|[.]csv)(?=')")
+  unique(unlist(regmatches(lines, gregexpr(.pat, lines, perl=TRUE))))
+}
+
+#' Source a fit's loader script and return the fit
+#'
+#' Runs with the working directory set to the loader's directory, since the
+#' loader reads its component files by name.  A loader that cannot be used as
+#' it is (see `.nlmixr2saveLoaderUsable()`) is regenerated from the component
+#' files beside it with the generator `saveFit()` uses, so a fit saved under
+#' any path loads from wherever its files now are.  The user's files are
+#' never modified: a regenerated loader is only evaluated.
+#' @param r path to the loader script
+#' @param checkVersion passed from [loadFit()]
+#' @return the fit
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveSourceLoader <- function(r, checkVersion) {
+  .base <- substr(basename(r), 1L, nchar(basename(r)) - 2L)
+  .owd <- setwd(dirname(r))
+  on.exit(setwd(.owd), add=TRUE)
+  .env <- new.env(parent=environment())
+  # the scripts call `lotri(...)` unqualified; read the blocks saveFit()
+  # writes without depending on the installed lotri
+  assign("lotri", .nlmixr2saveLotri, envir=.env)
+  .r <- basename(r)
+  .lines <- readLines(.r, warn=FALSE)
+  if (file.exists(paste0(.base, "-env.R")) &&
+        !.nlmixr2saveLoaderUsable(.lines, .base)) {
+    .minfo("the fit's loader script refers to the path it was saved under; regenerating it")
+    # only the files the original loader reads: a stray `<base>-*` file (or
+    # another fit's, swept into the archive) must not be run, and a missing
+    # one must not silently drop out of the fit
+    .ref <- .nlmixr2saveLoaderRefs(.lines, .base)
+    # every loader names `<base>.csv`, but reads it only for a fit with a data
+    # table; the per-item files it always reads
+    .missing <- .ref[!file.exists(.ref) & .ref != paste0(.base, ".csv")]
+    if (length(.missing)) {
+      stop("'", r, "' reads files that are missing: ",
+           paste(.missing, collapse=", "), call.=FALSE)
+    }
+    .files <- .ref
+    # the one thing not recoverable from the file names; it is written into
+    # the loader, and FALSE only for fits from newer nlmixr2est
+    .named <- !any(grepl("named=FALSE", .lines, fixed=TRUE))
+    eval(parse(text=.nlmixr2saveLoaderText(.base, .files, .named),
+               keep.source=FALSE), envir=.env)
+  } else {
+    source(.r, local=.env)
+  }
+  if (!exists(.base, envir=.env, inherits=FALSE)) {
+    stop("'", r, "' is not a fit loader script: it does not define `", .base,
+         "`", call.=FALSE)
+  }
+  ret <- get(.base, envir=.env, inherits=FALSE)
+  ret <- .nlmixr2saveRestoreIdFactor(ret)
+  .nlmixr2saveRestoreIniDf0(ret)
+  .nlmixr2saveKeepIniDf0Types(ret, .lines)
+  # must run while the component files still exist; it reads the csv
+  .nlmixr2saveRestoreParHistType(ret, .base)
+  if (isTRUE(checkVersion)) {
+    .nlmixr2saveWarnVersion(ret)
+  }
+  ret
+}
+
+#' Load a fit from its `.zip` archive
+#'
+#' @param zip path of the archive
+#' @param checkVersion passed on
+#' @return the fit
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveLoadZip <- function(zip, checkVersion) {
+  .zip <- zip
+  .base <- sub("[.]zip$", "", basename(.zip), ignore.case=TRUE)
+  # extract to a private directory: extracting into the working directory
+  # only found the loader when that was the zip's own directory, and it
+  # overwrote (then deleted) same-named files that were already there
+  .exdir <- tempfile("nlmixr2save-")
+  dir.create(.exdir)
+  on.exit(unlink(.exdir, recursive=TRUE, force=TRUE), add=TRUE)
+  # flat: an archive written by an older saveFit() given a path stores its
+  # files under that whole path (e.g. home/me/models/fit.R)
+  .entries <- zip::zip_list(.zip)$filename
+  .entries <- .entries[!endsWith(.entries, "/")]
+  .dup <- unique(basename(.entries)[duplicated(basename(.entries))])
+  if (length(.dup)) {
+    stop(.zip, " holds more than one file named ",
+         paste(.dup, collapse=", "), " in different directories",
+         call.=FALSE)
+  }
+  zip::unzip(.zip, exdir=.exdir, junkpaths=TRUE)
+  .loader <- .nlmixr2saveFindLoader(.exdir, .base)
+  if (is.null(.loader)) {
+    stop("cannot find the fit loader script inside ", .zip, call.=FALSE)
+  }
+  .minfo(paste0("loading fit from ", .zip))
+  .nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion)
+}
+
 #' Load a fitted model object from a file
 #'
-#' @param file the base name of the files to load the fit from.
+#' @param file the fit to load: the base name of the files it was saved to
+#'   (`"fit"` loads `fit.zip`, or `fit.R` for a fit saved with `zip=FALSE`),
+#'   or the path of that `.zip` or `.R` file itself.  It may include a
+#'   directory, e.g. `"path/to/fit"` or `"path/to/fit.zip"`; the working
+#'   directory is not changed and nothing is extracted into it.
 #'
 #' @param checkVersion when `TRUE`, warn if the fit was produced with a
 #'   different nlmixr2est/rxode2 version (or remote sha) than the one currently
@@ -880,37 +1396,49 @@ loadFit <- function(file, checkVersion=.nlmixr2saveCheckVersion()) {
 
   .file <- as.character(substitute(file))
   .tmp <- try(force(file), silent=TRUE)
-  if (is.character(.tmp) && length(.tmp) == 1) {
+  # a try-error is itself a character string: an undefined bare symbol would
+  # otherwise be taken for a file named after its error message
+  if (!inherits(.tmp, "try-error") && is.character(.tmp) && length(.tmp) == 1) {
     file <- .tmp
   } else {
     file <- .file
   }
-  .zip <- paste0(file, ".zip")
-  .r <-  paste0(file, ".R")
-  .didUnzip <- FALSE
-  if (file.exists(.zip)) {
-    zip::unzip(.zip)
-    .didUnzip <- TRUE
+  # accept the archive or loader path itself as well as the base name; when
+  # both readings name an existing file (fits saved as `my` and `my.zip`, so
+  # my.zip and my.zip.zip), neither can be assumed
+  if (grepl("[.](zip|R)$", file, ignore.case=TRUE) && file.exists(file) &&
+        (file.exists(paste0(file, ".zip")) || file.exists(paste0(file, ".R")))) {
+    .other <- c(paste0(file, ".zip"), paste0(file, ".R"))
+    .other <- .other[file.exists(.other)]
+    .own <- sub("[.](zip|R)$", "", file, ignore.case=TRUE)
+    stop("'", file, "' names two saved fits: the file '", file, "' itself, and ",
+         "the fit saved as '", file, "' ('", .other[1], "'); use loadFit(\"",
+         .own, "\") for the first or loadFit(\"", .other[1],
+         "\") for the second", call.=FALSE)
   }
-  if (file.exists(.r)) {
-    .minfo(paste0("loading fit from ", .r))
-    source(.r, local=TRUE)
-    ret <- get(file)
-    ret <- .nlmixr2saveRestoreIdFactor(ret)
-    # must run before the unzipped files are removed below; it reads the csv
-    .nlmixr2saveRestoreParHistType(ret, file)
-    if (isTRUE(checkVersion)) {
-      .nlmixr2saveWarnVersion(ret)
-    }
-    if (.didUnzip) {
-      .files <- .nlmixr2saveFitFiles(file)
-      .minfo("removing unzipped fit files")
-      lapply(.files, unlink)
-    }
-    return(ret)
+  if (grepl("[.]zip$", file, ignore.case=TRUE) && file.exists(file)) {
+    .zip <- file
+    .r <- NA_character_
+  } else if (grepl("[.]R$", file) && file.exists(file)) {
+    .zip <- NA_character_
+    .r <- file
   } else {
-    stop("cannot find fit file ", file, " or ", .r, " or ", .zip, call.=FALSE) # nocov
+    .zip <- paste0(file, ".zip")
+    .r <-  paste0(file, ".R")
   }
+  .base <- sub("[.](zip|R)$", "", basename(if (is.na(.zip)) .r else .zip),
+               ignore.case=TRUE)
+  if (!is.na(.zip) && file.exists(.zip)) {
+    return(.nlmixr2saveLoadZip(.zip, checkVersion))
+  }
+  if (!is.na(.r) && file.exists(.r)) {
+    .minfo(paste0("loading fit from ", .r))
+    return(.nlmixr2saveSourceLoader(.r, checkVersion))
+  }
+  stop("cannot find fit file ", file,
+       if (!is.na(.zip)) paste0(" or ", .zip),
+       if (!is.na(.r)) paste0(" or ", .r),
+       call.=FALSE)
 }
 
 #' This returns or assigns the environment used in the `:=` operator
@@ -1032,8 +1560,10 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
               file.rename(paste0(x, ".zip"), paste0(.base, ".zip")),
             add=TRUE)
   }
-  # the `:=` caller performs its own version check/rerun handling
-  loadFit(x, checkVersion=FALSE)
+  # the `:=` caller performs its own version check/rerun handling.  Load the
+  # archive itself rather than resolving a name: a variable can be named
+  # `fit.zip`, whose cache fit.zip.zip sits beside a `fit`'s fit.zip
+  .nlmixr2saveLoadZip(paste0(x, ".zip"), checkVersion=FALSE)
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {
@@ -1259,7 +1789,9 @@ nlmixr2saveInvalidate <- function() {
   .dir <- .nlmixr2saveDir()
   .prefix <- .nlmixr2savePrefix()
   if (!dir.exists(.dir)) return(invisible(character(0)))
-  .all <- list.files(.dir)
+  # a prefix starting with "." names hidden files; otherwise leave them (with
+  # an empty prefix, a directory's .gitignore is not a cache file)
+  .all <- list.files(.dir, all.files=startsWith(.prefix, "."), no..=TRUE)
   # a literal prefix match (the prefix may contain regex metacharacters); an
   # empty prefix matches everything in the directory
   .keep <- if (nzchar(.prefix)) startsWith(.all, .prefix) else rep(TRUE, length(.all))

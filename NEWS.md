@@ -1,3 +1,74 @@
+# nlmixr2save (development version)
+
+* `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
+  `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`
+  both work from any working directory.  It used to append `.zip` to whatever
+  it was given, so a path ending in `.zip` looked for `fit.zip.zip` and failed
+  with "cannot find fit file" even though the file existed.  It also extracted
+  the archive into the working directory rather than beside the `.zip`, so a
+  fit in another directory was never found, and a same-named file already in
+  the working directory was overwritten and then deleted.  The archive is now
+  extracted to a temporary directory instead.
+
+* `loadFit()` also loads a fit that an earlier version saved under a path --
+  `saveFit(fit, "models/fit")`, `saveFit(fit, "/home/me/models/fit")` or
+  `saveFit(fit, "~/models/fit")` -- from anywhere, including on another
+  user's machine.  Those versions wrote the path into the loader script
+  inside the archive: it named the fit after the path and read every file
+  from it, so loading elsewhere failed with "cannot open file" or
+  "Permission denied" for the original location.  A `~` path also garbled
+  the names the items were restored under.  The archive is now extracted
+  flat, and a loader tied to a path is regenerated from the files in it; the
+  restored fit matches one saved without a path.  A `.zip` renamed after
+  saving loads too.
+
+* `loadFit(myfit)` with a bare symbol loads `myfit.zip` again when no object
+  `myfit` exists; it looked for a file named after the "object not found"
+  error instead.
+
+* `saveFit(fit, "path_model/fit")` now writes the files inside `path_model/`
+  under the bare name `fit`, creating the directory if needed.  The files, and
+  the loader's references to them, used to be named `path_model/fit-...`, so
+  the archive stored a `path_model/` folder: unzipping it (including by
+  `loadFit()`, which unzipped into the working directory) recreated
+  `path_model/` wherever that happened, and the loader only worked from the
+  directory it was saved from.
+
+* New vignette, "Keeping fits in a models directory", on sending `:=` caches
+  to a directory with `nlmixr2save.dir` (and naming them with
+  `nlmixr2save.prefix`), setting that for a whole project, saving and loading
+  by path, and committing the directory to version control.
+
+* `loadFit()` no longer rebuilds a fit's models while loading.  A saved fit
+  stores its compiled model lists (`foceiModel`, `saemModel`) and its `ui` as
+  `rxode2::rxode2()` calls, and all of them were rebuilt on load -- for a
+  large model, several long C compilations that looked like a hang, plus a
+  parse of the whole model for the `ui`.  Each is now built only when
+  something first uses it: estimates, tables, `fixef()`, `summary()` and the
+  like need none of them; `print()` and `augPred()` build the `ui`, and
+  re-estimation or residual recalculation compiles the model list.
+  Re-saving a loaded fit (e.g. `nlmixr2saveShare()`) writes the model lists
+  back without compiling them.  Fits saved under a path by an earlier version
+  get this too, since their loader is regenerated.
+
+* `loadFit()` (and therefore `:=`) no longer depends on the installed lotri
+  to read a cache.  A fit's matrices (`cov`, `omega`, `R`, `phiC`, ...) are
+  stored as `lotri({...})` blocks with one row per statement; `loadFit()` now
+  reads that form itself and passes anything else to lotri.  Some development
+  versions of lotri rejected the named rows `saveFit()` writes ("matrix
+  expression should be 'name ~ c(lower-tri)'"), which is what broke the
+  `:=` example on the package website, and a cache could not be loaded at all
+  without nlmixr2est attached, since the scripts call `lotri()` unqualified.
+  Existing caches benefit without being re-saved.
+
+* `loadFit()` now brings a restored `iniDf0` in line with the installed
+  rxode2's `iniDf`.  It takes the columns and types from the fit's own `ui`,
+  which the installed rxode2 rebuilds on load, rather than from a version
+  check.  A cache written before rxode2 added `prior` gains the column (as
+  `NA`), and an all-`NA` `prior` -- which reads back from the `.csv` as
+  logical -- is character again, as rxode2 keeps it.  The reloaded fit's
+  `iniDf0` now matches the original.
+
 # nlmixr2save 0.2.0
 
 * `fit := nlmixr2(...)` no longer fails when data.table is attached after

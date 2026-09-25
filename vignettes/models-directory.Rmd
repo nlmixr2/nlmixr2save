@@ -1,0 +1,159 @@
+---
+title: "Keeping fits in a models directory"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Keeping fits in a models directory}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+By default `nlmixr2save` writes fits into the working directory: `fit :=
+nlmixr2(...)` caches to `./fit.zip`, and `saveFit(fit)` writes `./fit.zip`.
+In a project with more than a couple of models, that quickly mixes fits in
+with scripts, reports and data.  This article shows how to keep them all in
+one place -- a `models/` directory -- by default.
+
+## Caching `:=` fits in a directory
+
+The `:=` operator reads three options:
+
+| Option | Default | Effect |
+|---|---|---|
+| `nlmixr2save.dir` | `"."` | Directory the cache files live in (created when needed) |
+| `nlmixr2save.prefix` | `""` | String prepended to the variable name to name the cache file |
+| `nlmixr2save.check` | `TRUE` | Whether a cached fit is checked against the current model, data and arguments |
+
+To send every cache to `models/`, set the directory once:
+
+```{r, eval = FALSE}
+library(nlmixr2)
+library(nlmixr2save)
+
+options(nlmixr2save.dir = "models")
+
+fit := nlmixr2(one.cmt, theo_sd, est = "focei") # fits, writes models/fit.zip
+fit := nlmixr2(one.cmt, theo_sd, est = "focei") # loads models/fit.zip
+```
+
+The directory is created the first time something is cached there.  Other
+values assigned with `:=` (simulations, or functions registered with
+`saveFitRandom()`) are cached there too, as `models/<name>.rds`.
+
+### Naming the files with a prefix
+
+A prefix keeps caches from different analyses apart in the same directory:
+
+```{r, eval = FALSE}
+options(nlmixr2save.dir = "models", nlmixr2save.prefix = "pk-")
+
+fit := nlmixr2(one.cmt, theo_sd, est = "focei") # models/pk-fit.zip
+```
+
+The prefix applies only to the file name on disk.  The variable is still
+`fit`, and inside the archive the fit is stored under its bare name, so
+`models/pk-fit.zip` is an ordinary fit archive that `loadFit()` reads like any
+other.
+
+## Setting the directory for a whole project
+
+Options last for the R session, so set them where every script and report
+picks them up.
+
+**A project `.Rprofile`.**  R runs the `.Rprofile` in the directory it starts
+in, so the setting applies to every session in the project:
+
+```{r, eval = FALSE}
+# .Rprofile
+options(nlmixr2save.dir = "models")
+```
+
+**The setup chunk of a report.**  When a report should be self-contained,
+set the option at the top instead:
+
+````markdown
+```{r setup, include = FALSE}`r ''`
+options(nlmixr2save.dir = "models")
+```
+````
+
+**Only for part of a script.**  `withr::local_options()` or
+`withr::with_options()` restore the previous value afterwards:
+
+```{r, eval = FALSE}
+withr::with_options(list(nlmixr2save.dir = "models/sensitivity"), {
+  fitLow  := nlmixr2(one.cmt, theo_sd, est = "focei")
+  fitHigh := nlmixr2(one.cmt, theo_sd, est = "saem")
+})
+```
+
+### Relative paths and rendered reports
+
+A relative `nlmixr2save.dir` is resolved against the working directory *at
+the time of the `:=`*.  An R Markdown or Quarto document is rendered from its
+own folder, so `"models"` means `reports/models/` for a report in `reports/`,
+but `models/` at the project root for a script run from there.  To point
+everything at one directory, give an absolute path, for example with the
+`here` package:
+
+```{r, eval = FALSE}
+options(nlmixr2save.dir = here::here("models"))
+```
+
+## Saving and loading by path
+
+`saveFit()` and `loadFit()` do not read `nlmixr2save.dir`; give them the path
+directly.  The directory is created if needed:
+
+```{r, eval = FALSE}
+saveFit(fit, "models/run001")        # writes models/run001.zip
+
+fit2 <- loadFit("models/run001.zip") # or loadFit("models/run001")
+```
+
+The archive holds the fit under its bare name (`run001`), not the path it was
+saved to, so `models/run001.zip` can be moved, renamed or sent to a colleague
+and still loads from wherever it ends up.  `loadFit()` extracts it to a
+temporary directory, so loading never writes into your working directory.
+
+## Sharing and clearing the directory
+
+`nlmixr2saveShare()` and `nlmixr2saveInvalidate()` resolve names through the
+same options as `:=`:
+
+```{r, eval = FALSE}
+options(nlmixr2save.dir = "models", nlmixr2save.prefix = "pk-")
+
+nlmixr2saveShare("fit")  # models/pk-fit.zip -> models/pk-fit-noData.zip
+nlmixr2saveInvalidate()  # removes models/pk-* so := refits next time
+```
+
+`nlmixr2saveInvalidate()` removes every file in `nlmixr2save.dir` whose name
+starts with `nlmixr2save.prefix`.  **With no prefix set, that is every file
+in the directory**, including fits saved there by hand with `saveFit()`.  If
+you keep both kinds of fit in `models/`, give the `:=` caches a prefix, or
+cache them in a subdirectory such as `models/cache`.
+
+## Keeping the directory under version control
+
+By default `:=` refits when the cached fit no longer matches the model, the
+data or the arguments, and when the fit was made with a different
+`nlmixr2est` or `rxode2` version it asks what to do (or, when rendering,
+warns).  For a `models/` directory committed to version control, where the
+cache *is* the result, turn the check off so a cached fit is loaded whenever
+it exists:
+
+```{r, eval = FALSE}
+options(nlmixr2save.dir = "models", nlmixr2save.check = FALSE)
+```
+
+`:=` then fits only when the file is missing, and compares nothing -- not the
+model, not the data, and not the package versions.  Delete the file, or call
+`nlmixr2saveInvalidate()`, to refit.  See `vignette("version-tracking")` for
+how the two checks combine.
