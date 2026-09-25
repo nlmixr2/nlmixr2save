@@ -1395,6 +1395,9 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_true("fitW.R" %in% zip::zip_list("run1-fitW.zip")$filename)
         .w <- suppressMessages(.loadFitZipPlain("fitW"))
         expect_true(inherits(.w, "nlmixr2FitData"))
+        # loadFit() takes the prefixed archive too; its loader is `fitW.R`
+        expect_true(inherits(suppressMessages(
+          loadFit("run1-fitW.zip", checkVersion=FALSE)), "nlmixr2FitData"))
         expect_equal(tools::md5sum("fitW.zip"), .md5)
         expect_setequal(list.files(all.files=TRUE, no..=TRUE),
                         c("fitW.zip", "run1-fitW.zip"))

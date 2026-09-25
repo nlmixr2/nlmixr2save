@@ -871,14 +871,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   writeLines(.nlmixr2saveLoaderText(file, .files, .parFixedDfNamed,
                                     .nlmixr2saveIniDf0Types(fit)),
              con = paste0(file,".R"))
-  # the loader last: when a copy out fails, no new loader is left reading
-  # old component files
   .files <- c(.files, paste0(file, ".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
     zip::zip(zipfile = paste0(file, ".zip"),
              files = .files)
     .files <- paste0(file, ".zip")
+  } else {
+    # the loader is replaced last, and the one there now removed first: when
+    # a copy out fails, no loader is left reading a mix of old and new files
+    unlink(file.path(.outdir, paste0(file, ".R")))
   }
   for (.f in .files) {
     if (!file.copy(.f, .outdir, overwrite=TRUE)) {
