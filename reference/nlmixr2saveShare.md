@@ -168,7 +168,6 @@ Matthew L. Fidler
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
-#> ℹ removing unzipped fit files
 #> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data) to fit-noData.zip
 #> ℹ saving fit item: .fdFullCov
@@ -250,7 +249,6 @@ Matthew L. Fidler
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
-#> ℹ removing unzipped fit files
 #> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data, no output tables) to fit-noData-noFit.zip
 #> ℹ saving fit item: .fdFullCov
@@ -336,6 +334,5 @@ Matthew L. Fidler
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
 #> ℹ zipping fit files
-#> ℹ removing unzipped fit files
 # }
 ```

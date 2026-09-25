@@ -250,7 +250,6 @@ Matthew L. Fidler
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
-#> ℹ removing unzipped fit files
 #>  
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
@@ -299,7 +298,7 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8616
+#> → compress parHistData in nlmixr2 object, save 8608
 #> → compress phiM in nlmixr2 object, save 439912
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
@@ -377,6 +376,5 @@ Matthew L. Fidler
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
-#> ℹ removing unzipped fit files
 # }
 ```

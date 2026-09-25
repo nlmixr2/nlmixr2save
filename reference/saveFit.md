@@ -179,7 +179,6 @@ Matthew L. Fidler
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
-#> ℹ removing unzipped fit files
 #> ℹ loading fit from fit.zip
 #>  
 #>  
@@ -188,14 +187,14 @@ Matthew L. Fidler
 #> ── nlmixr² FOCEi (outer: bobyqa) ──
 #> 
 #>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8076 373.4073 393.587      -179.7037        538873.5        3771.305
+#> FOCEi 116.8076 373.4073 393.587      -179.7037        538870.8        3771.287
 #> 
 #> ── Time (sec $time): ──
 #> 
 #>             setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.1859723 0.2059098  0.2648636      0.023       0.023 0.056        0
+#> elapsed 0.1671303 0.1806292  0.2467319      0.024        0.02 0.053    0.001
 #>             other
-#> elapsed 0.1412542
+#> elapsed 0.1195085
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
