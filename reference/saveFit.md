@@ -188,14 +188,14 @@ Matthew L. Fidler
 #> ── nlmixr² FOCEi (outer: bobyqa) ──
 #> 
 #>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8076 373.4073 393.587      -179.7037        538870.8        3771.287
+#> FOCEi 116.8076 373.4073 393.587      -179.7037        538873.5        3771.305
 #> 
 #> ── Time (sec $time): ──
 #> 
 #>             setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.2782143 0.1898304  0.2442869      0.025       0.037 0.039    0.001
+#> elapsed 0.1859723 0.2059098  0.2648636      0.023       0.023 0.056        0
 #>             other
-#> elapsed 0.1086684
+#> elapsed 0.1412542
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
