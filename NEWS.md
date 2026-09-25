@@ -10,6 +10,9 @@
   fit on load.  `saveFit()` now writes every file into a private temporary
   directory and zips (or, with `zip=FALSE`, copies) only those, so files
   already in the target directory are never read, zipped or removed.
+  Likewise a `:=` cache under a `nlmixr2save.prefix` no longer overwrites
+  an unrelated `<name>.zip` in the cache directory while writing or reading
+  `<prefix><name>.zip`.
 
 * `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
   `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`

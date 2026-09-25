@@ -1368,6 +1368,8 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         suppressMessages(saveFit(fitF, file.path(.d, "fitY"), data=FALSE))
         expect_false("fitY-origData.csv" %in%
                        zip::zip_list(file.path(.d, "fitY.zip"))$filename)
+        # read, zipped and removed by no one
+        expect_true(file.exists(file.path(.d, "fitY-origData.csv")))
         .y <- suppressMessages(loadFit(file.path(.d, "fitY.zip"), checkVersion=FALSE))
         expect_null(.y$origData)
         # and loose files left beside it are still readable after a zip=FALSE
@@ -1378,6 +1380,24 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
                                fixed=TRUE)))
         .z <- suppressMessages(loadFit(file.path(.d, "fitZ"), checkVersion=FALSE))
         expect_null(.z$origData)
+      })
+
+      test_that("a prefixed := cache never touches the bare-name archive", {
+        .d <- withr::local_tempdir()
+        withr::local_dir(.d)
+        # someone else's fitW.zip, beside the cache of `fitW` under a prefix
+        writeLines("not a fit", "fitW.zip")
+        .md5 <- tools::md5sum("fitW.zip")
+        withr::local_options(list(nlmixr2save.prefix="run1-"))
+        suppressMessages(.saveFitZipPlain(fitF, "fitW"))
+        expect_true(file.exists("run1-fitW.zip"))
+        expect_equal(tools::md5sum("fitW.zip"), .md5)
+        expect_true("fitW.R" %in% zip::zip_list("run1-fitW.zip")$filename)
+        .w <- suppressMessages(.loadFitZipPlain("fitW"))
+        expect_true(inherits(.w, "nlmixr2FitData"))
+        expect_equal(tools::md5sum("fitW.zip"), .md5)
+        expect_setequal(list.files(all.files=TRUE, no..=TRUE),
+                        c("fitW.zip", "run1-fitW.zip"))
       })
 
       test_that("nlmixr2saveShare writes shareable zips and leaves the fit alone", {
