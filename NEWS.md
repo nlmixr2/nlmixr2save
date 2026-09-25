@@ -8,13 +8,20 @@
   files an earlier `zip=FALSE` save of the same name left behind, so an item
   the new fit lacks (e.g. `origData` with `data=FALSE`) came back from the old
   fit on load.  `saveFit()` now writes every file into a private temporary
-  directory and zips (or, with `zip=FALSE`, copies) only those, so files
-  already in the target directory are never read, zipped or removed.
-  Likewise a `:=` cache under a `nlmixr2save.prefix` no longer overwrites
-  an unrelated `<name>.zip` in the cache directory while writing or reading
-  `<prefix><name>.zip`.
-  A `zip=FALSE` save now also removes an earlier `zip=TRUE` save's archive
-  under the same name, which `loadFit()` would otherwise have loaded instead.
+  directory and zips (or, with `zip=FALSE`, copies) only those, so other
+  files already in the target directory are never read, zipped or removed.
+  A save still replaces the fit saved earlier under the same name: a
+  `zip=TRUE` save removes that fit's loose loader `<file>.R`, and a
+  `zip=FALSE` save removes its `<file>.zip`, which `loadFit()` would
+  otherwise load instead -- each only when it really is a saved fit, so an
+  unrelated script or archive of that name is kept.  A target directory that
+  is an existing file is now an error rather than being written over.
+
+* A `:=` cache under a `nlmixr2save.prefix` no longer overwrites (and, on
+  loading, can no longer lose) an unrelated `<name>.zip` in the cache
+  directory while writing or reading `<prefix><name>.zip`, and a prefix that
+  names a directory (e.g. `"run1/"`) now creates it instead of silently
+  failing to write the cache.
 
 * `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
   `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`
