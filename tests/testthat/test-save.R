@@ -12,6 +12,517 @@ test_that(".assignParent errors on non-environment", {
   expect_error(.assignParent(1), "env must be an environment")
 })
 
+# A stand-in for saveFit()'s output, written with the real item writers and
+# the real loader generator, so it has exactly the shape of a saved fit: a
+# small ui, a data frame item, an env script, and the `<name>.R` loader.  The
+# files are created as `<name>-...`; the loader is written as if saveFit() had
+# been given `savedAs`, with its component files listed under `filesAs` --
+# which is how older versions produced loaders tied to a path:
+#   savedAs = "a/b/fit"               saveFit(fit, "a/b/fit")
+#   savedAs = "/abs/a/b/fit"          saveFit(fit, "/abs/a/b/fit")
+#   savedAs = "~/a/b/fit",            saveFit(fit, "~/a/b/fit"): the files
+#     filesAs = "/home/me/a/b"        were listed with ~ expanded
+.fakeUi <- local({
+  .ui <- NULL
+  function() {
+    if (is.null(.ui)) {
+      .f <- function() {
+        ini({
+          tka <- 0.45
+          add.sd <- 0.7
+        })
+        model({
+          ka <- exp(tka)
+          ka ~ add(add.sd)
+        })
+      }
+      .ui <<- rxode2::rxode2(.f)
+    }
+    .ui
+  }
+})
+.fakeSavedFit <- function(name, zip=TRUE, val=42, savedAs=name,
+                          filesAs=dirname(savedAs)) {
+  writeLines(paste0("env <- list(val = ", val,
+                    ", ..class.. = \"nlmixr2saveFake\"",
+                    ", ..id.level.. = NULL, ..parHistType.level.. = NULL)\n",
+                    "env <- list2env(env)\n"),
+             paste0(name, "-env.R"))
+  utils::write.csv(data.frame(a=1:2), paste0(name, "-tab.csv"), row.names=FALSE)
+  saveFitItem(.fakeUi(), "ui", name)
+  .files <- basename(.nlmixr2saveFitFiles(name))
+  if (filesAs != ".") .files <- file.path(filesAs, .files)
+  writeLines(.nlmixr2saveLoaderText(savedAs, .files), paste0(name, ".R"))
+  if (zip) {
+    .files <- .nlmixr2saveFitFiles(name)
+    zip::zip(paste0(name, ".zip"), files=.files)
+    unlink(.files)
+  }
+}
+
+.expectFakeFit <- function(ret, val=42) {
+  expect_true(inherits(ret, "nlmixr2saveFake"))
+  expect_equal(ret$val, val)
+  expect_equal(ret$tab$a, 1:2)
+  expect_true(inherits(ret$ui, "rxUi"))
+  # restored under the item names, not names cut from a path
+  expect_setequal(setdiff(ls(ret, all.names=TRUE), "..nlmixr2saveLazy.."),
+                  c("val", "tab", "ui", "model"))
+}
+
+test_that("loadFit() loads a fit from another directory by path", {
+  withr::with_tempdir({
+    dir.create("sub")
+    withr::with_dir("sub", .fakeSavedFit("fit"))
+    # a same-named file in the working directory must survive the load
+    writeLines("keep me", "fit.R")
+    .before <- list.files(all.files=TRUE, recursive=TRUE)
+    .wd <- getwd()
+
+    .expectFakeFit(loadFit("sub/fit.zip", checkVersion=FALSE))
+    .expectFakeFit(loadFit("sub/fit", checkVersion=FALSE))
+    .expectFakeFit(loadFit(file.path(getwd(), "sub", "fit.zip"),
+                           checkVersion=FALSE))
+
+    expect_equal(getwd(), .wd)
+    expect_equal(list.files(all.files=TRUE, recursive=TRUE), .before)
+    expect_equal(readLines("fit.R"), "keep me")
+  })
+})
+
+test_that("loadFit() loads a fit that was saved under a directory", {
+  withr::with_tempdir({
+    dir.create("a/b", recursive=TRUE)
+    # saveFit(fit, "a/b/fit") names every file, and the loader's references to
+    # them, "a/b/fit-..."; the archive holds them under a/b/
+    .fakeSavedFit("a/b/fit")
+    .expectFakeFit(loadFit("a/b/fit.zip", checkVersion=FALSE))
+    # and it still loads once the archive is moved and renamed
+    dir.create("moved")
+    dir.create("elsewhere")
+    file.rename("a/b/fit.zip", "moved/run1.zip")
+    .expectFakeFit(loadFit("moved/run1.zip", checkVersion=FALSE))
+    .expectFakeFit(loadFit("moved/run1", checkVersion=FALSE))
+
+    # a hidden name (`.fit` is an ordinary R name) and regexp metacharacters,
+    # zipped and not, flat and saved under a directory (the rewrite path)
+    for (.nm in c(".hidden", "my+fit(1)", "a/b/.hidden", "a/b/my+fit(1)")) {
+      .fakeSavedFit(.nm)
+      .expectFakeFit(loadFit(paste0(.nm, ".zip"), checkVersion=FALSE))
+      .expectFakeFit(loadFit(.nm, checkVersion=FALSE))
+      file.rename(paste0(.nm, ".zip"), file.path("moved", basename(paste0(.nm, ".zip"))))
+      .expectFakeFit(loadFit(file.path("moved", basename(.nm)), checkVersion=FALSE))
+      .fakeSavedFit(.nm, zip=FALSE)
+      withr::with_dir("moved", {
+        .expectFakeFit(loadFit(file.path("..", paste0(.nm, ".R")), checkVersion=FALSE))
+      })
+    }
+
+    # saved with the FULL path, e.g. saveFit(fit, "/home/me/proj/models/fit"):
+    # every entry carries the whole path (zip drops the leading "/"), and the
+    # loader names its object and reads its files by the absolute path, which
+    # no longer exists once the archive has moved
+    dir.create("proj/models", recursive=TRUE)
+    .abs <- file.path(normalizePath("proj/models"), "fitAbs")
+    suppressWarnings(.fakeSavedFit(.abs))
+    .entries <- zip::zip_list(paste0(.abs, ".zip"))$filename
+    expect_true(any(endsWith(.entries, "proj/models/fitAbs.R")))
+    expect_true(all(grepl("/", .entries, fixed=TRUE)))
+    file.rename(paste0(.abs, ".zip"), "moved/fitAbs.zip")
+    unlink("proj", recursive=TRUE) # the original location is gone
+    .before <- list.files(all.files=TRUE, recursive=TRUE)
+    .expectFakeFit(loadFit("moved/fitAbs.zip", checkVersion=FALSE))
+    withr::with_dir("elsewhere", {
+      .expectFakeFit(loadFit("../moved/fitAbs", checkVersion=FALSE))
+    })
+    expect_equal(list.files(all.files=TRUE, recursive=TRUE), .before)
+
+    # saved with ~ (the user's report): the loader reads some files as
+    # '~/...' and lists the rest with ~ expanded, and its item names were cut
+    # from those by the length of the ~ form, so they are garbage
+    dir.create("tilde/Desktop/model", recursive=TRUE)
+    withr::with_dir("tilde/Desktop/model", {
+      .fakeSavedFit("fit", zip=FALSE, savedAs="~/Desktop/model/fit",
+                    filesAs="/home/someoneelse/Desktop/model")
+    })
+    .ldr <- readLines("tilde/Desktop/model/fit.R")
+    expect_true(any(grepl("source('~/Desktop/model/fit-env.R'", .ldr, fixed=TRUE)))
+    expect_true(any(grepl("/home/someoneelse/Desktop/model/fit-tab.csv", .ldr,
+                          fixed=TRUE)))
+    expect_false(any(grepl("env$`tab`", .ldr, fixed=TRUE))) # garbled
+    withr::with_dir("tilde", {
+      zip::zip("fit.zip", files=list.files("Desktop", recursive=TRUE,
+                                           full.names=TRUE))
+    })
+    .expectFakeFit(loadFit("tilde/fit.zip", checkVersion=FALSE))
+    .expectFakeFit(loadFit("tilde/Desktop/model/fit", checkVersion=FALSE))
+
+    # a loader tied to no path is used as it is, not regenerated
+    .fakeSavedFit("own", zip=FALSE)
+    .own <- readLines("own.R")
+    .own <- append(.own, "env$marker <- TRUE",
+                   after=grep("^delayedAssign\\('model'", .own))
+    writeLines(.own, "own.R")
+    expect_true(isTRUE(loadFit("own", checkVersion=FALSE)$marker))
+
+    # a fit named like an env script: its loader is `my-env.R`
+    .fakeSavedFit("my-env")
+    .expectFakeFit(loadFit("my-env.zip", checkVersion=FALSE))
+
+    # unzipped (saveFit(zip=FALSE)), loaded from another working directory
+    .fakeSavedFit("a/b/plain", zip=FALSE)
+    withr::with_dir("elsewhere", {
+      .expectFakeFit(loadFit("../a/b/plain", checkVersion=FALSE))
+      .expectFakeFit(loadFit("../a/b/plain.R", checkVersion=FALSE))
+    })
+    # the unzipped files are the user's; loading leaves them in place
+    expect_true(all(file.exists(c("a/b/plain.R", "a/b/plain-env.R",
+                                  "a/b/plain-tab.csv", "a/b/plain-ui.R"))))
+    # and the loader there is not rewritten
+    expect_true(any(grepl("a/b/plain-env.R", readLines("a/b/plain.R"), fixed=TRUE)))
+  })
+})
+
+test_that(".nlmixr2saveLoaderUsable accepts only a loader tied to no path", {
+  .ok <- c("`fit` <- function() {", "source('fit-env.R', local=TRUE)",
+           "env$`tab` <- read.csv('fit-tab.csv', check.names=FALSE)",
+           "env", "}", "`fit` <- `fit`()")
+  expect_true(.nlmixr2saveLoaderUsable(.ok, "fit"))
+  # the pre-backtick form of older versions
+  .old <- sub("`fit`", "fit", .ok, fixed=TRUE)
+  .old <- gsub("`fit`", "fit", .old, fixed=TRUE)
+  expect_true(.nlmixr2saveLoaderUsable(.old, "fit"))
+  # another name than the file's (renamed, or saved under a path)
+  expect_false(.nlmixr2saveLoaderUsable(.ok, "run1"))
+  .p <- gsub("fit", "/home/me/models/fit", .ok, fixed=TRUE)
+  expect_false(.nlmixr2saveLoaderUsable(.p, "fit"))
+  # the right name, but a file read from a path (relative, ~, or Windows)
+  for (.d in c("models/", "~/models/", "/home/me/", "C:\\\\Users\\\\me\\\\")) {
+    expect_false(.nlmixr2saveLoaderUsable(
+      sub("'fit-env.R'", paste0("'", .d, "fit-env.R'"), .ok, fixed=TRUE), "fit"))
+  }
+  # not a loader at all
+  expect_false(.nlmixr2saveLoaderUsable(character(0), "fit"))
+  expect_false(.nlmixr2saveLoaderUsable("x <- 1", "fit"))
+  expect_false(.nlmixr2saveLoaderUsable("x <- (", "fit"))
+})
+
+test_that("the := loader takes the archive of a variable named like a zip", {
+  withr::with_tempdir({
+    # `my.zip` is a valid variable name, so its cache is my.zip.zip; a fit
+    # called `my` sits beside it as my.zip and must not be picked up instead
+    .fakeSavedFit("my.zip", val=1)
+    .fakeSavedFit("my", val=2)
+    expect_true(all(file.exists(c("my.zip.zip", "my.zip"))))
+    .expectFakeFit(.loadFitZipPlain("my.zip"), val=1)
+    .expectFakeFit(.loadFitZipPlain("my"), val=2)
+  })
+})
+
+test_that("the lotri blocks saveFit() writes are read without lotri", {
+  # the block from the pkgdown site's failing `:=` example: a development
+  # lotri rejected its named, wrapped rows
+  .site <- quote({
+    tka ~ c(tka = 0.0367813010669496)
+    tcl ~ c(tka = -0.000782456725690811, tcl = 0.0069543545026029)
+    tv ~ c(tka = 0.000952366834165392, tcl = -0.000489959598361193,
+           tv = 0.00218330787936497)
+    add.sd ~ c(tka = -6.41258631708858e-05, tcl = -5.67004131128066e-05,
+               tv = 3.82936894597721e-05, add.sd = 0.00243929995816957)
+    om.eta.ka ~ c(tka = 0.000146993075376898, tcl = 0.000126165231341427,
+                  tv = -0.000127191366433412, add.sd = -0.000541130240379496,
+                  om.eta.ka = 0.0353763038424305)
+  })
+  # unnamed rows (R, S, phiC, ...) and a diagonal-only block (omega)
+  .unnamed <- quote({
+    tka ~ 22.5656297333401
+    tcl ~ c(-7.59115223994971, 159.478624702269)
+    tv ~ c(-30.7802054115303, 26.7036854081949, 603.566773588088)
+  })
+  .diag <- quote({
+    eta.ka ~ 0.39790253245538
+    eta.cl ~ 0.0702730989050519
+  })
+  .one <- quote({
+    eta.ka ~ -Inf
+  })
+  # a single value starts a new block, as lotri reads it
+  .blocks <- quote({
+    a ~ 1
+    b ~ c(0.5, 2)
+    c ~ c(c = 3)
+    d ~ c(c = 0.25, d = 4)
+  })
+  for (.b in list(.site, .unnamed, .diag, .one, .blocks)) {
+    .m <- .nlmixr2saveLotriRows(.b)
+    expect_false(is.null(.m))
+    expect_identical(.m, eval(bquote(rxode2::lotri(.(.b)))))
+  }
+  # and through the lotri() the scripts see
+  expect_identical(.nlmixr2saveLotri({
+    eta.ka ~ 0.39790253245538
+    eta.cl ~ c(0.1, 0.0702730989050519)
+  }), rxode2::lotri({
+    eta.ka ~ 0.39790253245538
+    eta.cl ~ c(0.1, 0.0702730989050519)
+  }))
+
+  # anything else goes to lotri: a joint block, fix()
+  expect_null(.nlmixr2saveLotriRows(quote({a + b ~ c(1, 0.5, 1)})))
+  expect_identical(.nlmixr2saveLotri({a + b ~ c(1, 0.5, 1)}),
+                   rxode2::lotri({a + b ~ c(1, 0.5, 1)}))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ fix(1)})))
+  # and extra arguments always do
+  expect_identical(.nlmixr2saveLotri({a ~ 1}, cov=TRUE),
+                   rxode2::lotri({a ~ 1}, cov=TRUE))
+
+  # names that disagree with the rows, or a wrong row length, are not the
+  # row form either
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(x = 0.1, b = 1)})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(0.1, 1, 2)})))
+  # a row as long as the whole matrix, but not its block, is not lotri's form
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ 2; c ~ c(0.1, 0.2, 3)})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; a ~ c(0.1, 1)})))
+  # only numbers are ever evaluated
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ c(a = stop("evaluated"))})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ log(2)})))
+  # lotri rejects NA, so the reader leaves it to lotri as well
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ NA})))
+  expect_null(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(NA_real_, 2)})))
+  # while the forms it does read match lotri.  Compared with a tolerance:
+  # lotri's own parse of an extreme value is inexact on some platforms (on
+  # macOS arm64, -1e-300 comes back as -9.999999985e-301), where the reader
+  # evaluates the literal exactly
+  for (.b in list(quote({a ~ 1L}), quote({`a b` ~ 1; c ~ c(0.1, 2)}),
+                  quote({a ~ 1; b ~ c(Inf, 2)}),
+                  quote({a ~ -0; b ~ c(-1e-300, +2)}))) {
+    expect_equal(.nlmixr2saveLotriRows(.b),
+                 eval(bquote(rxode2::lotri(.(.b)))))
+  }
+  expect_identical(.nlmixr2saveLotriRows(quote({a ~ 1; b ~ c(-1e-300, 2)}))[2, 1],
+                   -1e-300)
+})
+
+test_that("loadFit() refuses a name that means two saved fits", {
+  withr::with_tempdir({
+    # fits saved as `my` and `my.zip`: my.zip is one's archive and the other's
+    # base name
+    .fakeSavedFit("my", val=2)
+    .fakeSavedFit("my.zip", val=1)
+    expect_error(loadFit("my.zip", checkVersion=FALSE),
+                 'names two saved fits.*loadFit\\("my"\\).*loadFit\\("my.zip.zip"\\)')
+    .expectFakeFit(loadFit("my", checkVersion=FALSE), val=2)
+    .expectFakeFit(loadFit("my.zip.zip", checkVersion=FALSE), val=1)
+  })
+})
+
+test_that("a regenerated loader reads exactly the files the original one did", {
+  withr::with_tempdir({
+    dir.create("a/b", recursive=TRUE)
+    .fakeSavedFit("a/b/x", zip=FALSE)
+    # a stray file that only matches the name is never run
+    writeLines('stop("a stray script was run")', "a/b/x-extra.R")
+    .ret <- loadFit("a/b/x", checkVersion=FALSE)
+    .expectFakeFit(.ret)
+    # a file the loader reads, but that is gone, is an error -- not an item
+    # silently missing from the fit
+    unlink("a/b/x-tab.csv")
+    expect_error(loadFit("a/b/x", checkVersion=FALSE),
+                 "reads files that are missing: x-tab.csv")
+  })
+})
+
+test_that(".nlmixr2saveLoaderRefs finds the files a loader reads, by their shape", {
+  .l <- c("source('O'Brien/fit-ui.R', local=TRUE)", # an apostrophe in the path
+          "env$`x` <- read.csv('/home/me/fit-tab.csv')",
+          "ret <- read.csv('C:\\\\Users\\\\me\\\\fit.csv')",
+          "source('fit-env.R', local=TRUE)",
+          "source('fitX-ui.R', local=TRUE)",   # another fit
+          "source('my.fit-ui.R', local=TRUE)", # another fit, `.` not a wildcard
+          # a garbled `~` loader: its item name is not a file name
+          "env$`012730/fit-tab` <- read.csv('/home/me/fit-tab.csv')")
+  expect_setequal(.nlmixr2saveLoaderRefs(.l, "fit"),
+                  c("fit-ui.R", "fit-tab.csv", "fit.csv", "fit-env.R"))
+  expect_equal(.nlmixr2saveLoaderRefs(.l, "my.fit"), "my.fit-ui.R")
+  expect_equal(.nlmixr2saveLoaderRefs("source('a/my+fit(1)-ui.R')", "my+fit(1)"),
+               "my+fit(1)-ui.R")
+})
+
+test_that("a fit saved under a path with an apostrophe loads", {
+  withr::with_tempdir({
+    # the loader older versions wrote for saveFit(fit, "O'Brien/fit") is not
+    # even valid R: 'O'Brien/fit-ui.R'
+    dir.create("O'Brien")
+    .fakeSavedFit("O'Brien/fit", zip=FALSE)
+    expect_error(parse("O'Brien/fit.R"))
+    .expectFakeFit(loadFit("O'Brien/fit", checkVersion=FALSE))
+    withr::with_dir("O'Brien", {
+      zip::zip("fit.zip", files=list.files(all.files=TRUE, no..=TRUE))
+    })
+    dir.create("moved")
+    file.rename("O'Brien/fit.zip", "moved/fit.zip")
+    .expectFakeFit(loadFit("moved/fit.zip", checkVersion=FALSE))
+  })
+})
+
+test_that(".nlmixr2saveIsPromise tells a loader's promise from an assigned value", {
+  .e <- new.env()
+  .e$`..nlmixr2saveLazy..` <- list()
+  # the loader's promises all refer to ..nlmixr2saveLazy..
+  delayedAssign("p", {
+    `..nlmixr2saveLazy..`
+    stop("never forced here")
+  }, eval.env = .e, assign.env = .e)
+  expect_true(.nlmixr2saveIsPromise("p", .e))
+  delayedAssign("q", {
+    `..nlmixr2saveLazy..`
+    1
+  }, eval.env = .e, assign.env = .e)
+  force(.e$q)
+  expect_true(.nlmixr2saveIsPromise("q", .e)) # forced, but still the promise
+  assign("q", 2, envir = .e)
+  expect_false(.nlmixr2saveIsPromise("q", .e)) # replaced by a value
+  assign("q", quote(f(x)), envir = .e)
+  expect_false(.nlmixr2saveIsPromise("q", .e)) # replaced by a call
+  delayedAssign("r", identity(1), assign.env = .e)
+  expect_false(.nlmixr2saveIsPromise("r", .e)) # someone else's promise
+  expect_false(.nlmixr2saveIsPromise("missing", .e))
+})
+
+test_that("a fit's compiled model lists are built only when first used", {
+  withr::with_tempdir({
+    # the model list's script is evaluated (compiled) only on access; here it
+    # would fail loudly, so a load that touched it could not pass
+    .fakeSavedFit("lz", zip=FALSE)
+    writeLines('foceiModel <- stop("compiled while loading")', "lz-foceiModel.R")
+    writeLines(.nlmixr2saveLoaderText("lz", setdiff(.nlmixr2saveFitFiles("lz"), "lz.R")),
+               "lz.R")
+    zip::zip("lz.zip", files=.nlmixr2saveFitFiles("lz"))
+    unlink(.nlmixr2saveFitFiles("lz"))
+    .ret <- loadFit("lz.zip", checkVersion=FALSE)
+    expect_equal(.ret$val, 42)
+    # its script was read while the files existed, and is kept for saveFit()
+    expect_equal(.ret$`..nlmixr2saveLazy..`$foceiModel,
+                 'foceiModel <- stop("compiled while loading")')
+    # the extracted files are gone, yet first use still evaluates it
+    expect_error(.ret$foceiModel, "compiled while loading")
+  })
+})
+
+test_that("nlmixr2saveInvalidate() clears a hidden prefix, and only that", {
+  withr::with_tempdir({
+    dir.create("models")
+    file.create(c("models/.pk-fit.zip", "models/.pk-sim.rds", "models/.gitignore",
+                  "models/fit.zip"))
+    withr::with_options(list(nlmixr2save.dir="models", nlmixr2save.prefix=".pk-",
+                             nlmixr2save.quiet=TRUE), {
+      nlmixr2saveInvalidate()
+    })
+    expect_equal(sort(list.files("models", all.files=TRUE, no..=TRUE)),
+                 c(".gitignore", "fit.zip"))
+    # an empty prefix clears the caches but not the directory's hidden files
+    withr::with_options(list(nlmixr2save.dir="models", nlmixr2save.prefix="",
+                             nlmixr2save.quiet=TRUE), {
+      nlmixr2saveInvalidate()
+    })
+    expect_equal(list.files("models", all.files=TRUE, no..=TRUE), ".gitignore")
+  })
+})
+
+test_that("loadFit() takes a bare symbol naming a saved fit", {
+  withr::with_tempdir({
+    .fakeSavedFit("myfit")
+    expect_false(exists("myfit", inherits = FALSE))
+    .expectFakeFit(loadFit(myfit, checkVersion=FALSE))
+  })
+})
+
+test_that("loadFit() errors clearly on a missing fit or a foreign zip", {
+  withr::with_tempdir({
+    expect_error(loadFit("nope.zip", checkVersion=FALSE), "cannot find fit file")
+    expect_error(loadFit("nope", checkVersion=FALSE), "cannot find fit file")
+    writeLines("x", "readme.txt")
+    zip::zip("other.zip", files="readme.txt")
+    expect_error(loadFit("other.zip", checkVersion=FALSE),
+                 "cannot find the fit loader script")
+    # an empty or unrelated .R, e.g. from an interrupted save
+    file.create("empty.R")
+    expect_error(loadFit("empty.R", checkVersion=FALSE),
+                 "is not a fit loader script")
+    writeLines("x <- 1", "notfit.R")
+    expect_error(loadFit("notfit", checkVersion=FALSE),
+                 "is not a fit loader script")
+  })
+})
+
+test_that(".nlmixr2saveRestoreIniDf0 matches iniDf0 to the installed rxode2", {
+  # the loaded fit's ui is rebuilt by the installed rxode2, so its iniDf is the
+  # template; a list stands in for it here, since `$` is all that is used
+  .tmpl <- data.frame(name=character(0), est=double(0), prior=character(0),
+                      err=character(0))
+  .withIni <- function(ini, ui=list(iniDf=.tmpl)) {
+    .env <- new.env(parent=emptyenv())
+    assign("iniDf0", ini, envir=.env)
+    if (!is.null(ui)) assign("ui", ui, envir=.env)
+    .nlmixr2saveRestoreIniDf0(.env)
+    .env$iniDf0
+  }
+
+  # a cache from before rxode2 had `prior` gains it, typed and in place
+  .i <- .withIni(data.frame(name=c("a", "b"), est=c(1, 2), err=c(NA, "add")))
+  expect_equal(names(.i), c("name", "est", "prior", "err"))
+  expect_identical(.i$prior, c(NA_character_, NA_character_))
+  expect_equal(.i$err, c(NA, "add"))
+
+  # an all-NA prior read back from the csv as logical is made character
+  .i <- .withIni(data.frame(name="a", est=1, prior=NA, err="add"))
+  expect_identical(.i$prior, NA_character_)
+  # and a real prior is kept as it is
+  .i <- .withIni(data.frame(name="a", est=1, prior="dnorm(0, 1)", err="add"))
+  expect_identical(.i$prior, "dnorm(0, 1)")
+
+  # an older rxode2 without `prior` keeps the cache's column, after its own
+  .i <- .withIni(data.frame(name="a", est=1, prior="dnorm(0, 1)", err="add"),
+                 ui=list(iniDf=.tmpl[, c("name", "est", "err")]))
+  expect_equal(names(.i), c("name", "est", "err", "prior"))
+
+  # row names survive (iniDf0 is read with row.names=1)
+  .i <- .withIni(data.frame(name="a", est=1, err="add", row.names="7"))
+  expect_equal(row.names(.i), "7")
+
+  # with no ui to compare against, only prior is retyped and nothing added
+  .i <- .withIni(data.frame(name="a", prior=NA), ui=NULL)
+  expect_identical(.i$prior, NA_character_)
+  expect_equal(names(.i), c("name", "prior"))
+  .i <- .withIni(data.frame(name="a"), ui=NULL)
+  expect_equal(names(.i), "name")
+
+  # a real ui, compressed as the loader leaves it, works as the template
+  .f <- function() {
+    ini({
+      tka <- 0.45
+      add.sd <- 0.7
+    })
+    model({
+      ka <- exp(tka)
+      ka ~ add(add.sd)
+    })
+  }
+  .ui <- rxode2::rxUiCompress(rxode2::rxode2(.f))
+  .real <- rxode2::rxUiDecompress(.ui)$iniDf
+  .old <- .real[, setdiff(names(.real), "prior"), drop=FALSE]
+  .i <- .withIni(.old, ui=.ui)
+  expect_equal(names(.i), names(.real))
+  if (!is.null(.real$prior)) {
+    expect_identical(.i$prior, rep(NA_character_, nrow(.real)))
+  }
+
+  # a fit without iniDf0 is left alone
+  .noIni <- new.env()
+  expect_identical(.nlmixr2saveRestoreIniDf0(.noIni), .noIni)
+  expect_false(exists("iniDf0", envir=.noIni, inherits=FALSE))
+})
+
 test_that(".nlmixr2saveFitFiles matches one fit's files and no others", {
   # what comes back is zipped and then unlinked, so matching one file too many
   # destroys another cache and one too few leaves an unloadable one
@@ -581,8 +1092,106 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_true(file.exists("fitIS.zip"))
       })
 
+      test_that("saveFit() to a path writes a flat archive there", {
+        # the files used to be named, and the loader to read them, as
+        # "path_model/fitP-...", so the archive carried a path_model/ folder
+        # and unzipping it recreated one wherever that happened
+        .wd <- getwd()
+        .before <- list.files(all.files=TRUE)
+        suppressMessages(saveFit(fitF, "path_model/fitP"))
+        expect_equal(getwd(), .wd)
+        expect_true(file.exists("path_model/fitP.zip"))
+        # nothing but the new directory appears here, and no loose files there
+        expect_equal(setdiff(list.files(all.files=TRUE), .before), "path_model")
+        expect_equal(list.files("path_model", all.files=TRUE, no..=TRUE),
+                     "fitP.zip")
+        .entries <- zip::zip_list("path_model/fitP.zip")$filename
+        expect_true(all(c("fitP.R", "fitP-env.R", "fitP.csv") %in% .entries))
+        expect_false(any(grepl("/", .entries, fixed=TRUE)))
+        # and the loader reads its components by the bare name
+        .exdir <- withr::local_tempdir()
+        zip::unzip("path_model/fitP.zip", files="fitP.R", exdir=.exdir)
+        .loader <- readLines(file.path(.exdir, "fitP.R"))
+        expect_false(any(grepl("path_model", .loader, fixed=TRUE)))
+
+        # the full path: the archive is still flat and the loader holds no path
+        suppressMessages(saveFit(fitF, file.path(getwd(), "path_model", "fitA")))
+        expect_equal(getwd(), .wd)
+        .entries <- zip::zip_list("path_model/fitA.zip")$filename
+        expect_true("fitA.R" %in% .entries)
+        expect_false(any(grepl("/", .entries, fixed=TRUE)))
+        zip::unzip("path_model/fitA.zip", files="fitA.R", exdir=.exdir)
+        expect_false(any(grepl(getwd(), readLines(file.path(.exdir, "fitA.R")),
+                               fixed=TRUE)))
+
+        # zip=FALSE leaves the loose files in the directory, by the bare name
+        suppressMessages(saveFit(fitF, "path_model/fitQ", zip=FALSE))
+        expect_equal(getwd(), .wd)
+        expect_true(all(file.exists(file.path("path_model",
+                                              c("fitQ.R", "fitQ-env.R", "fitQ.csv")))))
+        expect_false(file.exists("path_model/fitQ.zip"))
+        expect_false(dir.exists("path_model/path_model"))
+        expect_false(any(grepl("path_model", readLines("path_model/fitQ.R"),
+                               fixed=TRUE)))
+        unlink("path_model", recursive=TRUE)
+      })
+
       fit2F <- suppressMessages(loadFit("fitF"))
       fit2S <- suppressMessages(loadFit(fitS))
+
+      test_that("a loaded fit builds its ui and model lists only on first use", {
+        # every model, and the ui, is built by rxode2::rxode2(); count calls
+        .cnt <- new.env()
+        .cnt$n <- 0L
+        suppressMessages(trace("rxode2",
+                               tracer = bquote(assign("n", get("n", envir = .(.cnt)) + 1L,
+                                                      envir = .(.cnt))),
+                               where = asNamespace("rxode2"), print = FALSE))
+        on.exit(suppressMessages(untrace("rxode2", where = asNamespace("rxode2"))),
+                add = TRUE)
+        .built <- function(expr) {
+          .n0 <- .cnt$n
+          force(expr)
+          .cnt$n - .n0
+        }
+        expect_equal(.built(.f <- suppressMessages(loadFit("fitF", checkVersion=FALSE))), 0L)
+        expect_equal(.built(.s <- suppressMessages(loadFit("fitS", checkVersion=FALSE))), 0L)
+        expect_equal(.built(list(.f$objf, .f$parFixed, .f$omega, head(as.data.frame(.f)))), 0L)
+        # the model list is compiled on first use
+        expect_gt(.built(.f$foceiModel), 0L)
+        expect_gt(.built(.s$saemModel), 0L)
+        # re-saving writes the kept scripts (and iniDf0 as read) back: nothing
+        # is built
+        .g <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
+        .d <- withr::local_tempdir()
+        expect_equal(.built(suppressMessages(saveFit(.g, file.path(.d, "resaved")))), 0L)
+        .r <- suppressMessages(loadFit(file.path(.d, "resaved.zip"), checkVersion=FALSE))
+        expect_equal(.r$iniDf0, fitF$iniDf0, ignore_attr = TRUE)
+        # with the original save's exact iniDf0 column types, not a fallback
+        .ldr <- function(z) {
+          .x <- withr::local_tempdir()
+          zip::unzip(z, exdir = .x, junkpaths = TRUE)
+          .l <- readLines(list.files(.x, pattern = "^[^-]*[.]R$", full.names = TRUE)[1])
+          .l[grepl("env$iniDf0", .l, fixed = TRUE)]
+        }
+        expect_equal(.ldr(file.path(.d, "resaved.zip")), .ldr("fitF.zip"))
+        # but a value assigned over a lazy item since loading is what is saved
+        .h <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
+        assign("foceiModel", "replaced after loading", envir = .h$env)
+        suppressMessages(saveFit(.h, file.path(.d, "changed")))
+        .c <- suppressMessages(loadFit(file.path(.d, "changed.zip"), checkVersion=FALSE))
+        expect_identical(get("foceiModel", envir = .c$env), "replaced after loading")
+        # and once an item is built, the object itself is saved, so a change
+        # made to it in place is kept
+        .k <- suppressMessages(loadFit("fitF", checkVersion=FALSE))
+        .m <- .k$foceiModel # built now
+        expect_null(.k$env$`..nlmixr2saveLazy..`[["foceiModel"]])
+        .u <- .k$ui
+        expect_null(.k$env$`..nlmixr2saveLazy..`[["ui"]])
+        invisible(.k$iniDf0)
+        expect_null(.k$env$`..nlmixr2saveLazy..`[["iniDf0"]])
+        # fitEquals() below compares every item, built, to the originals
+      })
 
       fitEquals(fitF, fit2F)
       fitEquals(fitS, fit2S)
