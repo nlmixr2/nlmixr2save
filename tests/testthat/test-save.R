@@ -1398,6 +1398,13 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(tools::md5sum("fitW.zip"), .md5)
         expect_setequal(list.files(all.files=TRUE, no..=TRUE),
                         c("fitW.zip", "run1-fitW.zip"))
+        # a prefix naming a directory that does not exist yet
+        withr::local_options(list(nlmixr2save.prefix="run2/"))
+        suppressMessages(.saveFitZipPlain(fitF, "fitW"))
+        expect_true(file.exists("run2/fitW.zip"))
+        expect_equal(tools::md5sum("fitW.zip"), .md5)
+        expect_true(inherits(suppressMessages(.loadFitZipPlain("fitW")),
+                             "nlmixr2FitData"))
       })
 
       test_that("nlmixr2saveShare writes shareable zips and leaves the fit alone", {

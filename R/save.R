@@ -1555,6 +1555,8 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   dir.create(.stage)
   on.exit(unlink(.stage, recursive=TRUE, force=TRUE), add=TRUE)
   saveFit(value, file.path(.stage, x), zip=TRUE, data=data)
+  # a prefix can name a directory, e.g. "run1/"
+  if (!dir.exists(dirname(.base))) dir.create(dirname(.base), recursive=TRUE)
   if (!file.copy(file.path(.stage, paste0(x, ".zip")), paste0(.base, ".zip"),
                  overwrite=TRUE)) {
     stop("could not write '", .base, ".zip'", call.=FALSE)
@@ -1567,8 +1569,9 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   # the `:=` caller performs its own version check/rerun handling.  Load the
   # archive itself rather than resolving a name: a variable can be named
   # `fit.zip`, whose cache fit.zip.zip sits beside a `fit`'s fit.zip
+  # saveFit() names the files inside by the bare base name
   .nlmixr2saveLoadZip(paste0(.nlmixr2saveBase(x), ".zip"), checkVersion=FALSE,
-                      base=x)
+                      base=basename(x))
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {
