@@ -1,5 +1,16 @@
 # nlmixr2save 0.2.1
 
+* `saveFit()` no longer zips and deletes the files of another fit whose name
+  extends its own with `-<suffix>` (#10).  It picked a fit's files out of the
+  target directory by the name pattern `<file>-*`, so with the loose files of
+  `saveFit(fit2, "fit-alt", zip=FALSE)` in the directory, `saveFit(fit)` put
+  them in `fit.zip` and then deleted them.  The same match also swept in the
+  files an earlier `zip=FALSE` save of the same name left behind, so an item
+  the new fit lacks (e.g. `origData` with `data=FALSE`) came back from the old
+  fit on load.  `saveFit()` now writes every file into a private temporary
+  directory and zips (or, with `zip=FALSE`, copies) only those, so files
+  already in the target directory are never read, zipped or removed.
+
 * `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
   `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`
   both work from any working directory.  It used to append `.zip` to whatever

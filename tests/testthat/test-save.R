@@ -523,38 +523,6 @@ test_that(".nlmixr2saveRestoreIniDf0 matches iniDf0 to the installed rxode2", {
   expect_false(exists("iniDf0", envir=.noIni, inherits=FALSE))
 })
 
-test_that(".nlmixr2saveFitFiles matches one fit's files and no others", {
-  # what comes back is zipped and then unlinked, so matching one file too many
-  # destroys another cache and one too few leaves an unloadable one
-  withr::with_tempdir({
-    file.create(c("fit-env.R", "fit-ui.R", "fit.csv", "fit.R", "fit.zip",
-                  "myfit-env.R", "myfit.csv", "fitExtra-env.R", "fit2.csv",
-                  "my.fit-env.R", "my.fit.csv", "my_fit-env.R", "my_fit.csv",
-                  "fit+1-env.R", ".dot-env.R", ".dot.csv"))
-
-    expect_equal(sort(.nlmixr2saveFitFiles("fit")),
-                 c("fit-env.R", "fit-ui.R", "fit.R", "fit.csv"))
-    # not the .zip, and not a longer name that merely starts the same way
-    expect_false(any(c("fit.zip", "fit2.csv", "fitExtra-env.R", "myfit.csv") %in%
-                       .nlmixr2saveFitFiles("fit")))
-    # a base name is a variable name, so it can hold regexp metacharacters:
-    # as a pattern, "my.fit" would also match my_fit's files
-    expect_equal(sort(.nlmixr2saveFitFiles("my.fit")),
-                 c("my.fit-env.R", "my.fit.csv"))
-    expect_equal(sort(.nlmixr2saveFitFiles("my_fit")),
-                 c("my_fit-env.R", "my_fit.csv"))
-    expect_equal(.nlmixr2saveFitFiles("fit+1"), "fit+1-env.R")
-    # `.dot` is an ordinary R name, and its files are hidden
-    expect_equal(sort(.nlmixr2saveFitFiles(".dot")), c(".dot-env.R", ".dot.csv"))
-    expect_equal(length(.nlmixr2saveFitFiles("nosuch")), 0)
-
-    dir.create("sub")
-    file.create(c("sub/a-env.R", "sub/a.csv", "sub/ab.csv"))
-    expect_equal(sort(.nlmixr2saveFitFiles(file.path("sub", "a"))),
-                 c("sub/a-env.R", "sub/a.csv"))
-  })
-})
-
 test_that("saveFitRandom adds and removes registered random functions", {
   .old <- saveFitRandom()
   on.exit(saveFitRandom(.old), add = TRUE)
@@ -1369,6 +1337,47 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
                             suppressMessages(saveFit(fitF, "fitFndOpt")))
         .ndo <- suppressMessages(loadFit("fitFndOpt", checkVersion=FALSE))
         expect_null(.ndo$origData)
+      })
+
+      test_that("saveFit() leaves another fit's files alone (#10)", {
+        .d <- withr::local_tempdir()
+        # `fit-alt` extends `fit` with -<suffix>; its loose files used to be
+        # zipped into fit.zip and then deleted
+        suppressMessages(saveFit(fitF, file.path(.d, "fitX-alt"), zip=FALSE))
+        .alt <- list.files(.d, all.files=TRUE, no..=TRUE)
+        .altMd5 <- tools::md5sum(file.path(.d, .alt))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitX")))
+        expect_setequal(list.files(.d, all.files=TRUE, no..=TRUE),
+                        c(.alt, "fitX.zip"))
+        expect_equal(tools::md5sum(file.path(.d, .alt)), .altMd5)
+        .entries <- zip::zip_list(file.path(.d, "fitX.zip"))$filename
+        expect_false(any(startsWith(.entries, "fitX-alt")))
+        # both still load
+        expect_true(inherits(suppressMessages(
+          loadFit(file.path(.d, "fitX"), checkVersion=FALSE)), "nlmixr2FitData"))
+        expect_true(inherits(suppressMessages(
+          loadFit(file.path(.d, "fitX-alt"), checkVersion=FALSE)), "nlmixr2FitData"))
+        # a working directory that is not the target is untouched as well
+        expect_false(file.exists("fitX.zip"))
+      })
+
+      test_that("a stale zip=FALSE save does not leak into a new save (#10)", {
+        .d <- withr::local_tempdir()
+        suppressMessages(saveFit(fitF, file.path(.d, "fitY"), zip=FALSE))
+        expect_true(file.exists(file.path(.d, "fitY-origData.csv")))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitY"), data=FALSE))
+        expect_false("fitY-origData.csv" %in%
+                       zip::zip_list(file.path(.d, "fitY.zip"))$filename)
+        .y <- suppressMessages(loadFit(file.path(.d, "fitY.zip"), checkVersion=FALSE))
+        expect_null(.y$origData)
+        # and loose files left beside it are still readable after a zip=FALSE
+        # resave that lacks the item: the new loader does not read them
+        suppressMessages(saveFit(fitF, file.path(.d, "fitZ"), zip=FALSE))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitZ"), zip=FALSE, data=FALSE))
+        expect_false(any(grepl("origData", readLines(file.path(.d, "fitZ.R")),
+                               fixed=TRUE)))
+        .z <- suppressMessages(loadFit(file.path(.d, "fitZ"), checkVersion=FALSE))
+        expect_null(.z$origData)
       })
 
       test_that("nlmixr2saveShare writes shareable zips and leaves the fit alone", {

@@ -12,37 +12,6 @@
 .saveFitEnv$fun <- ""
 .saveFitEnv$restore <- FALSE
 
-#' The unzipped files belonging to one saved fit
-#'
-#' That is `<file>-*` plus `<file>.csv` and `<file>.R`.
-#'
-#' Matched literally rather than by regexp.  A base name is a variable name or
-#' a `nlmixr2save.prefix`, so it can hold regexp metacharacters -- `my.fit` is
-#' an ordinary R name, and as a pattern its `.` also matches `my_fit`'s files.
-#' The caller zips what it gets back and then unlinks it, so matching one
-#' character too many silently destroys another cache; matching one too few
-#' leaves a cache that cannot be loaded.
-#'
-#' @param file base name of the fit, possibly with a directory
-#' @return the matching paths, relative to the working directory
-#' @noRd
-#' @author Matthew L. Fidler
-.nlmixr2saveFitFiles <- function(file) {
-  .base <- basename(file)
-  .dir <- dirname(file)
-  # dirname("fit") is "." but dirname("") is "", and file.path("", x) would
-  # make that an absolute path at the filesystem root
-  if (.dir == "") .dir <- "."
-  # all.files: a base name can start with a dot, since `.fit` is an ordinary
-  # R name and saveFit() takes the base name from the variable
-  .all <- setdiff(list.files(.dir, all.files=TRUE), c(".", ".."))
-  .keep <- startsWith(.all, .base) &
-    (substring(.all, nchar(.base) + 1L, nchar(.base) + 1L) == "-" |
-       .all == paste0(.base, ".csv") |
-       .all == paste0(.base, ".R"))
-  gsub("^[.]/", "", file.path(.dir, .all[.keep]))
-}
-
 .minfo <- function (text, ..., .envir = parent.frame()) {
   .opt <- getOption("nlmixr2save.quiet", FALSE)
   if (checkmate::testLogical(.opt,
@@ -755,10 +724,37 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
+  .nlmixr2saveFitStaged(fit, file, zip=zip, data=data, table=FALSE)
+}
+
+#' Write a fit's files in a private directory, then zip or copy them out
+#'
+#' Every file is written into a fresh temporary directory, and only what is
+#' there goes into the loader, the archive and the target directory.  Picking
+#' a fit's files out of the target directory by name instead cannot tell them
+#' apart from files already there: `-` is legal in a base name, so a fit saved
+#' as `fit` claimed (zipped, then deleted) every file of one saved as
+#' `fit-alt`, and an item this fit lacks was read from the file an earlier
+#' `zip=FALSE` save of the same name left behind.
+#' @param fit the fit
+#' @param file the `file` argument given to `saveFit()` (not missing)
+#' @param zip,data as in `saveFit()`
+#' @param table whether to write the fit table as `<file>.csv`
+#' @return nothing
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveFitStaged <- function(fit, file, zip, data, table) {
   .target <- .nlmixr2saveSaveTarget(file)
   file <- .target$file
-  .owd <- setwd(.target$dir)
-  on.exit(setwd(.owd), add=TRUE)
+  .outdir <- normalizePath(.target$dir, mustWork=TRUE)
+  .stage <- tempfile("nlmixr2save-")
+  dir.create(.stage)
+  on.exit(unlink(.stage, recursive=TRUE, force=TRUE), add=TRUE)
+  .owd <- setwd(.stage)
+  on.exit(setwd(.owd), add=TRUE, after=FALSE)
+  if (isTRUE(table)) {
+    utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
+  }
   .item <- ls(envir=fit$env, all.names=TRUE)
   .str <- character(0)
   # a loaded fit keeps its compiled model lists as unforced promises, with
@@ -860,7 +856,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   .str <- .str[.str != "NULL = NULL"]
   .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
   writeLines(.str, con = paste0(file,"-env.R"))
-  .files <- .nlmixr2saveFitFiles(file)
+  # the stage holds only what this save wrote
+  .files <- list.files(".", all.files=TRUE, no..=TRUE)
   # nlmixr2est <= 6.0 stores parFixedDf with named "Estimate"/"SE" columns;
   # the $parFixed refactor (nlmixr2est#645) stores them unnamed.  Record
   # which structure this fit uses so the restore script rebuilds it exactly.
@@ -874,13 +871,17 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   writeLines(.nlmixr2saveLoaderText(file, .files, .parFixedDfNamed,
                                     .nlmixr2saveIniDf0Types(fit)),
              con = paste0(file,".R"))
+  .files <- c(.files, paste0(file, ".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
-    .files <- .nlmixr2saveFitFiles(file)
     zip::zip(zipfile = paste0(file, ".zip"),
              files = .files)
-    .minfo("removing unzipped fit files")
-    lapply(.files, unlink)
+    .files <- paste0(file, ".zip")
+  }
+  .ok <- file.copy(.files, .outdir, overwrite=TRUE)
+  if (!all(.ok)) {
+    stop("could not write ", paste(.files[!.ok], collapse=", "), " to '",
+         .target$dir, "'", call.=FALSE)
   }
   invisible()
 }
@@ -891,12 +892,7 @@ saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
-  .target <- .nlmixr2saveSaveTarget(file)
-  file <- .target$file
-  .owd <- setwd(.target$dir)
-  on.exit(setwd(.owd), add=TRUE)
-  utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
-  saveFit.nlmixr2FitCore(fit, file, zip=zip, data=data)
+  .nlmixr2saveFitStaged(fit, file, zip=zip, data=data, table=TRUE)
 }
 
 #' @rdname saveFit
