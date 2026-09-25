@@ -1,4 +1,4 @@
-# nlmixr2save 0.2.0
+# nlmixr2save 0.2.1
 
 * `loadFit()` (and therefore `:=`) now restores the fit table's `ID` column as a
   factor.  The table round-trips through a plain `.csv`, so `ID` came back as an
@@ -39,6 +39,8 @@
   (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the
   core method with a hardcoded `zip=TRUE`, so the argument was silently ignored
   for every fit that carries data.
+
+# nlmixr2save 0.2.0
 
 * `nlmixrDataSimplify()` gained `est` and `control` arguments and no longer
   drops the covariate columns that `est="vae"` searches for.  The VAE covariate
