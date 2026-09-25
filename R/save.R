@@ -893,9 +893,17 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   } else {
     # the loader is replaced last, and the one there now removed first: when
     # a copy out fails, no loader is left reading a mix of old and new files.
-    # An archive from an earlier save under this name goes too, as a zip=TRUE
-    # save would overwrite it: loadFit() prefers it to the new loose files.
-    unlink(file.path(.outdir, paste0(file, c(".R", ".zip"))))
+    unlink(file.path(.outdir, paste0(file, ".R")))
+    # An archive from an earlier save under this name goes too, as loadFit()
+    # prefers it to the new loose files; only if it is one (its loader and
+    # `-env.R` inside), as an unrelated archive of that name is not the fit's
+    .zip <- file.path(.outdir, paste0(file, ".zip"))
+    if (file.exists(.zip) && !dir.exists(.zip)) {
+      .in <- tryCatch(zip::zip_list(.zip)$filename, error=function(e) character(0))
+      if (all(paste0(file, c(".R", "-env.R")) %in% basename(.in))) {
+        unlink(.zip)
+      }
+    }
   }
   for (.f in .files) {
     .to <- file.path(.outdir, .f)

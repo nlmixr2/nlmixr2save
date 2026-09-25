@@ -1384,6 +1384,13 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
         suppressMessages(saveFit(fitF, file.path(.d, "fitV"), zip=FALSE, data=FALSE))
         expect_false(file.exists(file.path(.d, "fitV.zip")))
+        # an unrelated archive of that name is kept
+        withr::with_dir(.d, {
+          writeLines("data", "raw.csv")
+          zip::zip("fitR.zip", "raw.csv")
+        })
+        suppressMessages(saveFit(fitF, file.path(.d, "fitR"), zip=FALSE))
+        expect_equal(zip::zip_list(file.path(.d, "fitR.zip"))$filename, "raw.csv")
         .v <- suppressMessages(loadFit(file.path(.d, "fitV"), checkVersion=FALSE))
         expect_null(.v$origData)
         # and a zip=TRUE save retires the loader of a zip=FALSE one
