@@ -1,4 +1,4 @@
-# nlmixr2save (development version)
+# nlmixr2save 0.2.1
 
 * `loadFit()` now loads a fit given as a path, with or without the `.zip` (or
   `.R`) extension: `loadFit("path/to/fit.zip")` and `loadFit("path/to/fit")`
@@ -122,6 +122,8 @@
   (a `nlmixr2FitData`).  The method wrote the fit `.csv` and then called the
   core method with a hardcoded `zip=TRUE`, so the argument was silently ignored
   for every fit that carries data.
+
+# nlmixr2save 0.2.0
 
 * `nlmixrDataSimplify()` gained `est` and `control` arguments and no longer
   drops the covariate columns that `est="vae"` searches for.  The VAE covariate
