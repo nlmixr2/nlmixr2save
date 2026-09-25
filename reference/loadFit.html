@@ -47,7 +47,11 @@
 
 
 <dl><dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
-<dd><p>the base name of the files to load the fit from.</p></dd>
+<dd><p>the fit to load: the base name of the files it was saved to
+(<code>"fit"</code> loads <code>fit.zip</code>, or <code>fit.R</code> for a fit saved with <code>zip=FALSE</code>),
+or the path of that <code>.zip</code> or <code>.R</code> file itself.  It may include a
+directory, e.g. <code>"path/to/fit"</code> or <code>"path/to/fit.zip"</code>; the working
+directory is not changed and nothing is extracted into it.</p></dd>
 
 
 <dt id="arg-checkversion">checkVersion<a class="anchor" aria-label="anchor" href="#arg-checkversion"></a></dt>

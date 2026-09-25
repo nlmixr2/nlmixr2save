@@ -7,3 +7,4 @@
 - [Tracking the nlmixr2est and rxode2 versions of a saved
   fit](version-tracking.md):
 - [Sharing a fit without the original data](sharing-fits.md):
+- [Keeping fits in a models directory](models-directory.md):

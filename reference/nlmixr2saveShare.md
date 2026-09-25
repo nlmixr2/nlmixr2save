@@ -169,18 +169,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
-#> ℹ loading fit from fit.R
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#> ℹ parameter labels from comments are typically ignored in non-interactive mode
-#> ℹ Need to run with the source intact to parse comments
-#> ℹ removing unzipped fit files
+#> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data) to fit-noData.zip
 #> ℹ saving fit item: .fdFullCov
 #> ℹ saving fit item: .fdFullS
@@ -262,18 +251,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
-#> ℹ loading fit from fit.R
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#> ℹ parameter labels from comments are typically ignored in non-interactive mode
-#> ℹ Need to run with the source intact to parse comments
-#> ℹ removing unzipped fit files
+#> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data, no output tables) to fit-noData-noFit.zip
 #> ℹ saving fit item: .fdFullCov
 #> ℹ saving fit item: .fdFullS
@@ -353,6 +331,10 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#>  
+#>  
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
 # }

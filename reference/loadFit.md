@@ -12,7 +12,11 @@ loadFit(file, checkVersion = .nlmixr2saveCheckVersion())
 
 - file:
 
-  the base name of the files to load the fit from.
+  the fit to load: the base name of the files it was saved to (`"fit"`
+  loads `fit.zip`, or `fit.R` for a fit saved with `zip=FALSE`), or the
+  path of that `.zip` or `.R` file itself. It may include a directory,
+  e.g. `"path/to/fit"` or `"path/to/fit.zip"`; the working directory is
+  not changed and nothing is extracted into it.
 
 - checkVersion:
 

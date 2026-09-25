@@ -259,18 +259,7 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#> ℹ loading fit from fit.R
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#> ℹ parameter labels from comments are typically ignored in non-interactive mode
-#> ℹ Need to run with the source intact to parse comments
-#> ℹ removing unzipped fit files
+#> ℹ loading fit from fit.zip
 #>  
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
@@ -279,18 +268,7 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#> ℹ loading fit from fit.R
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
-#> ℹ parameter labels from comments are typically ignored in non-interactive mode
-#> ℹ Need to run with the source intact to parse comments
-#> ℹ removing unzipped fit files
+#> ℹ loading fit from fit.zip
 #> ℹ fit in fit.zip does not match current fit; removing and refitting
 #>  
 #>  
@@ -321,7 +299,7 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8616
+#> → compress parHistData in nlmixr2 object, save 8608
 #> → compress phiM in nlmixr2 object, save 439912
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum

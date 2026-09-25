@@ -25,7 +25,11 @@ saveFit(fit, file, zip = TRUE, data = .nlmixr2saveData())
 
 - file:
 
-  the base name of the files to save the fit to.
+  the base name of the files to save the fit to. It may include a
+  directory, e.g. `"path/to/fit"`: the files are written there (the
+  directory is created if needed) and the archive `path/to/fit.zip`
+  holds them under the bare name `fit`, so it can be moved and loaded
+  from anywhere.
 
 - zip:
 
@@ -176,29 +180,22 @@ Matthew L. Fidler
 #> ℹ saving fit item: ui
 #> ℹ zipping fit files
 #> ℹ removing unzipped fit files
-#> ℹ loading fit from fit.R
-#>  
-#>  
-#>  
-#>  
-#>  
-#>  
+#> ℹ loading fit from fit.zip
 #>  
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#> ℹ removing unzipped fit files
 #> ── nlmixr² FOCEi (outer: bobyqa) ──
 #> 
 #>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8076 373.4073 393.587      -179.7037        538873.5        3771.305
+#> FOCEi 116.8076 373.4073 393.587      -179.7037        538870.8        3771.287
 #> 
 #> ── Time (sec $time): ──
 #> 
 #>             setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.2363176 0.1944412  0.2814882      0.027       0.024 0.043    0.001
-#>            other
-#> elapsed 0.130753
+#> elapsed 0.2782143 0.1898304  0.2442869      0.025       0.037 0.039    0.001
+#>             other
+#> elapsed 0.1086684
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
