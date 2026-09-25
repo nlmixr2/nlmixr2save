@@ -714,22 +714,33 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' @author Matthew L. Fidler
 .nlmixr2saveSaveTarget <- function(file) {
   .dir <- dirname(file)
-  if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE, showWarnings=FALSE)
+  if (!dir.exists(.dir)) {
+    dir.create(.dir, recursive = TRUE, showWarnings = FALSE)
+  }
   # a file of that name is not a directory to save in (nor to copy over)
   if (!dir.exists(.dir)) {
-    stop("cannot save the fit in '", .dir, "': it is not a directory",
-         call.=FALSE)
+    stop(
+      "cannot save the fit in '",
+      .dir,
+      "': it is not a directory",
+      call. = FALSE
+    )
   }
-  list(dir=.dir, file=basename(file))
+  list(dir = .dir, file = basename(file))
 }
 
 #' @rdname saveFit
 #' @export
-saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
+saveFit.nlmixr2FitCore <- function(
+  fit,
+  file,
+  zip = TRUE,
+  data = .nlmixr2saveData()
+) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
-  .nlmixr2saveFitStaged(fit, file, zip=zip, data=data, table=FALSE)
+  .nlmixr2saveFitStaged(fit, file, zip = zip, data = data, table = FALSE)
 }
 
 #' Write a fit's files in a private directory, then zip or copy them out
@@ -751,16 +762,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
 .nlmixr2saveFitStaged <- function(fit, file, zip, data, table) {
   .target <- .nlmixr2saveSaveTarget(file)
   file <- .target$file
-  .outdir <- normalizePath(.target$dir, mustWork=TRUE)
+  .outdir <- normalizePath(.target$dir, mustWork = TRUE)
   .stage <- tempfile("nlmixr2save-")
   dir.create(.stage)
-  on.exit(unlink(.stage, recursive=TRUE, force=TRUE), add=TRUE)
+  on.exit(unlink(.stage, recursive = TRUE, force = TRUE), add = TRUE)
   .owd <- setwd(.stage)
-  on.exit(setwd(.owd), add=TRUE, after=FALSE)
+  on.exit(setwd(.owd), add = TRUE, after = FALSE)
   if (isTRUE(table)) {
-    utils::write.csv(fit, paste0(file, ".csv"), row.names=FALSE)
+    utils::write.csv(fit, paste0(file, ".csv"), row.names = FALSE)
   }
-  .item <- ls(envir=fit$env, all.names=TRUE)
+  .item <- ls(envir = fit$env, all.names = TRUE)
   .str <- character(0)
   # a loaded fit keeps its compiled model lists as unforced promises, with
   # their script text; write that back rather than force (compile) them
@@ -768,12 +779,15 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   for (.i in .item) {
     # re-read each time: saving an earlier item can build a lazy one, which
     # drops its kept text
-    .lazy <- get0("..nlmixr2saveLazy..", envir=fit$env, inherits=FALSE)
+    .lazy <- get0("..nlmixr2saveLazy..", envir = fit$env, inherits = FALSE)
     # only while the binding is still the loader's promise and unbuilt (a
     # promise drops its kept text when it is built): a value assigned since
     # loading, or one changed in place after building, must be saved
-    if (is.list(.lazy) && !is.null(.lazy[[.i]]) &&
-          .nlmixr2saveIsPromise(.i, fit$env)) {
+    if (
+      is.list(.lazy) &&
+        !is.null(.lazy[[.i]]) &&
+        .nlmixr2saveIsPromise(.i, fit$env)
+    ) {
       .minfo(paste0("saving fit item: ", .i))
       if (is.data.frame(.lazy[[.i]])) {
         # iniDf0 as read; loading repairs it again, without building the ui now
@@ -784,44 +798,61 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
       next
     }
     # .nlmixr2saveMeta is written once, below, from the preserved-or-fresh value
-    if (.i == ".nlmixr2saveMeta") next
+    if (.i == ".nlmixr2saveMeta") {
+      next
+    }
     # when data=FALSE the original dataset is left out of the zip entirely
-    if (!isTRUE(data) && .i == "origData") next
+    if (!isTRUE(data) && .i == "origData") {
+      next
+    }
     # `model` is always regenerated from `ui` by the loader
     # (env$model <- rxode2::model(env$ui)); saving it is redundant and, for a
     # reloaded fit (where it is a `call`), triggers a spurious "could not
     # determine how to save" warning.
-    if (.i == "model") next
+    if (.i == "model") {
+      next
+    }
     .minfo(paste0("saving fit item: ", .i))
-    .obj <- get(.i, envir=fit$env)
+    .obj <- get(.i, envir = fit$env)
     if (is.raw(.obj)) {
       # decompresses object; a call, not parsed text, so any item name works
       .obj <- eval(call("$", quote(fit), as.name(.i)))
     }
     if (!saveFitItem(.obj, .i, file)) {
       if (.i %in% c("phiC", "phiH")) {
-        .lines <- deparse(as.call(c(quote(`list`), lapply(seq_along(.obj), function(i) {
-          .ret <- .saveDeparse(.obj[[i]], "x")
-          if (!is.null(.ret)) {
-            return(.ret[[3]])
-          }
-          NULL # nocov
-        }))))
+        .lines <- deparse(as.call(c(
+          quote(`list`),
+          lapply(seq_along(.obj), function(i) {
+            .ret <- .saveDeparse(.obj[[i]], "x")
+            if (!is.null(.ret)) {
+              return(.ret[[3]])
+            }
+            NULL # nocov
+          })
+        )))
         .lines[1] <- paste0(.i, " <- ", .lines[1])
         if (!is.null(names(.obj))) {
-          .lines <- c(.lines,
-                      paste0("names(", .i, ") <- ", deparse1(names(.obj))))
+          .lines <- c(
+            .lines,
+            paste0("names(", .i, ") <- ", deparse1(names(.obj)))
+          )
         }
-        writeLines(.lines, con = paste0(file,"-", .i, ".R"))
+        writeLines(.lines, con = paste0(file, "-", .i, ".R"))
       } else {
         .expr <- .saveDeparse(.obj, .i)
         if (!is.null(.expr)) {
           .expr[[1]] <- quote(`=`)
           .expr <- as.call(.expr)
-          .str <- c(.str, paste(deparse(.expr), collapse="\n"))
+          .str <- c(.str, paste(deparse(.expr), collapse = "\n"))
         } else {
-          warning("could not determine how to save object of class ", paste(class(.obj), collapse=", "),
-                  " for item ", .i, "; as a text-file, reverting to .rds format", call.=FALSE)
+          warning(
+            "could not determine how to save object of class ",
+            paste(class(.obj), collapse = ", "),
+            " for item ",
+            .i,
+            "; as a text-file, reverting to .rds format",
+            call. = FALSE
+          )
           saveRDS(.obj, paste0(file, "-", .i, ".rds"))
         }
       }
@@ -831,8 +862,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   # the nlmixr2save version); preserve it across a load -> save round-trip (it
   # records the run version, not the save version), otherwise stamp the
   # currently installed packages.
-  .meta <- if (exists(".nlmixr2saveMeta", envir=fit$env, inherits=FALSE)) {
-    get(".nlmixr2saveMeta", envir=fit$env)
+  .meta <- if (exists(".nlmixr2saveMeta", envir = fit$env, inherits = FALSE)) {
+    get(".nlmixr2saveMeta", envir = fit$env)
   } else {
     .nlmixr2saveMeta()
   }
@@ -841,8 +872,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   # grown over nlmixr2est versions, e.g. "Analytic Gradient").  A hardcoded
   # fallback in the loader still covers fits saved before this was recorded.
   .parHistTypeLevel <- NULL
-  if (exists("parHistData", envir=fit$env, inherits=FALSE)) {
-    .phd <- get("parHistData", envir=fit$env)
+  if (exists("parHistData", envir = fit$env, inherits = FALSE)) {
+    .phd <- get("parHistData", envir = fit$env)
     if (is.raw(.phd)) {
       # nlmixr2est stores parHistData compressed; `$` decompresses it
       .phd <- fit$parHistData
@@ -853,41 +884,58 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   }
   .cls <- as.character(class(fit))
   attr(.cls, ".foceiEnv") <- NULL
-  .str <- c(.str, paste0("..class.. = ", paste(deparse(.cls), collapse="\n")),
-            paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse="\n")),
-            paste0("..parHistType.level.. = ",
-                   paste(deparse(.parHistTypeLevel), collapse="\n")),
-            paste0(".nlmixr2saveMeta = ", paste(deparse(.meta), collapse="\n")))
+  .str <- c(
+    .str,
+    paste0("..class.. = ", paste(deparse(.cls), collapse = "\n")),
+    paste0("..id.level.. = ", paste(deparse(levels(fit$ID)), collapse = "\n")),
+    paste0(
+      "..parHistType.level.. = ",
+      paste(deparse(.parHistTypeLevel), collapse = "\n")
+    ),
+    paste0(".nlmixr2saveMeta = ", paste(deparse(.meta), collapse = "\n"))
+  )
   .str <- .str[.str != "NULL = NULL"]
-  .str <- paste0("env <- list(", paste(.str, collapse=",\n"), ")\nenv <- list2env(env)\n")
-  writeLines(.str, con = paste0(file,"-env.R"))
+  .str <- paste0(
+    "env <- list(",
+    paste(.str, collapse = ",\n"),
+    ")\nenv <- list2env(env)\n"
+  )
+  writeLines(.str, con = paste0(file, "-env.R"))
   # the stage holds only what this save wrote
-  .files <- list.files(".", all.files=TRUE, no..=TRUE)
+  .files <- list.files(".", all.files = TRUE, no.. = TRUE)
   # nlmixr2est <= 6.0 stores parFixedDf with named "Estimate"/"SE" columns;
   # the $parFixed refactor (nlmixr2est#645) stores them unnamed.  Record
   # which structure this fit uses so the restore script rebuilds it exactly.
   .parFixedDfNamed <- TRUE
-  if (exists("parFixedDf", envir=fit$env)) {
-    .pfd <- get("parFixedDf", envir=fit$env)
+  if (exists("parFixedDf", envir = fit$env)) {
+    .pfd <- get("parFixedDf", envir = fit$env)
     if (is.data.frame(.pfd) && !is.null(.pfd$Estimate)) {
       .parFixedDfNamed <- !is.null(names(.pfd$Estimate))
     }
   }
-  writeLines(.nlmixr2saveLoaderText(file, .files, .parFixedDfNamed,
-                                    .nlmixr2saveIniDf0Types(fit)),
-             con = paste0(file,".R"))
+  writeLines(
+    .nlmixr2saveLoaderText(
+      file,
+      .files,
+      .parFixedDfNamed,
+      .nlmixr2saveIniDf0Types(fit)
+    ),
+    con = paste0(file, ".R")
+  )
   .files <- c(.files, paste0(file, ".R"))
   if (isTRUE(zip)) {
     .minfo("zipping fit files")
-    zip::zip(zipfile = paste0(file, ".zip"),
-             files = .files)
+    zip::zip(zipfile = paste0(file, ".zip"), files = .files)
     .files <- paste0(file, ".zip")
     # the loader of an earlier zip=FALSE save under this name, which would
     # load the old fit were the archive moved; only if it is one, as a script
     # the user wrote under that name must be left alone
     .old <- file.path(.outdir, paste0(file, ".R"))
-    if (file.exists(.old) && !dir.exists(.old) &&
-          .nlmixr2saveLoaderUsable(readLines(.old, warn=FALSE), file)) {
+    if (
+      file.exists(.old) &&
+        !dir.exists(.old) &&
+        .nlmixr2saveLoaderUsable(readLines(.old, warn = FALSE), file)
+    ) {
       unlink(.old)
     }
   } else {
@@ -899,7 +947,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     # `-env.R` inside), as an unrelated archive of that name is not the fit's
     .zip <- file.path(.outdir, paste0(file, ".zip"))
     if (file.exists(.zip) && !dir.exists(.zip)) {
-      .in <- tryCatch(zip::zip_list(.zip)$filename, error=function(e) character(0))
+      .in <- tryCatch(zip::zip_list(.zip)$filename, error = function(e) {
+        character(0)
+      })
       if (all(paste0(file, c(".R", "-env.R")) %in% basename(.in))) {
         unlink(.zip)
       }
@@ -908,8 +958,8 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
   for (.f in .files) {
     .to <- file.path(.outdir, .f)
     # file.copy() onto a directory copies into it, and reports success
-    if (dir.exists(.to) || !file.copy(.f, .to, overwrite=TRUE)) {
-      stop("could not write '", .f, "' to '", .target$dir, "'", call.=FALSE)
+    if (dir.exists(.to) || !file.copy(.f, .to, overwrite = TRUE)) {
+      stop("could not write '", .f, "' to '", .target$dir, "'", call. = FALSE)
     }
   }
   invisible()
@@ -917,11 +967,16 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
 
 #' @rdname saveFit
 #' @export
-saveFit.nlmixr2FitData <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
+saveFit.nlmixr2FitData <- function(
+  fit,
+  file,
+  zip = TRUE,
+  data = .nlmixr2saveData()
+) {
   if (missing(file)) {
     file <- as.character(substitute(fit))
   }
-  .nlmixr2saveFitStaged(fit, file, zip=zip, data=data, table=TRUE)
+  .nlmixr2saveFitStaged(fit, file, zip = zip, data = data, table = TRUE)
 }
 
 #' @rdname saveFit
@@ -1376,9 +1431,11 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' @return the fit
 #' @noRd
 #' @author Matthew L. Fidler
-.nlmixr2saveLoadZip <- function(zip, checkVersion,
-                                base=sub("[.]zip$", "", basename(zip),
-                                         ignore.case=TRUE)) {
+.nlmixr2saveLoadZip <- function(
+  zip,
+  checkVersion,
+  base = sub("[.]zip$", "", basename(zip), ignore.case = TRUE)
+) {
   .zip <- zip
   .base <- base
   # extract to a private directory: extracting into the working directory
@@ -1386,21 +1443,25 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   # overwrote (then deleted) same-named files that were already there
   .exdir <- tempfile("nlmixr2save-")
   dir.create(.exdir)
-  on.exit(unlink(.exdir, recursive=TRUE, force=TRUE), add=TRUE)
+  on.exit(unlink(.exdir, recursive = TRUE, force = TRUE), add = TRUE)
   # flat: an archive written by an older saveFit() given a path stores its
   # files under that whole path (e.g. home/me/models/fit.R)
   .entries <- zip::zip_list(.zip)$filename
   .entries <- .entries[!endsWith(.entries, "/")]
   .dup <- unique(basename(.entries)[duplicated(basename(.entries))])
   if (length(.dup)) {
-    stop(.zip, " holds more than one file named ",
-         paste(.dup, collapse=", "), " in different directories",
-         call.=FALSE)
+    stop(
+      .zip,
+      " holds more than one file named ",
+      paste(.dup, collapse = ", "),
+      " in different directories",
+      call. = FALSE
+    )
   }
-  zip::unzip(.zip, exdir=.exdir, junkpaths=TRUE)
+  zip::unzip(.zip, exdir = .exdir, junkpaths = TRUE)
   .loader <- .nlmixr2saveFindLoader(.exdir, .base)
   if (is.null(.loader)) {
-    stop("cannot find the fit loader script inside ", .zip, call.=FALSE)
+    stop("cannot find the fit loader script inside ", .zip, call. = FALSE)
   }
   .minfo(paste0("loading fit from ", .zip))
   .nlmixr2saveSourceLoader(file.path(.exdir, .loader), checkVersion)
@@ -1572,23 +1633,30 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
 #'   original dataset is stored (passed through to [saveFit()])
 #' @return the fit (load), or `value` invisibly (save)
 #' @noRd
-.saveFitZipPlain <- function(value, x, data=.nlmixr2saveData()) {
+.saveFitZipPlain <- function(value, x, data = .nlmixr2saveData()) {
   .base <- .nlmixr2saveBase(x)
   if (identical(x, .base)) {
-    saveFit(value, x, zip=TRUE, data=data)
+    saveFit(value, x, zip = TRUE, data = data)
     return(invisible(value))
   }
   .stage <- tempfile("nlmixr2save-")
   dir.create(.stage)
-  on.exit(unlink(.stage, recursive=TRUE, force=TRUE), add=TRUE)
-  saveFit(value, file.path(.stage, x), zip=TRUE, data=data)
+  on.exit(unlink(.stage, recursive = TRUE, force = TRUE), add = TRUE)
+  saveFit(value, file.path(.stage, x), zip = TRUE, data = data)
   # a prefix can name a directory, e.g. "run1/"
-  if (!dir.exists(dirname(.base))) dir.create(dirname(.base), recursive=TRUE)
+  if (!dir.exists(dirname(.base))) {
+    dir.create(dirname(.base), recursive = TRUE)
+  }
   # file.copy() onto a directory copies into it, and reports success
-  if (dir.exists(paste0(.base, ".zip")) ||
-        !file.copy(file.path(.stage, paste0(x, ".zip")), paste0(.base, ".zip"),
-                   overwrite=TRUE)) {
-    stop("could not write '", .base, ".zip'", call.=FALSE)
+  if (
+    dir.exists(paste0(.base, ".zip")) ||
+      !file.copy(
+        file.path(.stage, paste0(x, ".zip")),
+        paste0(.base, ".zip"),
+        overwrite = TRUE
+      )
+  ) {
+    stop("could not write '", .base, ".zip'", call. = FALSE)
   }
   invisible(value)
 }
@@ -1599,8 +1667,11 @@ saveFitRandom <- function(fun = NULL, remove = FALSE) {
   # archive itself rather than resolving a name: a variable can be named
   # `fit.zip`, whose cache fit.zip.zip sits beside a `fit`'s fit.zip
   # saveFit() names the files inside by the bare base name
-  .nlmixr2saveLoadZip(paste0(.nlmixr2saveBase(x), ".zip"), checkVersion=FALSE,
-                      base=basename(x))
+  .nlmixr2saveLoadZip(
+    paste0(.nlmixr2saveBase(x), ".zip"),
+    checkVersion = FALSE,
+    base = basename(x)
+  )
 }
 
 .nlmixr2saveLoadIfExists <- function(x) {

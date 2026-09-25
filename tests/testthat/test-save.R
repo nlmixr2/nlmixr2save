@@ -1343,55 +1343,90 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         .d <- withr::local_tempdir()
         # `fit-alt` extends `fit` with -<suffix>; its loose files used to be
         # zipped into fit.zip and then deleted
-        suppressMessages(saveFit(fitF, file.path(.d, "fitX-alt"), zip=FALSE))
-        .alt <- list.files(.d, all.files=TRUE, no..=TRUE)
+        suppressMessages(saveFit(fitF, file.path(.d, "fitX-alt"), zip = FALSE))
+        .alt <- list.files(.d, all.files = TRUE, no.. = TRUE)
         .altMd5 <- tools::md5sum(file.path(.d, .alt))
         suppressMessages(saveFit(fitF, file.path(.d, "fitX")))
-        expect_setequal(list.files(.d, all.files=TRUE, no..=TRUE),
-                        c(.alt, "fitX.zip"))
+        expect_setequal(
+          list.files(.d, all.files = TRUE, no.. = TRUE),
+          c(.alt, "fitX.zip")
+        )
         expect_equal(tools::md5sum(file.path(.d, .alt)), .altMd5)
         .entries <- zip::zip_list(file.path(.d, "fitX.zip"))$filename
         expect_false(any(startsWith(.entries, "fitX-alt")))
         # both still load
-        expect_true(inherits(suppressMessages(
-          loadFit(file.path(.d, "fitX"), checkVersion=FALSE)), "nlmixr2FitData"))
-        expect_true(inherits(suppressMessages(
-          loadFit(file.path(.d, "fitX-alt"), checkVersion=FALSE)), "nlmixr2FitData"))
+        expect_true(inherits(
+          suppressMessages(
+            loadFit(file.path(.d, "fitX"), checkVersion = FALSE)
+          ),
+          "nlmixr2FitData"
+        ))
+        expect_true(inherits(
+          suppressMessages(
+            loadFit(file.path(.d, "fitX-alt"), checkVersion = FALSE)
+          ),
+          "nlmixr2FitData"
+        ))
         # a working directory that is not the target is untouched as well
         expect_false(file.exists("fitX.zip"))
       })
 
       test_that("a stale zip=FALSE save does not leak into a new save (#10)", {
         .d <- withr::local_tempdir()
-        suppressMessages(saveFit(fitF, file.path(.d, "fitY"), zip=FALSE))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitY"), zip = FALSE))
         expect_true(file.exists(file.path(.d, "fitY-origData.csv")))
-        suppressMessages(saveFit(fitF, file.path(.d, "fitY"), data=FALSE))
-        expect_false("fitY-origData.csv" %in%
-                       zip::zip_list(file.path(.d, "fitY.zip"))$filename)
+        suppressMessages(saveFit(fitF, file.path(.d, "fitY"), data = FALSE))
+        expect_false(
+          "fitY-origData.csv" %in%
+            zip::zip_list(file.path(.d, "fitY.zip"))$filename
+        )
         # read, zipped and removed by no one
         expect_true(file.exists(file.path(.d, "fitY-origData.csv")))
-        .y <- suppressMessages(loadFit(file.path(.d, "fitY.zip"), checkVersion=FALSE))
+        .y <- suppressMessages(loadFit(
+          file.path(.d, "fitY.zip"),
+          checkVersion = FALSE
+        ))
         expect_null(.y$origData)
         # and loose files left beside it are still readable after a zip=FALSE
         # resave that lacks the item: the new loader does not read them
-        suppressMessages(saveFit(fitF, file.path(.d, "fitZ"), zip=FALSE))
-        suppressMessages(saveFit(fitF, file.path(.d, "fitZ"), zip=FALSE, data=FALSE))
-        expect_false(any(grepl("origData", readLines(file.path(.d, "fitZ.R")),
-                               fixed=TRUE)))
-        .z <- suppressMessages(loadFit(file.path(.d, "fitZ"), checkVersion=FALSE))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitZ"), zip = FALSE))
+        suppressMessages(saveFit(
+          fitF,
+          file.path(.d, "fitZ"),
+          zip = FALSE,
+          data = FALSE
+        ))
+        expect_false(any(grepl(
+          "origData",
+          readLines(file.path(.d, "fitZ.R")),
+          fixed = TRUE
+        )))
+        .z <- suppressMessages(
+          loadFit(file.path(.d, "fitZ"), checkVersion = FALSE)
+        )
         expect_null(.z$origData)
-        # nor does an archive from an earlier zip=TRUE save shadow a zip=FALSE one
+        # nor does an earlier zip=TRUE save's archive shadow a zip=FALSE one
         suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
-        suppressMessages(saveFit(fitF, file.path(.d, "fitV"), zip=FALSE, data=FALSE))
+        suppressMessages(saveFit(
+          fitF,
+          file.path(.d, "fitV"),
+          zip = FALSE,
+          data = FALSE
+        ))
         expect_false(file.exists(file.path(.d, "fitV.zip")))
         # an unrelated archive of that name is kept
         withr::with_dir(.d, {
           writeLines("data", "raw.csv")
           zip::zip("fitR.zip", "raw.csv")
         })
-        suppressMessages(saveFit(fitF, file.path(.d, "fitR"), zip=FALSE))
-        expect_equal(zip::zip_list(file.path(.d, "fitR.zip"))$filename, "raw.csv")
-        .v <- suppressMessages(loadFit(file.path(.d, "fitV"), checkVersion=FALSE))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitR"), zip = FALSE))
+        expect_equal(
+          zip::zip_list(file.path(.d, "fitR.zip"))$filename,
+          "raw.csv"
+        )
+        .v <- suppressMessages(
+          loadFit(file.path(.d, "fitV"), checkVersion = FALSE)
+        )
         expect_null(.v$origData)
         # and a zip=TRUE save retires the loader of a zip=FALSE one
         suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
@@ -1405,20 +1440,24 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_equal(readLines(file.path(.d, "fitV.R")), "x <- 1")
       })
 
-      test_that("saveFit() fails cleanly when its files cannot be written (#10)", {
+      test_that("saveFit() fails cleanly when it cannot write (#10)", {
         .d <- withr::local_tempdir()
         # a file where the directory should be is left alone, not copied over
         writeLines("keep", file.path(.d, "notadir"))
-        expect_error(suppressMessages(saveFit(fitF, file.path(.d, "notadir", "fit"))),
-                     "not a directory")
+        expect_error(
+          suppressMessages(saveFit(fitF, file.path(.d, "notadir", "fit"))),
+          "not a directory"
+        )
         expect_equal(readLines(file.path(.d, "notadir")), "keep")
         # a component that cannot be copied out: no loader is left behind to
         # read the old and new files mixed
-        suppressMessages(saveFit(fitF, file.path(.d, "fitU"), zip=FALSE))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitU"), zip = FALSE))
         unlink(file.path(.d, "fitU-env.R"))
         dir.create(file.path(.d, "fitU-env.R"))
-        expect_error(suppressMessages(saveFit(fitF, file.path(.d, "fitU"), zip=FALSE)),
-                     "could not write")
+        expect_error(
+          suppressMessages(saveFit(fitF, file.path(.d, "fitU"), zip = FALSE)),
+          "could not write"
+        )
         expect_false(file.exists(file.path(.d, "fitU.R")))
       })
 
@@ -1428,7 +1467,7 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         # someone else's fitW.zip, beside the cache of `fitW` under a prefix
         writeLines("not a fit", "fitW.zip")
         .md5 <- tools::md5sum("fitW.zip")
-        withr::local_options(list(nlmixr2save.prefix="run1-"))
+        withr::local_options(list(nlmixr2save.prefix = "run1-"))
         suppressMessages(.saveFitZipPlain(fitF, "fitW"))
         expect_true(file.exists("run1-fitW.zip"))
         expect_equal(tools::md5sum("fitW.zip"), .md5)
@@ -1436,23 +1475,33 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         .w <- suppressMessages(.loadFitZipPlain("fitW"))
         expect_true(inherits(.w, "nlmixr2FitData"))
         # loadFit() takes the prefixed archive too; its loader is `fitW.R`
-        expect_true(inherits(suppressMessages(
-          loadFit("run1-fitW.zip", checkVersion=FALSE)), "nlmixr2FitData"))
+        expect_true(inherits(
+          suppressMessages(
+            loadFit("run1-fitW.zip", checkVersion = FALSE)
+          ),
+          "nlmixr2FitData"
+        ))
         expect_equal(tools::md5sum("fitW.zip"), .md5)
-        expect_setequal(list.files(all.files=TRUE, no..=TRUE),
-                        c("fitW.zip", "run1-fitW.zip"))
+        expect_setequal(
+          list.files(all.files = TRUE, no.. = TRUE),
+          c("fitW.zip", "run1-fitW.zip")
+        )
         # a directory where the cache goes is an error, not copied into
         dir.create("run1-fitD.zip")
-        expect_error(suppressMessages(.saveFitZipPlain(fitF, "fitD")),
-                     "could not write")
+        expect_error(
+          suppressMessages(.saveFitZipPlain(fitF, "fitD")),
+          "could not write"
+        )
         expect_length(list.files("run1-fitD.zip"), 0)
         # a prefix naming a directory that does not exist yet
-        withr::local_options(list(nlmixr2save.prefix="run2/"))
+        withr::local_options(list(nlmixr2save.prefix = "run2/"))
         suppressMessages(.saveFitZipPlain(fitF, "fitW"))
         expect_true(file.exists("run2/fitW.zip"))
         expect_equal(tools::md5sum("fitW.zip"), .md5)
-        expect_true(inherits(suppressMessages(.loadFitZipPlain("fitW")),
-                             "nlmixr2FitData"))
+        expect_true(inherits(
+          suppressMessages(.loadFitZipPlain("fitW")),
+          "nlmixr2FitData"
+        ))
       })
 
       test_that("nlmixr2saveShare writes shareable zips and leaves the fit alone", {
