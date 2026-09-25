@@ -1386,6 +1386,31 @@ if (requireNamespace("nlmixr2est", quietly = TRUE) &&
         expect_false(file.exists(file.path(.d, "fitV.zip")))
         .v <- suppressMessages(loadFit(file.path(.d, "fitV"), checkVersion=FALSE))
         expect_null(.v$origData)
+        # and a zip=TRUE save retires the loader of a zip=FALSE one
+        suppressMessages(saveFit(fitF, file.path(.d, "fitV")))
+        expect_false(file.exists(file.path(.d, "fitV.R")))
+        expect_true(file.exists(file.path(.d, "fitV.zip")))
+        # but not a script of that name that is no fit loader
+        writeLines("x <- 1", file.path(.d, "fitT.R"))
+        suppressMessages(saveFit(fitF, file.path(.d, "fitT")))
+        expect_equal(readLines(file.path(.d, "fitT.R")), "x <- 1")
+      })
+
+      test_that("saveFit() fails cleanly when its files cannot be written (#10)", {
+        .d <- withr::local_tempdir()
+        # a file where the directory should be is left alone, not copied over
+        writeLines("keep", file.path(.d, "notadir"))
+        expect_error(suppressMessages(saveFit(fitF, file.path(.d, "notadir", "fit"))),
+                     "not a directory")
+        expect_equal(readLines(file.path(.d, "notadir")), "keep")
+        # a component that cannot be copied out: no loader is left behind to
+        # read the old and new files mixed
+        suppressMessages(saveFit(fitF, file.path(.d, "fitU"), zip=FALSE))
+        unlink(file.path(.d, "fitU-env.R"))
+        dir.create(file.path(.d, "fitU-env.R"))
+        expect_error(suppressMessages(saveFit(fitF, file.path(.d, "fitU"), zip=FALSE)),
+                     "could not write")
+        expect_false(file.exists(file.path(.d, "fitU.R")))
       })
 
       test_that("a prefixed := cache never touches the bare-name archive", {

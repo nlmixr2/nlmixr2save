@@ -714,7 +714,12 @@ saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
 #' @author Matthew L. Fidler
 .nlmixr2saveSaveTarget <- function(file) {
   .dir <- dirname(file)
-  if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE)
+  if (!dir.exists(.dir)) dir.create(.dir, recursive=TRUE, showWarnings=FALSE)
+  # a file of that name is not a directory to save in (nor to copy over)
+  if (!dir.exists(.dir)) {
+    stop("cannot save the fit in '", .dir, "': it is not a directory",
+         call.=FALSE)
+  }
   list(dir=.dir, file=basename(file))
 }
 
@@ -877,6 +882,11 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     zip::zip(zipfile = paste0(file, ".zip"),
              files = .files)
     .files <- paste0(file, ".zip")
+    # the loader of an earlier zip=FALSE save under this name (it has its
+    # `-env.R` beside it), which would load the old fit were the archive moved
+    if (file.exists(file.path(.outdir, paste0(file, "-env.R")))) {
+      unlink(file.path(.outdir, paste0(file, ".R")))
+    }
   } else {
     # the loader is replaced last, and the one there now removed first: when
     # a copy out fails, no loader is left reading a mix of old and new files.
@@ -885,7 +895,9 @@ saveFit.nlmixr2FitCore <- function(fit, file, zip=TRUE, data=.nlmixr2saveData())
     unlink(file.path(.outdir, paste0(file, c(".R", ".zip"))))
   }
   for (.f in .files) {
-    if (!file.copy(.f, .outdir, overwrite=TRUE)) {
+    .to <- file.path(.outdir, .f)
+    # file.copy() onto a directory copies into it, and reports success
+    if (dir.exists(.to) || !file.copy(.f, .to, overwrite=TRUE)) {
       stop("could not write '", .f, "' to '", .target$dir, "'", call.=FALSE)
     }
   }
