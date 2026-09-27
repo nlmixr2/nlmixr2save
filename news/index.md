@@ -2,6 +2,8 @@
 
 ## nlmixr2save 0.2.1
 
+CRAN release: 2026-09-25
+
 - [`saveFit()`](../reference/saveFit.md) no longer zips and deletes the
   files of another fit whose name extends its own with `-<suffix>`
   ([\#10](https://github.com/nlmixr2/nlmixr2save/issues/10)). It picked
