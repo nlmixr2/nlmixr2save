@@ -17,8 +17,10 @@ knitr::opts_chunk$set(
   eval = has_bus
 )
 # everything `:=` and saveFit() write goes to a scratch directory
-knitr::opts_knit$set(root.dir = tempfile("nlmixr2save-events-"))
-if (has_bus) dir.create(knitr::opts_knit$get("root.dir"))
+if (has_bus) {
+  knitr::opts_knit$set(root.dir = tempfile("nlmixr2save-events-"))
+  dir.create(knitr::opts_knit$get("root.dir"))
+}
 ```
 
 ```{r, eval = !has_bus, echo = FALSE, results = "asis"}
