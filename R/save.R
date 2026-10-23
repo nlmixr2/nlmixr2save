@@ -528,6 +528,15 @@ saveFitItem.saemModelList <- saveFitItem.foceiModelList
 #'   }
 #' }
 saveFit <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
+  ## event bus (see events.R): a direct saveFit() of a fit reports it under
+  ## its file name; inside `:=` the `:=` itself reports
+  if (!isTRUE(.saveFitEnv$inAssign) && inherits(fit, "nlmixr2FitCore")) {
+    .evName <- if (!missing(file)) as.character(file) else if (is.name(substitute(fit))) as.character(substitute(fit)) else NULL
+    on.exit(if (!identical(returnValue(.saveFitEnv), .saveFitEnv)) {
+      .nlmixr2saveEmit("assign", name=.evName, value=fit, call=sys.call(), envir=parent.frame(),
+                       cached=FALSE, sha=NULL, random=FALSE, seed=NULL, since=NULL)
+    }, add=TRUE)
+  }
   UseMethod("saveFit")
 }
 
@@ -1381,6 +1390,15 @@ saveFit.default <- function(fit, file, zip=TRUE, data=.nlmixr2saveData()) {
   # the scripts call `lotri(...)` unqualified; read the blocks saveFit()
   # writes without depending on the installed lotri
   assign("lotri", .nlmixr2saveLotri, envir=.env)
+  # the scripts also call control constructors unqualified (`table <-
+  # tableControl()`); make them available without attaching nlmixr2est
+  for (.pkg in c("nlmixr2est", "babelmixr2")) {
+    if (requireNamespace(.pkg, quietly=TRUE)) {
+      for (.f in grep("Control$", getNamespaceExports(.pkg), value=TRUE)) {
+        assign(.f, getExportedValue(.pkg, .f), envir=.env)
+      }
+    }
+  }
   .r <- basename(r)
   .lines <- readLines(.r, warn=FALSE)
   if (file.exists(paste0(.base, "-env.R")) &&
@@ -2025,6 +2043,22 @@ nlmixr2saveInvalidate <- function() {
   .saveFitEnv$restore <- FALSE
   .subs <- substitute(value)
   .saveFitEnv$fun <- if (is.call(.subs)) gsub(".*::", "", deparse1(.subs[[1]])) else ""
+  ## event bus (see events.R): announce the name before anything runs, and
+  ## report the result (or the error) when `:=` returns.  The state of an
+  ## outer `:=` is saved and restored so a nested `:=` cannot clobber it.
+  .evName <- if (is.name(substitute(x))) as.character(substitute(x)) else NULL
+  .evOuter <- list(sha=.saveFitEnv$evSha, inAssign=.saveFitEnv$inAssign)
+  .saveFitEnv$evSha <- NULL
+  .saveFitEnv$inAssign <- TRUE
+  .nlmixr2saveEmit("assignStart", name=.evName)
+  .evSince <- .nlmixr2saveSeq()
+  .evEnvir <- .assignParent()
+  on.exit({
+    .nlmixr2saveAssignDone(returnValue(.saveFitEnv), .evName, .subs, .evEnvir,
+                           .saveFitEnv$evSha, .evSince)
+    .saveFitEnv$evSha <- .evOuter$sha
+    .saveFitEnv$inAssign <- .evOuter$inAssign
+  }, add=TRUE)
   if (!.nlmixr2saveCheck()) {
     # Trusted-cache mode: load the file if it exists (no model/data/version
     # hash check), otherwise run and save it by result type.  The cache is only
@@ -2050,7 +2084,7 @@ nlmixr2saveInvalidate <- function() {
     if (.cls %in% c("nlmixr2", "nlmixr")) {
       .est <- .subs
       .est[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
-      .tmp <- eval(.est, envir=.assignParent())
+      .tmp <- .nlmixr2saveScope(eval(.est, envir=.assignParent()))
       .est <- .tmp$est
       if (.isRandomMethod(.est)) {
         # This is nlmixr2 but it is a random estimation method, so use
@@ -2202,7 +2236,11 @@ nlmixr2saveInvalidate <- function() {
 #' @author Matthew L. Fidler
 .stableLst <- function(lst, .visited=list()) {
   lapply(seq_along(lst), function(i) {
-    if (inherits(lst[[i]], "rxode2")) {
+    if (inherits(lst[[i]], "nlmixr2FitCore")) {
+      ## a fit reloaded from its zip serializes differently from the fresh
+      ## one; hash what identifies it and what results depend on instead
+      nlmixr2saveFitKey(lst[[i]])
+    } else if (inherits(lst[[i]], "rxode2")) {
       rxode2::rxNorm(lst[[i]])
     } else if (is.environment(lst[[i]])) {
       .env2list(lst[[i]], .visited)
@@ -2257,9 +2295,10 @@ nlmixr2saveInvalidate <- function() {
   .rds <- paste0(.base, ".rds")
   .sha1 <- substitute(value)
   .sha1[[1]] <- str2lang("nlmixr2save::.nlmixr2saveProps")
-  .prop <- eval(.sha1, envir=.assignParent())
+  .prop <- .nlmixr2saveScope(eval(.sha1, envir=.assignParent()))
   .est <- .prop$est
   .sha1 <- .prop$sha
+  .saveFitEnv$evSha <- .sha1
   if (file.exists(.zip)) {
     .fit <- .loadFitZipPlain(.x)
     .isData <- inherits(.fit, "nlmixr2FitData") &&
@@ -2433,7 +2472,9 @@ nlmixr2saveInvalidate <- function() {
     .rds <- paste0(.base, ".rds")
     .sha1 <- substitute(value)
     .sha1[[1]] <- quote(`list`)
-    .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
+    ## evaluated only to build the hash: silent on the event bus
+    .sha1 <- .digest(.nlmixr2saveScope(eval(.sha1, envir=.assignParent())))
+    .saveFitEnv$evSha <- .sha1
     .random <- FALSE
     if (file.exists(.rds)) {
       .rdsInfo <- readRDS(.rds)
@@ -2482,7 +2523,9 @@ nlmixr2saveInvalidate <- function() {
     .rds <- paste0(.base, ".rds")
     .sha1 <- substitute(value)
     .sha1[[1]] <- quote(`list`)
-    .sha1 <- .digest(eval(.sha1, envir=.assignParent()))
+    ## evaluated only to build the hash: silent on the event bus
+    .sha1 <- .digest(.nlmixr2saveScope(eval(.sha1, envir=.assignParent())))
+    .saveFitEnv$evSha <- .sha1
     if (file.exists(.rds)) {
       .rdsInfo <- readRDS(.rds)
       if (is.list(.rdsInfo) && length(.rdsInfo) == 2 &&
