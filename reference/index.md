@@ -11,6 +11,10 @@
 
 - [`loadFit()`](loadFit.md) : Load a fitted model object from a file
 
+- [`nlmixr2saveFitIdentity()`](nlmixr2saveFitIdentity.md)
+  [`nlmixr2saveFitKey()`](nlmixr2saveFitIdentity.md) : Identity and
+  cache keys of an nlmixr2 fit
+
 - [`nlmixr2saveInvalidate()`](nlmixr2saveInvalidate.md) :
 
   Delete every `:=` cache entry under the active prefix and directory

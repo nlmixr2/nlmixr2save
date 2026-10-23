@@ -2,9 +2,10 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  events: events.html
   models-directory: models-directory.html
   register-simulation-functions: register-simulation-functions.html
   sharing-fits: sharing-fits.html
   uses: uses.html
   version-tracking: version-tracking.html
-last_built: 2026-10-23T01:02Z
+last_built: 2026-10-23T01:12Z

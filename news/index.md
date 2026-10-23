@@ -1,5 +1,29 @@
 # Changelog
 
+## nlmixr2save (development version)
+
+- `:=` results built on a fit (`sim := rxSolve(fit, ev)`,
+  `a := augPred(fit)`) are now cache hits in a new R session: fits on
+  the right of `:=` are hashed with the new
+  [`nlmixr2saveFitKey()`](../reference/nlmixr2saveFitIdentity.md)
+  instead of being serialized, since a fit reloaded from its zip differs
+  byte-wise from the fresh one. The key still changes when the fit does
+  ([`addCwres()`](https://nlmixr2.github.io/nlmixr2est/reference/addCwres.html),
+  [`setOfv()`](https://nlmixr2.github.io/nlmixr2est/reference/setOfv.html),
+  a new covariance or table values).
+  [`nlmixr2saveFitIdentity()`](../reference/nlmixr2saveFitIdentity.md)
+  identifies which fit it is.
+
+- `:=` and [`saveFit()`](../reference/saveFit.md) now report to the
+  rxode2 event bus (`assignStart`, `assign`, `assignAbort`) so loggers
+  such as nlmixr2log can name what was assigned. The evaluations `:=`
+  does only to build its hash are silent.
+
+- [`loadFit()`](../reference/loadFit.md) no longer needs nlmixr2est
+  attached: the control constructors the saved scripts call
+  ([`tableControl()`](https://nlmixr2.github.io/nlmixr2est/reference/tableControl.html),
+  …) are provided to the loader.
+
 ## nlmixr2save 0.2.1
 
 CRAN release: 2026-09-25
