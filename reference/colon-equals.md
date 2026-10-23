@@ -159,7 +159,7 @@ Matthew L. Fidler
 #>  
 #>  
 #> ✔ done
-#> rxode2 5.1.8 using 2 threads (see ?getRxThreads)
+#> rxode2 5.1.8.9000 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
@@ -169,7 +169,10 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullH
+#> ℹ saving fit item: .fdFullR
 #> ℹ saving fit item: .fdFullS
+#> ℹ saving fit item: .fdFullX0
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -193,6 +196,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: convergence
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covEvals
+#> ℹ saving fit item: covHandoff
 #> ℹ saving fit item: covList
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
@@ -200,6 +205,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: covR
 #> ℹ saving fit item: covRS
 #> ℹ saving fit item: covS
+#> ℹ saving fit item: covStore
+#> ℹ saving fit item: covTried
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor
@@ -284,7 +291,7 @@ Matthew L. Fidler
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
-#> covMethod="sa" could not be computed; using the linearized FIM
+#> Calculating covariance matrix
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -298,10 +305,11 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8616
+#> → compress parHistData in nlmixr2 object, save 9616
 #> → compress phiM in nlmixr2 object, save 439912
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
+#> ℹ saving fit item: .saemCovMethod
 #> ℹ saving fit item: .saemFullCov
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -313,8 +321,11 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCor
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covEvals
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
+#> ℹ saving fit item: covStore
+#> ℹ saving fit item: covTried
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor

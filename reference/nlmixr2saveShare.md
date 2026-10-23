@@ -86,10 +86,16 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
+#>  
+#>  
+#>  
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullH
+#> ℹ saving fit item: .fdFullR
 #> ℹ saving fit item: .fdFullS
+#> ℹ saving fit item: .fdFullX0
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -113,6 +119,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: convergence
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covEvals
+#> ℹ saving fit item: covHandoff
 #> ℹ saving fit item: covList
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
@@ -120,6 +128,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: covR
 #> ℹ saving fit item: covRS
 #> ℹ saving fit item: covS
+#> ℹ saving fit item: covStore
+#> ℹ saving fit item: covTried
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor
@@ -171,7 +181,10 @@ Matthew L. Fidler
 #> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data) to fit-noData.zip
 #> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullH
+#> ℹ saving fit item: .fdFullR
 #> ℹ saving fit item: .fdFullS
+#> ℹ saving fit item: .fdFullX0
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -195,6 +208,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: convergence
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covEvals
+#> ℹ saving fit item: covHandoff
 #> ℹ saving fit item: covList
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
@@ -202,6 +217,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: covR
 #> ℹ saving fit item: covRS
 #> ℹ saving fit item: covS
+#> ℹ saving fit item: covStore
+#> ℹ saving fit item: covTried
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor
@@ -252,7 +269,10 @@ Matthew L. Fidler
 #> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data, no output tables) to fit-noData-noFit.zip
 #> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullH
+#> ℹ saving fit item: .fdFullR
 #> ℹ saving fit item: .fdFullS
+#> ℹ saving fit item: .fdFullX0
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -276,6 +296,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: convergence
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covEvals
+#> ℹ saving fit item: covHandoff
 #> ℹ saving fit item: covList
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
@@ -283,6 +305,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: covR
 #> ℹ saving fit item: covRS
 #> ℹ saving fit item: covS
+#> ℹ saving fit item: covStore
+#> ℹ saving fit item: covTried
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor

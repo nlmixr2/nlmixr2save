@@ -97,10 +97,16 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
+#>  
+#>  
+#>  
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .fdFullCov
+#> ℹ saving fit item: .fdFullH
+#> ℹ saving fit item: .fdFullR
 #> ℹ saving fit item: .fdFullS
+#> ℹ saving fit item: .fdFullX0
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: AIC
 #> ℹ saving fit item: BIC
@@ -124,6 +130,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: conditionNumberCov
 #> ℹ saving fit item: convergence
 #> ℹ saving fit item: cov
+#> ℹ saving fit item: covEvals
+#> ℹ saving fit item: covHandoff
 #> ℹ saving fit item: covList
 #> ℹ saving fit item: covLvl
 #> ℹ saving fit item: covMethod
@@ -131,6 +139,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: covR
 #> ℹ saving fit item: covRS
 #> ℹ saving fit item: covS
+#> ℹ saving fit item: covStore
+#> ℹ saving fit item: covTried
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor
@@ -187,47 +197,46 @@ Matthew L. Fidler
 #> ── nlmixr² FOCEi (outer: bobyqa) ──
 #> 
 #>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8076 373.4073 393.587      -179.7037        538873.5        3771.305
+#> FOCEi 116.8076 373.4073 393.587      -179.7037        2867.904        90.70332
 #> 
 #> ── Time (sec $time): ──
 #> 
 #>             setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.1922938 0.2799674  0.2862983      0.024       0.025 0.041    0.001
+#> elapsed 0.1714077 0.2352326  0.1119543      0.027       0.024 0.068    0.001
 #>             other
-#> elapsed 0.1444404
+#> elapsed 0.1094054
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
-#>         Est.      SE  %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka    0.472   0.208  44.1       1.60 (1.07, 2.41)     69.9       1.34 
-#> tcl     1.01 0.00728 0.719       2.75 (2.71, 2.79)     27.0       4.41 
-#> tv      3.46  0.0460  1.33       31.8 (29.1, 34.8)     13.9       10.4 
-#> add.sd 0.695  0.0940  13.5    0.695 (0.511, 0.880)                     
+#>         Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
+#> tka    0.472  0.200 42.4       1.60 (1.08, 2.37)     69.9       1.34 
+#> tcl     1.01 0.0736 7.27       2.75 (2.38, 3.18)     27.0       4.41 
+#> tv      3.46 0.0429 1.24       31.8 (29.2, 34.6)     13.9       10.4 
+#> add.sd 0.695 0.0947 13.6    0.695 (0.510, 0.881)                     
 #>  
 #>   Covariance Type ($covMethod): r,s (full)
 #>     other calculated covs (setCov()): r; s; r,s; r (full); s (full)
 #>   Some strong fixed parameter correlations exist ($cor) :
 #>                 cor:tcl,tka              cor:tv,tka          cor:add.sd,tka 
-#>                  0.316                   0.288                   -0.177   
+#>                  0.189                    0.393                 -0.0959   
 #>       cor:om.eta.ka,tka       cor:om.eta.cl,tka        cor:om.eta.v,tka 
-#>                  0.735                  -0.163                   -0.220   
+#>                  0.614                  -0.146                   -0.279   
 #>              cor:tv,tcl          cor:add.sd,tcl       cor:om.eta.ka,tcl 
-#>                 -0.296                   -0.281                    0.260   
+#>                  0.802                  -0.214                    0.121   
 #>       cor:om.eta.cl,tcl        cor:om.eta.v,tcl           cor:add.sd,tv 
-#>                -0.0127                    0.178                   -0.381  
+#>                 -0.481                   0.348                  -0.350  
 #>        cor:om.eta.ka,tv        cor:om.eta.cl,tv         cor:om.eta.v,tv 
-#>                  0.274                   -0.102                  -0.0694   
+#>                  0.112                  -0.0485                   0.0806   
 #>    cor:om.eta.ka,add.sd    cor:om.eta.cl,add.sd     cor:om.eta.v,add.sd 
-#>                 -0.411                 -0.0705                   -0.595  
+#>                 -0.456                  -0.108                   -0.334  
 #> cor:om.eta.cl,om.eta.ka  cor:om.eta.v,om.eta.ka  cor:om.eta.v,om.eta.cl 
-#>                 -0.276                    0.452                 -0.0799   
+#>                 -0.198                   0.0561                  -0.0630   
 #>  
 #> 
 #>   No correlations in between subject variability (BSV) matrix
 #>   Full BSV covariance ($omega) or correlation ($omegaR; diagonals=SDs) 
 #>   Distribution stats (mean/skewness/kurtosis/p-value) available in $shrink 
 #>   Information about run found ($runInfo):
-#>    • gradient problems with covariance; see $scaleInfo 
 #>    • last objective function was not at minimum, possible problems in optimization 
 #>    • ETAs were reset to zero during optimization; (Can control by foceiControl(resetEtaP=.)) 
 #>   Censoring ($censInformation): No censoring
