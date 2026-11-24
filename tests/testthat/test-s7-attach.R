@@ -99,3 +99,26 @@ test_that("data.table without a `:=` after S7 does not move nlmixr2save (#18)", 
   .out <- .runScript(.script)
   expect_equal(tail(.out, 1), "ok", info = paste(.out, collapse = "\n"))
 })
+
+test_that("`:=` hands S7::new_class() to S7 before S7 is loaded (#18)", {
+  skip_on_cran()
+  .skipIfNoS7Bind()
+  skip_if_not_installed("withr")
+  .skipIfNotInstalledBuild()
+  .script <- tempfile(fileext = ".R")
+  on.exit(unlink(.script), add = TRUE)
+  writeLines(
+    c(
+      "suppressPackageStartupMessages(library(nlmixr2save))",
+      "stopifnot(!isNamespaceLoaded('S7'))",
+      "withr::with_tempdir({",
+      "  Foo := S7::new_class()",
+      "  stopifnot(identical(Foo@name, 'Foo'), length(list.files()) == 0L)",
+      "})",
+      "cat('ok')"
+    ),
+    .script
+  )
+  .out <- .runScript(.script)
+  expect_equal(tail(.out, 1), "ok", info = paste(.out, collapse = "\n"))
+})
