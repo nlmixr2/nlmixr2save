@@ -35,6 +35,7 @@ Suggests:
     nlmixr2est (>= 5.0.2),
     PopED,
     rmarkdown,
+    S7,
     testthat (>= 3.0.0),
     tidyvpc,
     withr
