@@ -20,26 +20,35 @@
 #' @noRd
 #' @author Matthew L. Fidler
 .nlmixr2saveS7Bind <- function(value, envir) {
-  if (!is.call(value) || !isNamespaceLoaded("S7")) {
+  if (!is.call(value)) {
     return(NULL)
   }
   .fun <- value[[1]]
-  .ns <- asNamespace("S7")
   .colons <- list(quote(`::`), quote(`:::`))
   if (is.call(.fun) && any(vapply(.colons, identical, logical(1), .fun[[1]]))) {
-    # S7::new_class() -- resolve it without evaluating anything else
-    if (!identical(as.character(.fun[[2]]), "S7")) {
+    # S7::new_class() -- resolve it without evaluating anything else; this
+    # loads S7 just as evaluating `S7::new_class` would
+    if (
+      !identical(as.character(.fun[[2]]), "S7") ||
+        !requireNamespace("S7", quietly = TRUE)
+    ) {
       return(NULL)
     }
-    .fun <- get0(as.character(.fun[[3]]), envir = .ns, inherits = FALSE)
+    .fun <- get0(
+      as.character(.fun[[3]]),
+      envir = asNamespace("S7"),
+      inherits = FALSE
+    )
   } else if (is.name(.fun)) {
     .fun <- get0(as.character(.fun), envir = envir, mode = "function")
   } else {
     return(NULL)
   }
-  if (!is.function(.fun)) {
+  # a function bound to an S7 builder means S7 is loaded already
+  if (!is.function(.fun) || !isNamespaceLoaded("S7")) {
     return(NULL)
   }
+  .ns <- asNamespace("S7")
   .exports <- getNamespaceExports("S7")
   if (!(":=" %in% .exports)) {
     return(NULL)
