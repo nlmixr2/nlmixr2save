@@ -214,6 +214,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: est
 #> ℹ saving fit item: etaObf
 #> ℹ saving fit item: extra
+#> ℹ saving fit item: finalBestX
+#> ℹ saving fit item: finalEtaMoved
 #> ℹ saving fit item: fixef
 #> ℹ saving fit item: foceiControl0
 #> ℹ saving fit item: foceiModel
@@ -256,6 +258,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#> ℹ saving fit item: zeroThetaIdx
 #> ℹ zipping fit files
 #>  
 #>  
@@ -282,13 +285,13 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#>  
-#>  
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
 #> → finding duplicate expressions in saem model...
 #> ✔ done
+#>  
+#>  
 #> ℹ calculate uninformed etas
 #> ℹ done
 #> Calculating covariance matrix
@@ -305,8 +308,8 @@ Matthew L. Fidler
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 9616
-#> → compress phiM in nlmixr2 object, save 439912
+#> → compress parHistData in nlmixr2 object, save 9544
+#> → compress phiM in nlmixr2 object, save 63256
 #> ℹ saving fit item: .likTime
 #> ℹ saving fit item: .rownum
 #> ℹ saving fit item: .saemCovMethod
@@ -326,12 +329,14 @@ Matthew L. Fidler
 #> ℹ saving fit item: covMethod
 #> ℹ saving fit item: covStore
 #> ℹ saving fit item: covTried
+#> ℹ saving fit item: ebe
 #> ℹ saving fit item: eigenCor
 #> ℹ saving fit item: eigenCov
 #> ℹ saving fit item: eigenVecCor
 #> ℹ saving fit item: eigenVecCov
 #> ℹ saving fit item: est
 #> ℹ saving fit item: etaObf
+#> ℹ saving fit item: etaSaem
 #> ℹ saving fit item: extra
 #> ℹ saving fit item: fixef
 #> ℹ saving fit item: foceiControl0
@@ -379,6 +384,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: saem0
 #> ℹ saving fit item: saemControl
 #> ℹ saving fit item: saemModel
+#> ℹ saving fit item: saemPseudoEtas
 #> ℹ saving fit item: scaleInfo
 #> ℹ saving fit item: sessioninfo
 #> ℹ saving fit item: shrink
@@ -386,6 +392,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#> ℹ saving fit item: zeroThetaIdx
 #> ℹ zipping fit files
 # }
 ```

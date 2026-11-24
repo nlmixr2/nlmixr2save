@@ -86,9 +86,6 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#>  
-#>  
-#>  
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .fdFullCov
@@ -137,6 +134,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: est
 #> ℹ saving fit item: etaObf
 #> ℹ saving fit item: extra
+#> ℹ saving fit item: finalBestX
+#> ℹ saving fit item: finalEtaMoved
 #> ℹ saving fit item: fixef
 #> ℹ saving fit item: foceiControl0
 #> ℹ saving fit item: foceiModel
@@ -177,6 +176,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#> ℹ saving fit item: zeroThetaIdx
 #> ℹ zipping fit files
 #> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data) to fit-noData.zip
@@ -226,6 +226,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: est
 #> ℹ saving fit item: etaObf
 #> ℹ saving fit item: extra
+#> ℹ saving fit item: finalBestX
+#> ℹ saving fit item: finalEtaMoved
 #> ℹ saving fit item: fixef
 #> ℹ saving fit item: foceiControl0
 #> ℹ saving fit item: foceiModel
@@ -265,6 +267,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#> ℹ saving fit item: zeroThetaIdx
 #> ℹ zipping fit files
 #> ℹ loading fit from fit.zip
 #> ℹ writing shareable fit (no data, no output tables) to fit-noData-noFit.zip
@@ -314,6 +317,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: est
 #> ℹ saving fit item: etaObf
 #> ℹ saving fit item: extra
+#> ℹ saving fit item: finalBestX
+#> ℹ saving fit item: finalEtaMoved
 #> ℹ saving fit item: fixef
 #> ℹ saving fit item: foceiControl0
 #> ℹ saving fit item: foceiModel
@@ -353,6 +358,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#> ℹ saving fit item: zeroThetaIdx
 #>  
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode

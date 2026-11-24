@@ -181,7 +181,7 @@ a <- events$log[[length(events$log)]]$payload
 a$cached
 #> [1] FALSE
 a$sha
-#> [1] "7627ce8c37bb6ce794f615d561390c0dc1bbc31d"
+#> [1] "d6d0f932dbe64bb9ebcaa3e0e3c723c005ea1421"
 as.call(as.list(a$call)) # the right-hand side of `:=`
 #> nlmixr2(one, nlmixr2data::theo_sd, est = "posthoc", control = list(print = 0))
 ```

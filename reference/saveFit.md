@@ -97,9 +97,6 @@ Matthew L. Fidler
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#>  
-#>  
-#>  
 #> → Calculating residuals/tables
 #> ✔ done
 #> ℹ saving fit item: .fdFullCov
@@ -148,6 +145,8 @@ Matthew L. Fidler
 #> ℹ saving fit item: est
 #> ℹ saving fit item: etaObf
 #> ℹ saving fit item: extra
+#> ℹ saving fit item: finalBestX
+#> ℹ saving fit item: finalEtaMoved
 #> ℹ saving fit item: fixef
 #> ℹ saving fit item: foceiControl0
 #> ℹ saving fit item: foceiModel
@@ -188,6 +187,7 @@ Matthew L. Fidler
 #> ℹ saving fit item: time
 #> ℹ saving fit item: tolFactor
 #> ℹ saving fit item: ui
+#> ℹ saving fit item: zeroThetaIdx
 #> ℹ zipping fit files
 #> ℹ loading fit from fit.zip
 #>  
@@ -196,41 +196,41 @@ Matthew L. Fidler
 #> ℹ Need to run with the source intact to parse comments
 #> ── nlmixr² FOCEi (outer: bobyqa) ──
 #> 
-#>           OBJF      AIC     BIC Log-likelihood Condition#(Cov) Condition#(Cor)
-#> FOCEi 116.8076 373.4073 393.587      -179.7037        2867.904        90.70332
+#>           OBJF      AIC      BIC Log-likelihood Condition#(Cov) Condition#(Cor)
+#> FOCEi 116.8075 373.4073 393.5869      -179.7037         2898.88          90.695
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>             setup  optimize covariance preprocess postprocess table compress
-#> elapsed 0.1351771 0.2299732  0.1076829      0.027       0.022 0.045        0
+#>              setup   optimize covariance preprocess postprocess table compress
+#> elapsed 0.08106385 0.03312801 0.06470123      0.016       0.021 0.028    0.001
 #>             other
-#> elapsed 0.1021668
+#> elapsed 0.1221069
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
 #>         Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka    0.472  0.200 42.4       1.60 (1.08, 2.37)     69.9       1.34 
-#> tcl     1.01 0.0736 7.27       2.75 (2.38, 3.18)     27.0       4.41 
-#> tv      3.46 0.0429 1.24       31.8 (29.2, 34.6)     13.9       10.4 
-#> add.sd 0.695 0.0947 13.6    0.695 (0.510, 0.881)                     
+#> tka    0.472  0.201 42.7       1.60 (1.08, 2.38)     69.9       1.36 
+#> tcl     1.01 0.0739 7.29       2.75 (2.38, 3.18)     27.0       4.42 
+#> tv      3.46 0.0430 1.24       31.8 (29.2, 34.6)     13.9       10.4 
+#> add.sd 0.696 0.0951 13.7    0.696 (0.509, 0.882)                     
 #>  
 #>   Covariance Type ($covMethod): r,s (full)
 #>     other calculated covs (setCov()): r; s; r,s; r (full); s (full)
 #>   Some strong fixed parameter correlations exist ($cor) :
 #>                 cor:tcl,tka              cor:tv,tka          cor:add.sd,tka 
-#>                  0.189                    0.393                 -0.0959   
+#>                  0.189                    0.393                 -0.0960   
 #>       cor:om.eta.ka,tka       cor:om.eta.cl,tka        cor:om.eta.v,tka 
-#>                  0.614                  -0.146                   -0.279   
+#>                  0.614                  -0.147                   -0.277   
 #>              cor:tv,tcl          cor:add.sd,tcl       cor:om.eta.ka,tcl 
-#>                  0.802                  -0.214                    0.121   
+#>                  0.803                  -0.215                    0.121   
 #>       cor:om.eta.cl,tcl        cor:om.eta.v,tcl           cor:add.sd,tv 
-#>                 -0.481                   0.348                  -0.350  
+#>                 -0.481                   0.352                  -0.350  
 #>        cor:om.eta.ka,tv        cor:om.eta.cl,tv         cor:om.eta.v,tv 
-#>                  0.112                  -0.0485                   0.0806   
+#>                  0.112                  -0.0504                   0.0825   
 #>    cor:om.eta.ka,add.sd    cor:om.eta.cl,add.sd     cor:om.eta.v,add.sd 
-#>                 -0.456                  -0.108                   -0.334  
+#>                 -0.456                  -0.105                   -0.335  
 #> cor:om.eta.cl,om.eta.ka  cor:om.eta.v,om.eta.ka  cor:om.eta.v,om.eta.cl 
-#>                 -0.198                   0.0561                  -0.0630   
+#>                 -0.200                   0.0587                  -0.0694   
 #>  
 #> 
 #>   No correlations in between subject variability (BSV) matrix
@@ -248,8 +248,8 @@ Matthew L. Fidler
 #>   ID     TIME    DV  PRED    RES   WRES IPRED   IRES  IWRES CPRED   CRES  CWRES
 #>   <fct> <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>
 #> 1 1      0     0.74  0     0.74   1.06   0     0.74   1.06   0     0.74   1.06 
-#> 2 1      0.25  2.84  3.28 -0.445 -0.237  3.85 -1.01  -1.45   3.24 -0.404 -0.190
-#> 3 1      0.57  6.57  5.86  0.711  0.287  6.79 -0.216 -0.310  5.81  0.763  0.278
+#> 2 1      0.25  2.84  3.28 -0.443 -0.236  3.85 -1.01  -1.45   3.24 -0.402 -0.189
+#> 3 1      0.57  6.57  5.86  0.713  0.287  6.79 -0.216 -0.310  5.80  0.765  0.278
 #> # ℹ 129 more rows
 #> # ℹ 10 more variables: eta.ka <dbl>, eta.cl <dbl>, eta.v <dbl>, depot <dbl>,
 #> #   central <dbl>, ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <int>
