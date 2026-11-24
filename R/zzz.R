@@ -1,4 +1,10 @@
-#' Re-attach nlmixr2save in front of data.table
+## Packages whose attached `:=` masks nlmixr2save's when they are attached
+## after it.  data.table's `:=` only errors outside `DT[...]` (#8); S7's
+## (>= 1.0.0) names a class or generic after its variable, which nlmixr2save's
+## `:=` hands on to S7's (see .nlmixr2saveS7Bind(), #18).
+.nlmixr2saveMaskers <- c("data.table", "S7")
+
+#' Re-attach nlmixr2save in front of a package that masks its `:=`
 #'
 #' data.table exports a `:=` that only errors when called outside of
 #' `DT[...]` ("Check that is.data.table(DT) == TRUE"), so attaching data.table
@@ -7,12 +13,22 @@
 #' up on the search path -- `[.data.table` handles it inside `j` -- so putting
 #' nlmixr2save back in front costs data.table nothing.
 #'
-#' This detaches `package:nlmixr2save` and re-attaches it (as `library()`
-#' does) directly in front of data.table.  It does nothing when nlmixr2save is
-#' not attached, since then `:=` was never going to reach nlmixr2save's, or
-#' when nlmixr2save is already in front of data.table.
+#' S7 (>= 1.0.0) exports a `:=` that turns `x := f(...)` into
+#' `x <- f(..., name = "x")`, so attaching S7 after nlmixr2save turns
+#' `fit := nlmixr2(...)` into a call with an unused `name` argument.
+#' nlmixr2save's `:=` hands calls to S7's builders (`Foo := new_class()`) to
+#' S7's `:=`, so putting nlmixr2save in front keeps both working.
 #'
-#' @param pkgname,pkgpath passed by the package-event hook; ignored
+#' This detaches `package:nlmixr2save` and re-attaches it (as `library()`
+#' does) directly in front of the package just attached.  It does nothing
+#' when nlmixr2save is not attached, since then `:=` was never going to reach
+#' nlmixr2save's, when nlmixr2save is already in front, or when the package
+#' was attached without a `:=` of its own (`library(data.table,
+#' exclude=":=")`, or the `conflictRules()` S7 sets up for data.table).
+#'
+#' @param pkgname the package just attached (`"data.table"` or `"S7"`), as
+#'   passed by the package-event hook
+#' @param pkgpath passed by the package-event hook; ignored
 #' @return invisible `TRUE` when nlmixr2save was re-attached, otherwise
 #'   `FALSE`
 #' @noRd
@@ -20,14 +36,18 @@
 .nlmixr2saveReattach <- function(pkgname, pkgpath) {
   .search <- search()
   .us <- match("package:nlmixr2save", .search)
-  .dt <- match("package:data.table", .search)
-  if (is.na(.us) || is.na(.dt) || .us < .dt ||
-        .nlmixr2saveConflictsError()) {
+  .dt <- match(paste0("package:", pkgname), .search)
+  if (is.na(.us) || is.na(.dt) || .us < .dt || .nlmixr2saveConflictsError()) {
+    return(invisible(FALSE))
+  }
+  # attached without a `:=` (excluded, or an S7 too old to export one):
+  # it masks nothing, so nothing needs moving
+  if (!exists(":=", envir = as.environment(.dt), inherits = FALSE)) {
     return(invisible(FALSE))
   }
   # library(nlmixr2save, include.only=/exclude=) attaches only some exports;
   # re-attach exactly those.  Without `:=` among them nothing needs moving.
-  .attached <- ls(as.environment(.us), all.names=TRUE)
+  .attached <- ls(as.environment(.us), all.names = TRUE)
   if (!(":=" %in% .attached)) {
     return(invisible(FALSE))
   }
@@ -42,28 +62,50 @@
   # would swallow that, leaving `:=` broken.  nlmixr2save is back on the
   # search path immediately, so the "may no longer work correctly" warning
   # that force gives instead does not apply.
-  suppressWarnings(detach(pos=.us, force=TRUE))
-  # nlmixr2save sat below data.table, so detaching it left data.table's
-  # position unchanged; attaching there puts nlmixr2save just in front of it.
-  # Anything that sat between the two now sits below nlmixr2save too, which
-  # is unavoidable if nlmixr2save is to come before data.table.
-  tryCatch({
-    attachNamespace("nlmixr2save", pos=.dt, include.only=.attached)
-  }, error=function(e) {
-    warning("could not re-attach nlmixr2save in front of data.table; use ",
-            "nlmixr2save::`:=` (", conditionMessage(e), ")", call.=FALSE)
-    # never leave the package detached, even if back behind data.table
-    tryCatch(attachNamespace("nlmixr2save", pos=.us,
-                             include.only=.attached), error=function(e2) {
-      warning("could not re-attach nlmixr2save; call library(nlmixr2save) (",
-              conditionMessage(e2), ")", call.=FALSE)
-    })
-  })
+  suppressWarnings(detach(pos = .us, force = TRUE))
+  # nlmixr2save sat below the masking package, so detaching it left that
+  # package's position unchanged; attaching there puts nlmixr2save just in
+  # front of it.  Anything that sat between the two now sits below
+  # nlmixr2save too, which is unavoidable if nlmixr2save is to come first.
+  tryCatch(
+    {
+      attachNamespace("nlmixr2save", pos = .dt, include.only = .attached)
+    },
+    error = function(e) {
+      warning(
+        "could not re-attach nlmixr2save in front of ",
+        pkgname,
+        "; use nlmixr2save::`:=` (",
+        conditionMessage(e),
+        ")",
+        call. = FALSE
+      )
+      # never leave the package detached, even if back behind data.table
+      tryCatch(
+        attachNamespace("nlmixr2save", pos = .us, include.only = .attached),
+        error = function(e2) {
+          warning(
+            "could not re-attach nlmixr2save; call library(nlmixr2save) (",
+            conditionMessage(e2),
+            ")",
+            call. = FALSE
+          )
+        }
+      )
+    }
+  )
   if ("package:nlmixr2save" %in% search()[seq_len(.dt)]) {
     packageStartupMessage(
-      "nlmixr2save: re-attached in front of data.table so ",
+      "nlmixr2save: re-attached in front of ",
+      pkgname,
+      " so ",
       "`fit := nlmixr2(...)` keeps working ",
-      "(data.table's `DT[, a := b]` is unaffected)")
+      if (identical(pkgname, "S7")) {
+        "(S7's `Foo := new_class()` still binds S7 classes and generics)"
+      } else {
+        "(data.table's `DT[, a := b]` is unaffected)"
+      }
+    )
     return(invisible(TRUE))
   }
   invisible(FALSE)
@@ -83,18 +125,38 @@
 #' @author Matthew L. Fidler
 .nlmixr2saveConflictsError <- function() {
   .p <- getOption("conflicts.policy")
-  if (is.character(.p)) return(length(.p) == 1L &&
-                                .p %in% c("strict", "depends.ok"))
+  if (is.character(.p)) {
+    return(
+      length(.p) == 1L &&
+        .p %in% c("strict", "depends.ok")
+    )
+  }
   is.list(.p) && isTRUE(.p$error)
 }
 
 .onLoad <- function(libname, pkgname) {
-  .hook <- packageEvent("data.table", "attach")
+  for (.pkg in .nlmixr2saveMaskers) {
+    .nlmixr2saveSetHook(.pkg)
+  }
+}
+
+#' Register the re-attach hook for one masking package
+#'
+#' @param pkg package whose attach should move nlmixr2save in front of it
+#' @return nothing, called for its side effect
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveSetHook <- function(pkg) {
+  .hook <- packageEvent(pkg, "attach")
   # a reloaded namespace (devtools::load_all(), unload + reload) would
   # otherwise stack a second copy of the hook
-  .has <- vapply(getHook(.hook), function(f) {
-    isTRUE(attr(f, "nlmixr2save"))
-  }, logical(1))
+  .has <- vapply(
+    getHook(.hook),
+    function(f) {
+      isTRUE(attr(f, "nlmixr2save"))
+    },
+    logical(1)
+  )
   if (!any(.has)) {
     .fun <- function(pkgname, pkgpath) {
       # look the function up at call time so a reloaded namespace is used
@@ -105,4 +167,5 @@
     attr(.fun, "nlmixr2save") <- TRUE
     setHook(.hook, .fun, "append")
   }
+  invisible()
 }

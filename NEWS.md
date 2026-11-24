@@ -6,6 +6,13 @@
   names the class or generic after the variable, instead of failing with
   `argument "name" is missing` (and nothing is cached for them).
 
+* Attaching S7 (>= 1.0.0) after nlmixr2save (`library(nlmixr2);
+  library(S7)`) no longer breaks `fit := nlmixr2(...)` with an unused `name`
+  argument: nlmixr2save re-attaches itself in front of S7, as it does for
+  data.table, and S7's builders still go to S7's `:=` (#18).  A data.table
+  attached without its `:=` (as S7 arranges with `conflictRules()`) no
+  longer moves nlmixr2save.
+
 * `:=` results built on a fit (`sim := rxSolve(fit, ev)`, `a := augPred(fit)`)
   are now cache hits in a new R session: fits on the right of `:=` are hashed
   with the new `nlmixr2saveFitKey()` instead of being serialized, since a fit

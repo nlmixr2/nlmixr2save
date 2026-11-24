@@ -76,10 +76,14 @@ after the variable it is assigned to (\code{Foo := new_class()} is
 \code{Foo <- new_class(name = "Foo")}).  When the right-hand side is a call to
 one of S7's builders (\code{new_class()}, \code{new_generic()},
 \code{new_external_generic()}, \code{new_property()}, ...), nlmixr2save's \verb{:=} hands
-it to S7's \verb{:=} without caching anything, so S7's bind keeps working when
-nlmixr2save comes first on the search path.  Any other call (including one to
-a function of your own with a \code{name} argument) is cached as usual; use
-\code{S7::`:=`} to bind those.
+it to S7's \verb{:=} without caching anything.  When S7 is attached after
+nlmixr2save (for example \code{library(nlmixr2)} followed by \code{library(S7)}),
+nlmixr2save re-attaches itself in front of S7, as for data.table, so both
+\code{fit := nlmixr2(...)} and \code{Foo := new_class()} keep working whichever is
+attached first.  Any other call (including one to a function of your own
+with a \code{name} argument) is cached as usual; use \code{S7::`:=`} to bind
+those.  When S7 is attached it also keeps data.table's \verb{:=} off the search
+path, and nlmixr2save then has nothing to move in front of.
 }
 
 \examples{
