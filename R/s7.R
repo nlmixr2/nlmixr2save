@@ -23,31 +23,45 @@
   if (!is.call(value)) {
     return(NULL)
   }
-  .fun <- value[[1]]
-  .colons <- list(quote(`::`), quote(`:::`))
-  if (is.call(.fun) && any(vapply(.colons, identical, logical(1), .fun[[1]]))) {
-    # S7::new_class() -- resolve it without evaluating anything else; this
-    # loads S7 just as evaluating `S7::new_class` would
-    if (
-      !identical(as.character(.fun[[2]]), "S7") ||
-        !requireNamespace("S7", quietly = TRUE)
-    ) {
-      return(NULL)
-    }
-    .fun <- get0(
-      as.character(.fun[[3]]),
-      envir = asNamespace("S7"),
-      inherits = FALSE
-    )
-  } else if (is.name(.fun)) {
-    .fun <- get0(as.character(.fun), envir = envir, mode = "function")
-  } else {
-    return(NULL)
-  }
+  .fun <- .nlmixr2saveS7Fun(value[[1]], envir)
   # a function bound to an S7 builder means S7 is loaded already
   if (!is.function(.fun) || !isNamespaceLoaded("S7")) {
     return(NULL)
   }
+  .nlmixr2saveS7BindIfBuilder(.fun)
+}
+
+#' Resolve the function called by `:=`'s right-hand side
+#'
+#' @param fun the function part of the call (a name or a `pkg::fun` call)
+#' @param envir the environment `:=` was called from
+#' @return the function, or `NULL` when it cannot be an S7 builder
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveS7Fun <- function(fun, envir) {
+  if (is.name(fun)) {
+    return(get0(as.character(fun), envir = envir, mode = "function"))
+  }
+  .colons <- list(quote(`::`), quote(`:::`))
+  if (!is.call(fun) || !any(vapply(.colons, identical, logical(1), fun[[1]]))) {
+    return(NULL)
+  }
+  # S7::new_class() -- resolve it without evaluating anything else; this
+  # loads S7 just as evaluating `S7::new_class` would
+  if (!identical(as.character(fun[[2]]), "S7") ||
+        !requireNamespace("S7", quietly = TRUE)) {
+    return(NULL)
+  }
+  get0(as.character(fun[[3]]), envir = asNamespace("S7"), inherits = FALSE)
+}
+
+#' S7's `:=` when `fun` is one of S7's builders
+#'
+#' @param fun a function
+#' @return S7's exported `:=`, or `NULL`
+#' @noRd
+#' @author Matthew L. Fidler
+.nlmixr2saveS7BindIfBuilder <- function(fun) {
   .ns <- asNamespace("S7")
   .exports <- getNamespaceExports("S7")
   if (!(":=" %in% .exports)) {
@@ -56,11 +70,9 @@
   # only the builders (new_class(), new_generic(), deprecated_class(), ...);
   # prop() also has a `name` argument but is not something one binds
   .builders <- grep("^(new|deprecated)_", .exports, value = TRUE)
-  for (.b in .builders) {
+  .isBuilder <- vapply(.builders, function(.b) {
     .f <- get0(.b, envir = .ns, inherits = FALSE)
-    if (identical(.fun, .f) && "name" %in% names(formals(.f))) {
-      return(getExportedValue("S7", ":="))
-    }
-  }
-  NULL
+    identical(fun, .f) && "name" %in% names(formals(.f))
+  }, logical(1))
+  if (any(.isBuilder)) getExportedValue("S7", ":=") else NULL
 }
