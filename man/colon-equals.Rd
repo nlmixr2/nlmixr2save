@@ -68,6 +68,20 @@ a \code{conflicts.policy} that makes conflicts errors (\code{"strict"},
 stays where it is and \code{library()} reports the conflict as usual.
 }
 
+\section{S7}{
+
+
+S7 (>= 1.0.0) exports a \verb{:=} of its own that names a class or generic
+after the variable it is assigned to (\code{Foo := new_class()} is
+\code{Foo <- new_class(name = "Foo")}).  When the right-hand side is a call to
+one of S7's builders (\code{new_class()}, \code{new_generic()},
+\code{new_external_generic()}, \code{new_property()}, ...), nlmixr2save's \verb{:=} hands
+it to S7's \verb{:=} without caching anything, so S7's bind keeps working when
+nlmixr2save comes first on the search path.  Any other call (including one to
+a function of your own with a \code{name} argument) is cached as usual; use
+\code{S7::`:=`} to bind those.
+}
+
 \examples{
 
 \donttest{

@@ -1977,6 +1977,18 @@ nlmixr2saveInvalidate <- function() {
 #' `"depends.ok"` or `list(error=TRUE)`, see [base::library()]) nlmixr2save
 #' stays where it is and `library()` reports the conflict as usual.
 #'
+#' @section S7:
+#'
+#' S7 (>= 1.0.0) exports a `:=` of its own that names a class or generic
+#' after the variable it is assigned to (`Foo := new_class()` is
+#' `Foo <- new_class(name = "Foo")`).  When the right-hand side is a call to
+#' one of S7's builders (`new_class()`, `new_generic()`,
+#' `new_external_generic()`, `new_property()`, ...), nlmixr2save's `:=` hands
+#' it to S7's `:=` without caching anything, so S7's bind keeps working when
+#' nlmixr2save comes first on the search path.  Any other call (including one to
+#' a function of your own with a `name` argument) is cached as usual; use
+#' `` S7::`:=` `` to bind those.
+#'
 #' @param x the name of the object to assign the value to
 #'
 #' @param value the value to assign to the object, because R can use
@@ -2038,6 +2050,15 @@ nlmixr2saveInvalidate <- function() {
 #' }
 #' @export
 `:=` <- function(x, value) {
+  .s7 <- .nlmixr2saveS7Bind(substitute(value), parent.frame())
+  if (!is.null(.s7)) {
+    # S7's bind (`Foo := new_class()`): no caching, the class/generic is
+    # named after the variable exactly as S7's own `:=` would name it
+    return(eval(
+      as.call(list(.s7, substitute(x), substitute(value))),
+      parent.frame()
+    ))
+  }
   .assignParent(parent.frame())
   .saveFitEnv$isRandom <- FALSE
   .saveFitEnv$restore <- FALSE

@@ -1,5 +1,11 @@
 # nlmixr2save (development version)
 
+* `:=` now works with S7's `:=` (S7 >= 1.0.0, #18): when nlmixr2save's `:=`
+  comes first on the search path, `Foo := new_class()`, `bar :=
+  new_generic("x")` and the other S7 builders are handed to S7's `:=`, which
+  names the class or generic after the variable, instead of failing with
+  `argument "name" is missing` (and nothing is cached for them).
+
 * `:=` results built on a fit (`sim := rxSolve(fit, ev)`, `a := augPred(fit)`)
   are now cache hits in a new R session: fits on the right of `:=` are hashed
   with the new `nlmixr2saveFitKey()` instead of being serialized, since a fit
