@@ -82,7 +82,7 @@ test_that(".nlmixr2saveS7Bind() only matches S7 functions with `name`", {
     getExportedValue("S7", ":=")
   )
   expect_identical(
-    .nlmixr2saveS7Bind(quote(S7:::new_generic("x")), .env),
+    .nlmixr2saveS7Bind(str2lang("S7:::new_generic('x')"), .env),
     getExportedValue("S7", ":=")
   )
 })
